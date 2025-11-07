@@ -77,6 +77,10 @@ export interface NetworkConfig {
         password?: string;
     };
 }
+/**
+ * Directory organization mode
+ */
+export type OrganizationMode = 'flat' | 'byAuthor' | 'byTag' | 'byDate' | 'byAuthorAndTag' | 'byDateAndAuthor';
 export interface StorageConfig {
     /**
      * Path to SQLite database file
@@ -98,6 +102,16 @@ export interface StorageConfig {
      * Default: {downloadDirectory}/novels
      */
     novelDirectory?: string;
+    /**
+     * Directory organization mode for illustrations
+     * Default: 'flat'
+     */
+    illustrationOrganization?: OrganizationMode;
+    /**
+     * Directory organization mode for novels
+     * Default: 'flat'
+     */
+    novelOrganization?: OrganizationMode;
 }
 export interface SchedulerConfig {
     enabled: boolean;

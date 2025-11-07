@@ -2,7 +2,7 @@ import { StandaloneConfig, TargetConfig } from '../config';
 import { logger } from '../logger';
 import { PixivClient, PixivIllust, PixivIllustPage, PixivNovel } from '../pixiv/PixivClient';
 import { Database } from '../storage/Database';
-import { FileService } from './FileService';
+import { FileService, FileMetadata } from './FileService';
 
 export class DownloadManager {
   constructor(
@@ -258,8 +258,14 @@ export class DownloadManager {
         `${detail.id}_${detail.title}_${index + 1}${extension}`
       );
 
+      const metadata: FileMetadata = {
+        author: detail.user?.name,
+        tag: tag,
+        date: detail.create_date ? new Date(detail.create_date) : new Date(),
+      };
+
       const buffer = await this.client.downloadImage(originalUrl);
-      const filePath = await this.fileService.saveImage(buffer, fileName);
+      const filePath = await this.fileService.saveImage(buffer, fileName, metadata);
 
       this.database.insertDownload({
         pixivId: String(detail.id),
@@ -291,7 +297,14 @@ export class DownloadManager {
 
     const content = `${header}\n${text}`;
     const fileName = this.fileService.sanitizeFileName(`${novel.id}_${novel.title}.txt`);
-    const filePath = await this.fileService.saveText(content, fileName);
+    
+    const metadata: FileMetadata = {
+      author: novel.user?.name,
+      tag: tag,
+      date: novel.create_date ? new Date(novel.create_date) : new Date(),
+    };
+    
+    const filePath = await this.fileService.saveText(content, fileName, metadata);
 
     this.database.insertDownload({
       pixivId: String(novel.id),

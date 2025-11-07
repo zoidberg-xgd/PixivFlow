@@ -223,8 +223,13 @@ class DownloadManager {
             }
             const extension = this.extractExtension(originalUrl) ?? '.jpg';
             const fileName = this.fileService.sanitizeFileName(`${detail.id}_${detail.title}_${index + 1}${extension}`);
+            const metadata = {
+                author: detail.user?.name,
+                tag: tag,
+                date: detail.create_date ? new Date(detail.create_date) : new Date(),
+            };
             const buffer = await this.client.downloadImage(originalUrl);
-            const filePath = await this.fileService.saveImage(buffer, fileName);
+            const filePath = await this.fileService.saveImage(buffer, fileName, metadata);
             this.database.insertDownload({
                 pixivId: String(detail.id),
                 type: 'illustration',
@@ -251,7 +256,12 @@ class DownloadManager {
         ].join('\n');
         const content = `${header}\n${text}`;
         const fileName = this.fileService.sanitizeFileName(`${novel.id}_${novel.title}.txt`);
-        const filePath = await this.fileService.saveText(content, fileName);
+        const metadata = {
+            author: novel.user?.name,
+            tag: tag,
+            date: novel.create_date ? new Date(novel.create_date) : new Date(),
+        };
+        const filePath = await this.fileService.saveText(content, fileName, metadata);
         this.database.insertDownload({
             pixivId: String(novel.id),
             type: 'novel',

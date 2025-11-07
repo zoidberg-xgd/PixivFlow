@@ -87,6 +87,17 @@ export interface NetworkConfig {
   };
 }
 
+/**
+ * Directory organization mode
+ */
+export type OrganizationMode =
+  | 'flat' // Flat structure: all files in one directory
+  | 'byAuthor' // Organize by author: {baseDir}/{author_name}/{filename}
+  | 'byTag' // Organize by tag: {baseDir}/{tag}/{filename}
+  | 'byDate' // Organize by date: {baseDir}/{YYYY-MM}/{filename}
+  | 'byAuthorAndTag' // Organize by author and tag: {baseDir}/{author_name}/{tag}/{filename}
+  | 'byDateAndAuthor'; // Organize by date and author: {baseDir}/{YYYY-MM}/{author_name}/{filename}
+
 export interface StorageConfig {
   /**
    * Path to SQLite database file
@@ -108,6 +119,16 @@ export interface StorageConfig {
    * Default: {downloadDirectory}/novels
    */
   novelDirectory?: string;
+  /**
+   * Directory organization mode for illustrations
+   * Default: 'flat'
+   */
+  illustrationOrganization?: OrganizationMode;
+  /**
+   * Directory organization mode for novels
+   * Default: 'flat'
+   */
+  novelOrganization?: OrganizationMode;
 }
 
 export interface SchedulerConfig {

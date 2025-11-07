@@ -44,7 +44,11 @@
     "illustrationDirectory": "./downloads/illustrations",
     "_illustrationDirectory_note": "插画保存目录（相对于 downloadDirectory 或绝对路径），默认 {downloadDirectory}/illustrations",
     "novelDirectory": "./downloads/novels",
-    "_novelDirectory_note": "小说保存目录（相对于 downloadDirectory 或绝对路径），默认 {downloadDirectory}/novels"
+    "_novelDirectory_note": "小说保存目录（相对于 downloadDirectory 或绝对路径），默认 {downloadDirectory}/novels",
+    "illustrationOrganization": "flat",
+    "_illustrationOrganization_note": "插画目录组织方式: flat（扁平）| byAuthor（按作者）| byTag（按标签）| byDate（按日期）| byAuthorAndTag（按作者和标签）| byDateAndAuthor（按日期和作者），默认 flat",
+    "novelOrganization": "flat",
+    "_novelOrganization_note": "小说目录组织方式: flat（扁平）| byAuthor（按作者）| byTag（按标签）| byDate（按日期）| byAuthorAndTag（按作者和标签）| byDateAndAuthor（按日期和作者），默认 flat"
   },
   
   "scheduler": {

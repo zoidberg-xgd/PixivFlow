@@ -196,7 +196,7 @@ async function exampleDownloaderIntegration() {
         await fs.writeFile(configPath, JSON.stringify(configData, null, 2), 'utf-8');
         console.log('✓ Configuration updated successfully!');
         console.log('You can now run the downloader with:');
-        console.log('  npm run standalone:run-once');
+        console.log('  npm run download');
     }
     catch (error) {
         console.error('✗ Integration example failed:', error);

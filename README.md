@@ -494,10 +494,25 @@ pixivflow/
     "databasePath": "./data/pixiv-downloader.db",
     "downloadDirectory": "./downloads",
     "illustrationDirectory": "./downloads/illustrations",
-    "novelDirectory": "./downloads/novels"
+    "novelDirectory": "./downloads/novels",
+    "illustrationOrganization": "byAuthorAndTag",
+    "novelOrganization": "byDateAndAuthor"
   }
 }
 ```
+
+#### 目录组织方式
+
+| 模式 | 说明 | 目录结构示例 |
+|------|------|-------------|
+| `flat` | 扁平结构（默认） | `illustrations/123456_标题_1.jpg` |
+| `byAuthor` | 按作者组织 | `illustrations/作者名/123456_标题_1.jpg` |
+| `byTag` | 按标签组织 | `illustrations/标签名/123456_标题_1.jpg` |
+| `byDate` | 按日期组织 | `illustrations/2024-12/123456_标题_1.jpg` |
+| `byAuthorAndTag` | 按作者和标签 | `illustrations/作者名/标签名/123456_标题_1.jpg` |
+| `byDateAndAuthor` | 按日期和作者 | `illustrations/2024-12/作者名/123456_标题_1.jpg` |
+
+> 💡 **提示**：使用组织模式可以让下载的文件更有条理，便于管理和查找。
 
 **完整配置说明**：查看 [配置指南](STANDALONE-SETUP-GUIDE.md) 和 [配置文件使用指南](CONFIG_GUIDE.md)
 

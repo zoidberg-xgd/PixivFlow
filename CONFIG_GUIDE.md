@@ -146,9 +146,34 @@ pixivflow download --config config/my-custom-config.json
 
 参考 `config/specific-download.example.json` 查看完整的配置示例，包括：
 - 网络配置（代理、超时等）
-- 存储配置（下载目录、数据库路径）
+- 存储配置（下载目录、数据库路径、目录组织方式）
 - 下载配置（并发数、重试次数等）
 - 调度器配置（定时任务）
+
+### 存储配置 - 目录组织
+
+PixivFlow 支持多种目录组织方式，让下载的文件更有条理：
+
+```json
+{
+  "storage": {
+    "illustrationDirectory": "./downloads/illustrations",
+    "illustrationOrganization": "byAuthorAndTag",
+    "novelDirectory": "./downloads/novels",
+    "novelOrganization": "byDateAndAuthor"
+  }
+}
+```
+
+**支持的组织模式**：
+- `flat` - 扁平结构（默认）
+- `byAuthor` - 按作者组织
+- `byTag` - 按标签组织
+- `byDate` - 按日期组织（YYYY-MM）
+- `byAuthorAndTag` - 按作者和标签
+- `byDateAndAuthor` - 按日期和作者
+
+详细说明请参考 [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md#4-存储配置)。
 
 ## ❓ 常见问题
 
