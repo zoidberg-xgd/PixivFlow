@@ -44,6 +44,7 @@ export declare class PixivClient {
     private readonly auth;
     private readonly config;
     private readonly baseUrl;
+    private readonly proxyAgent?;
     constructor(auth: PixivAuth, config: StandaloneConfig);
     searchIllustrations(target: TargetConfig): Promise<PixivIllust[]>;
     searchNovels(target: TargetConfig): Promise<PixivNovel[]>;

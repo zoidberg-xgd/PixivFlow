@@ -17,6 +17,13 @@ export interface TargetConfig {
    * Search target parameter for Pixiv API.
    */
   searchTarget?: 'partial_match_for_tags' | 'exact_match_for_tags' | 'title_and_caption';
+  /**
+   * Sort order for search results.
+   * - 'date_desc': Sort by date (newest first)
+   * - 'date_asc': Sort by date (oldest first)
+   * - 'popular_desc': Sort by popularity (most bookmarks first)
+   */
+  sort?: 'date_desc' | 'date_asc' | 'popular_desc';
   restrict?: 'public' | 'private';
   /**
    * Download mode: 'search' (default) or 'ranking'
@@ -495,6 +502,55 @@ function applyEnvironmentOverrides(config: Partial<StandaloneConfig>): Partial<S
       };
     } else {
       overridden.scheduler.enabled = process.env.PIXIV_SCHEDULER_ENABLED.toLowerCase() === 'true';
+    }
+  }
+
+  // Override proxy from environment variables
+  // Priority: all_proxy > https_proxy > http_proxy
+  const proxyUrl = process.env.all_proxy || process.env.ALL_PROXY || 
+                   process.env.https_proxy || process.env.HTTPS_PROXY ||
+                   process.env.http_proxy || process.env.HTTP_PROXY;
+  
+  if (proxyUrl && (!overridden.network?.proxy?.enabled)) {
+    try {
+      const url = new URL(proxyUrl);
+      const protocol = url.protocol.replace(':', '').toLowerCase();
+      
+      // Map common protocols
+      let mappedProtocol: 'http' | 'https' | 'socks4' | 'socks5' = 'http';
+      if (protocol === 'socks5' || protocol === 'socks') {
+        mappedProtocol = 'socks5';
+      } else if (protocol === 'socks4') {
+        mappedProtocol = 'socks4';
+      } else if (protocol === 'https') {
+        mappedProtocol = 'https';
+      } else {
+        mappedProtocol = 'http';
+      }
+      
+      if (!overridden.network) {
+        overridden.network = {};
+      }
+      
+      overridden.network.proxy = {
+        enabled: true,
+        host: url.hostname,
+        port: parseInt(url.port || (protocol.startsWith('socks') ? '1080' : '8080'), 10),
+        protocol: mappedProtocol,
+        username: url.username || undefined,
+        password: url.password || undefined,
+      };
+      
+      logger.info('Proxy configured from environment variable', {
+        protocol: mappedProtocol,
+        host: url.hostname,
+        port: overridden.network.proxy.port,
+      });
+    } catch (error) {
+      logger.warn('Failed to parse proxy URL from environment variable', {
+        proxyUrl,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

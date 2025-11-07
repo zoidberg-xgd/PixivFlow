@@ -10,6 +10,13 @@ export interface TargetConfig {
      * Search target parameter for Pixiv API.
      */
     searchTarget?: 'partial_match_for_tags' | 'exact_match_for_tags' | 'title_and_caption';
+    /**
+     * Sort order for search results.
+     * - 'date_desc': Sort by date (newest first)
+     * - 'date_asc': Sort by date (oldest first)
+     * - 'popular_desc': Sort by popularity (most bookmarks first)
+     */
+    sort?: 'date_desc' | 'date_asc' | 'popular_desc';
     restrict?: 'public' | 'private';
     /**
      * Download mode: 'search' (default) or 'ranking'

@@ -817,7 +817,36 @@ sudo systemctl status pixivflow
 
 ### 使用代理
 
-如果需要通过代理访问 Pixiv：
+如果需要通过代理访问 Pixiv，有两种方式：
+
+#### 方式 1：使用环境变量（推荐 ⭐）
+
+程序会自动从环境变量读取代理配置，无需修改配置文件：
+
+```bash
+# 设置代理环境变量（优先级：all_proxy > https_proxy > http_proxy）
+export all_proxy=socks5://127.0.0.1:6153
+# 或
+export https_proxy=http://127.0.0.1:6152
+# 或
+export http_proxy=http://127.0.0.1:6152
+
+# 然后运行程序
+npm run download
+```
+
+**支持的代理协议**：
+- `http://` - HTTP 代理
+- `https://` - HTTPS 代理
+- `socks5://` - SOCKS5 代理
+- `socks4://` - SOCKS4 代理
+
+**环境变量优先级**：
+1. `all_proxy` 或 `ALL_PROXY`（最高优先级）
+2. `https_proxy` 或 `HTTPS_PROXY`
+3. `http_proxy` 或 `HTTP_PROXY`
+
+#### 方式 2：配置文件设置
 
 ```json
 {
@@ -831,6 +860,16 @@ sudo systemctl status pixivflow
   }
 }
 ```
+
+**注意**：如果配置文件中已启用代理，环境变量不会覆盖配置文件中的设置。
+
+**常见代理配置**：
+
+| 代理软件 | 协议 | 地址 | 端口 |
+|---------|------|------|------|
+| Clash | HTTP | `127.0.0.1` | `7890` |
+| V2Ray | HTTP | `127.0.0.1` | `10809` |
+| Shadowsocks | SOCKS5 | `127.0.0.1` | `1080` |
 
 ---
 

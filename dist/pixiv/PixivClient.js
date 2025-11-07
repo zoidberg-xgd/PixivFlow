@@ -2,14 +2,32 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PixivClient = void 0;
 const promises_1 = require("node:timers/promises");
+const undici_1 = require("undici");
 const logger_1 = require("../logger");
 class PixivClient {
     auth;
     config;
     baseUrl = 'https://app-api.pixiv.net/';
+    proxyAgent;
     constructor(auth, config) {
         this.auth = auth;
         this.config = config;
+        // Setup proxy agent if configured
+        const proxy = this.config.network?.proxy;
+        if (proxy?.enabled && proxy.host && proxy.port) {
+            const protocol = proxy.protocol || 'http';
+            const auth = proxy.username && proxy.password
+                ? `${proxy.username}:${proxy.password}@`
+                : '';
+            const proxyUrl = `${protocol}://${auth}${proxy.host}:${proxy.port}`;
+            // undici ProxyAgent supports http, https, socks4, and socks5
+            this.proxyAgent = new undici_1.ProxyAgent(proxyUrl);
+            logger_1.logger.info('Proxy enabled', {
+                protocol,
+                host: proxy.host,
+                port: proxy.port
+            });
+        }
     }
     async searchIllustrations(target) {
         const results = [];
@@ -38,7 +56,7 @@ class PixivClient {
         let nextUrl = this.createRequestUrl('v1/search/novel', {
             word: target.tag,
             search_target: target.searchTarget ?? 'partial_match_for_tags',
-            sort: 'date_desc',
+            sort: target.sort ?? 'date_desc',
         });
         while (nextUrl && (!target.limit || results.length < target.limit)) {
             const requestUrl = nextUrl;
@@ -155,11 +173,16 @@ class PixivClient {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), network.timeoutMs ?? 30000);
                 try {
-                    const response = await fetch(url, {
+                    const fetchOptions = {
                         method: 'GET',
                         headers,
                         signal: controller.signal,
-                    });
+                    };
+                    // Add proxy agent if configured
+                    if (this.proxyAgent) {
+                        fetchOptions.dispatcher = this.proxyAgent;
+                    }
+                    const response = await fetch(url, fetchOptions);
                     if (!response.ok) {
                         throw new Error(`Failed to fetch binary: ${response.status}`);
                     }
@@ -200,19 +223,28 @@ class PixivClient {
                         'App-Version': '7.13.3',
                         Referer: 'https://app-api.pixiv.net/',
                     };
-                    const response = await fetch(url, {
+                    const fetchOptions = {
                         ...init,
                         headers: {
                             ...headers,
                             ...(init.headers ?? {}),
                         },
                         signal: controller.signal,
-                    });
+                    };
+                    // Add proxy agent if configured
+                    if (this.proxyAgent) {
+                        fetchOptions.dispatcher = this.proxyAgent;
+                    }
+                    const response = await fetch(url, fetchOptions);
                     if (response.status === 401) {
                         // Token expired, refresh and retry
                         logger_1.logger.warn('Received 401 from Pixiv API, refreshing token');
                         await this.auth.getAccessToken();
                         continue;
+                    }
+                    if (response.status === 404) {
+                        // 404 means resource not found, don't retry
+                        throw new Error(`Pixiv API error: ${response.status} ${response.statusText}`);
                     }
                     if (!response.ok) {
                         throw new Error(`Pixiv API error: ${response.status} ${response.statusText}`);
@@ -225,6 +257,11 @@ class PixivClient {
             }
             catch (error) {
                 lastError = error;
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                // Don't retry on 404 errors - resource doesn't exist
+                if (errorMessage.includes('404')) {
+                    throw error;
+                }
                 logger_1.logger.warn('Pixiv API request failed', {
                     url,
                     attempt: attempt + 1,

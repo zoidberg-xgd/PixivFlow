@@ -177,7 +177,36 @@ Pixiv API 认证信息
 | `proxy.enabled` | 是否启用代理 | `false` |
 | `proxy.host` | 代理服务器地址 | - |
 | `proxy.port` | 代理服务器端口 | - |
-| `proxy.protocol` | 代理协议（http/https/socks5） | `http` |
+| `proxy.protocol` | 代理协议（http/https/socks4/socks5） | `http` |
+
+#### 使用环境变量配置代理（推荐 ⭐）
+
+除了在配置文件中设置代理，程序还支持从环境变量自动读取代理配置：
+
+```bash
+# 设置代理环境变量（优先级：all_proxy > https_proxy > http_proxy）
+export all_proxy=socks5://127.0.0.1:6153
+# 或
+export https_proxy=http://127.0.0.1:6152
+# 或
+export http_proxy=http://127.0.0.1:6152
+```
+
+**支持的代理协议**：
+- `http://` - HTTP 代理
+- `https://` - HTTPS 代理
+- `socks5://` - SOCKS5 代理
+- `socks4://` - SOCKS4 代理
+
+**环境变量优先级**：
+1. `all_proxy` 或 `ALL_PROXY`（最高优先级）
+2. `https_proxy` 或 `HTTPS_PROXY`
+3. `http_proxy` 或 `HTTP_PROXY`
+
+**注意**：
+- 如果配置文件中已启用代理（`proxy.enabled: true`），环境变量不会覆盖配置文件中的设置
+- 如果配置文件中未启用代理，程序会自动从环境变量读取代理配置
+- 程序启动时会记录使用的代理信息到日志中
 
 ---
 

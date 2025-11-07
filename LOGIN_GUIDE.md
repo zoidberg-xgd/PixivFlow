@@ -337,32 +337,43 @@ sudo iptables -L -n | grep 8899
 
 #### 方法 1：设置代理环境变量（推荐 ⭐）
 
-gppt 库会自动从环境变量读取代理设置。在运行登录命令前设置：
+gppt 库和 PixivFlow 程序都会自动从环境变量读取代理设置。在运行登录命令前设置：
 
 ```bash
-# 设置 HTTPS 代理（推荐）
-export HTTPS_PROXY=http://127.0.0.1:7890
+# 设置代理环境变量（优先级：all_proxy > https_proxy > http_proxy）
+export all_proxy=socks5://127.0.0.1:6153
 # 或
-export HTTPS_PROXY=socks5://127.0.0.1:1080
-
-# 设置全局代理（备选）
-export ALL_PROXY=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:6152
+# 或
+export http_proxy=http://127.0.0.1:6152
 
 # 然后运行登录
 npm run login
 ```
 
+**支持的代理协议**：
+- `http://` - HTTP 代理
+- `https://` - HTTPS 代理
+- `socks5://` - SOCKS5 代理
+- `socks4://` - SOCKS4 代理
+
 **Windows (PowerShell)**：
 ```powershell
-$env:HTTPS_PROXY="http://127.0.0.1:7890"
+$env:all_proxy="socks5://127.0.0.1:6153"
+# 或
+$env:https_proxy="http://127.0.0.1:6152"
 npm run login
 ```
 
 **Windows (CMD)**：
 ```cmd
-set HTTPS_PROXY=http://127.0.0.1:7890
+set all_proxy=socks5://127.0.0.1:6153
+# 或
+set https_proxy=http://127.0.0.1:6152
 npm run login
 ```
+
+> 💡 **提示**：登录时设置的代理环境变量也会在后续下载时生效，无需重复设置。
 
 #### 方法 2：检查 Chrome/ChromeDriver
 

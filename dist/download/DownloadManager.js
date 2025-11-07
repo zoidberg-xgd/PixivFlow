@@ -89,42 +89,78 @@ class DownloadManager {
                 // Search by tag (default mode)
                 illusts = await this.client.searchIllustrations(target);
             }
-            // Random selection mode
-            if (target.random && illusts.length > 0) {
-                // Filter out already downloaded items
-                const available = illusts.filter(illust => !this.database.hasDownloaded(String(illust.id), 'illustration'));
-                if (available.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * available.length);
-                    const randomIllust = available[randomIndex];
-                    logger_1.logger.info(`Randomly selected illustration ${randomIllust.id} from ${available.length} available results`);
-                    illusts = [randomIllust];
-                }
-                else {
-                    logger_1.logger.info('All search results have already been downloaded');
-                    illusts = [];
-                }
-            }
             let downloaded = 0;
             let skippedCount = 0;
             const tagForLog = target.filterTag || target.tag;
-            for (const illust of illusts) {
-                if (this.database.hasDownloaded(String(illust.id), 'illustration')) {
-                    logger_1.logger.debug(`Illustration ${illust.id} already downloaded, skipping`);
-                    continue;
+            // Random selection mode
+            if (target.random && illusts.length > 0) {
+                // Filter out already downloaded items
+                let available = illusts.filter(illust => !this.database.hasDownloaded(String(illust.id), 'illustration'));
+                if (available.length === 0) {
+                    logger_1.logger.info('All search results have already been downloaded');
                 }
-                try {
-                    await this.downloadIllustration(illust, tagForLog);
-                    downloaded++;
-                }
-                catch (error) {
-                    // Skip illustrations that are deleted, private, or inaccessible
-                    skippedCount++;
-                    const errorMessage = error instanceof Error ? error.message : String(error);
-                    if (errorMessage.includes('404')) {
-                        logger_1.logger.debug(`Illustration ${illust.id} not found (deleted or private), skipping`);
+                else {
+                    // Try random illustrations until we find one that works or exhaust all options
+                    const maxAttempts = Math.min(available.length, 50); // Limit attempts to avoid infinite loops
+                    const triedIds = new Set();
+                    for (let attempt = 0; attempt < maxAttempts && downloaded < (target.limit || 1); attempt++) {
+                        // Filter out already tried illustrations
+                        const remaining = available.filter(illust => !triedIds.has(illust.id));
+                        if (remaining.length === 0) {
+                            logger_1.logger.info('All available illustrations have been tried');
+                            break;
+                        }
+                        // Randomly select from remaining illustrations
+                        const randomIndex = Math.floor(Math.random() * remaining.length);
+                        const randomIllust = remaining[randomIndex];
+                        triedIds.add(randomIllust.id);
+                        logger_1.logger.info(`Randomly selected illustration ${randomIllust.id} from ${remaining.length} remaining results (attempt ${attempt + 1}/${maxAttempts})`);
+                        try {
+                            await this.downloadIllustration(randomIllust, tagForLog);
+                            downloaded++;
+                            // If we only need one and got it, we're done
+                            if ((target.limit || 1) === 1) {
+                                break;
+                            }
+                        }
+                        catch (error) {
+                            // Skip illustrations that are deleted, private, or inaccessible
+                            skippedCount++;
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            if (errorMessage.includes('404')) {
+                                logger_1.logger.debug(`Illustration ${randomIllust.id} not found (deleted or private), trying another random illustration...`);
+                                // Continue to next random selection
+                                continue;
+                            }
+                            else {
+                                logger_1.logger.warn(`Failed to download illustration ${randomIllust.id}`, { error: errorMessage });
+                                // For non-404 errors, continue trying (might be temporary issues)
+                                continue;
+                            }
+                        }
                     }
-                    else {
-                        logger_1.logger.warn(`Failed to download illustration ${illust.id}`, { error: errorMessage });
+                }
+            }
+            else {
+                for (const illust of illusts) {
+                    if (this.database.hasDownloaded(String(illust.id), 'illustration')) {
+                        logger_1.logger.debug(`Illustration ${illust.id} already downloaded, skipping`);
+                        continue;
+                    }
+                    try {
+                        await this.downloadIllustration(illust, tagForLog);
+                        downloaded++;
+                    }
+                    catch (error) {
+                        // Skip illustrations that are deleted, private, or inaccessible
+                        skippedCount++;
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        if (errorMessage.includes('404')) {
+                            logger_1.logger.debug(`Illustration ${illust.id} not found (deleted or private), skipping`);
+                        }
+                        else {
+                            logger_1.logger.warn(`Failed to download illustration ${illust.id}`, { error: errorMessage });
+                        }
                     }
                 }
             }
@@ -197,46 +233,105 @@ class DownloadManager {
             }
             else {
                 // Search by tag (default mode)
-                novels = await this.client.searchNovels(target);
-            }
-            // Random selection mode
-            if (target.random && novels.length > 0) {
-                // Filter out already downloaded items
-                const available = novels.filter(novel => !this.database.hasDownloaded(String(novel.id), 'novel'));
-                if (available.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * available.length);
-                    const randomNovel = available[randomIndex];
-                    logger_1.logger.info(`Randomly selected novel ${randomNovel.id} from ${available.length} available results`);
-                    novels = [randomNovel];
-                }
-                else {
-                    logger_1.logger.info('All search results have already been downloaded');
-                    novels = [];
-                }
+                // For search mode, fetch more results upfront to handle 404s
+                // If limit is small (especially 1), fetch many more to ensure we can find valid novels
+                const targetLimit = target.limit || 10;
+                const searchLimit = targetLimit <= 5 ? Math.max(targetLimit * 20, 100) : targetLimit * 2;
+                const searchTarget = { ...target, limit: searchLimit };
+                logger_1.logger.info(`Fetching up to ${searchLimit} search results to find ${targetLimit} valid novel(s)`);
+                novels = await this.client.searchNovels(searchTarget);
+                logger_1.logger.info(`Found ${novels.length} search results`);
             }
             let downloaded = 0;
             let skippedCount = 0;
             const tagForLog = target.filterTag || target.tag;
-            for (const novel of novels) {
-                if (this.database.hasDownloaded(String(novel.id), 'novel')) {
-                    logger_1.logger.debug(`Novel ${novel.id} already downloaded, skipping`);
-                    continue;
+            const targetLimit = target.limit || 10;
+            // Random selection mode
+            if (target.random && novels.length > 0) {
+                // Filter out already downloaded items
+                let available = novels.filter(novel => !this.database.hasDownloaded(String(novel.id), 'novel'));
+                if (available.length === 0) {
+                    logger_1.logger.info('All search results have already been downloaded');
                 }
-                try {
-                    await this.downloadNovel(novel, tagForLog);
-                    downloaded++;
-                }
-                catch (error) {
-                    // Skip novels that are deleted, private, or inaccessible
-                    skippedCount++;
-                    const errorMessage = error instanceof Error ? error.message : String(error);
-                    if (errorMessage.includes('404')) {
-                        logger_1.logger.debug(`Novel ${novel.id} not found (deleted or private), skipping`);
+                else {
+                    // Try random novels until we find one that works or exhaust all options
+                    const maxAttempts = Math.min(available.length, 50); // Limit attempts to avoid infinite loops
+                    const triedIds = new Set();
+                    for (let attempt = 0; attempt < maxAttempts && downloaded < targetLimit; attempt++) {
+                        // Filter out already tried novels
+                        const remaining = available.filter(novel => !triedIds.has(novel.id));
+                        if (remaining.length === 0) {
+                            logger_1.logger.info('All available novels have been tried');
+                            break;
+                        }
+                        // Randomly select from remaining novels
+                        const randomIndex = Math.floor(Math.random() * remaining.length);
+                        const randomNovel = remaining[randomIndex];
+                        triedIds.add(randomNovel.id);
+                        logger_1.logger.info(`Randomly selected novel ${randomNovel.id} from ${remaining.length} remaining results (attempt ${attempt + 1}/${maxAttempts})`);
+                        try {
+                            await this.downloadNovel(randomNovel, tagForLog);
+                            downloaded++;
+                            logger_1.logger.info(`Successfully downloaded novel ${randomNovel.id} (${downloaded}/${targetLimit})`);
+                            // If we only need one and got it, we're done
+                            if (targetLimit === 1) {
+                                break;
+                            }
+                        }
+                        catch (error) {
+                            // Skip novels that are deleted, private, or inaccessible
+                            skippedCount++;
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            if (errorMessage.includes('404')) {
+                                logger_1.logger.debug(`Novel ${randomNovel.id} not found (deleted or private), trying another random novel...`);
+                                // Continue to next random selection
+                                continue;
+                            }
+                            else {
+                                logger_1.logger.warn(`Failed to download novel ${randomNovel.id}`, { error: errorMessage });
+                                // For non-404 errors, continue trying (might be temporary issues)
+                                continue;
+                            }
+                        }
                     }
-                    else {
-                        logger_1.logger.warn(`Failed to download novel ${novel.id}`, { error: errorMessage });
+                }
+            }
+            else {
+                // Smart retry logic: try each novel in order, skip 404s and continue
+                for (let i = 0; i < novels.length && downloaded < targetLimit; i++) {
+                    const novel = novels[i];
+                    if (this.database.hasDownloaded(String(novel.id), 'novel')) {
+                        logger_1.logger.debug(`Novel ${novel.id} already downloaded, skipping`);
+                        continue;
+                    }
+                    try {
+                        await this.downloadNovel(novel, tagForLog);
+                        downloaded++;
+                        logger_1.logger.info(`Successfully downloaded novel ${novel.id} (${downloaded}/${targetLimit})`);
+                        // If we only need one and got it, we're done
+                        if (targetLimit === 1) {
+                            break;
+                        }
+                    }
+                    catch (error) {
+                        // Skip novels that are deleted, private, or inaccessible
+                        skippedCount++;
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        if (errorMessage.includes('404')) {
+                            logger_1.logger.debug(`Novel ${novel.id} not found (deleted or private), trying next result...`);
+                            // Continue to next novel
+                            continue;
+                        }
+                        else {
+                            logger_1.logger.warn(`Failed to download novel ${novel.id}`, { error: errorMessage });
+                            // For non-404 errors, continue trying (might be temporary issues)
+                            continue;
+                        }
                     }
                 }
+            }
+            if (downloaded < targetLimit && skippedCount > 0) {
+                logger_1.logger.warn(`Only downloaded ${downloaded} out of ${targetLimit} requested novel(s). ${skippedCount} novel(s) were skipped due to 404 errors or other issues.`);
             }
             if (skippedCount > 0) {
                 logger_1.logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);

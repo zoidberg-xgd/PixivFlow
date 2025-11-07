@@ -1,4 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
+import { ProxyAgent } from 'undici';
 
 import { StandaloneConfig, TargetConfig } from '../config';
 import { logger } from '../logger';
@@ -51,8 +52,28 @@ export interface PixivNovelTextResponse {
 
 export class PixivClient {
   private readonly baseUrl = 'https://app-api.pixiv.net/';
+  private readonly proxyAgent?: ProxyAgent;
 
-  constructor(private readonly auth: PixivAuth, private readonly config: StandaloneConfig) {}
+  constructor(private readonly auth: PixivAuth, private readonly config: StandaloneConfig) {
+    // Setup proxy agent if configured
+    const proxy = this.config.network?.proxy;
+    if (proxy?.enabled && proxy.host && proxy.port) {
+      const protocol = proxy.protocol || 'http';
+      const auth = proxy.username && proxy.password 
+        ? `${proxy.username}:${proxy.password}@` 
+        : '';
+      const proxyUrl = `${protocol}://${auth}${proxy.host}:${proxy.port}`;
+      
+      // undici ProxyAgent supports http, https, socks4, and socks5
+      this.proxyAgent = new ProxyAgent(proxyUrl);
+      
+      logger.info('Proxy enabled', { 
+        protocol, 
+        host: proxy.host, 
+        port: proxy.port 
+      });
+    }
+  }
 
   public async searchIllustrations(target: TargetConfig): Promise<PixivIllust[]> {
     const results: PixivIllust[] = [];
@@ -90,7 +111,7 @@ export class PixivClient {
     let nextUrl: string | null = this.createRequestUrl('v1/search/novel', {
       word: target.tag,
       search_target: target.searchTarget ?? 'partial_match_for_tags',
-      sort: 'date_desc',
+      sort: target.sort ?? 'date_desc',
     });
 
     while (nextUrl && (!target.limit || results.length < target.limit)) {
@@ -266,11 +287,18 @@ export class PixivClient {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), network.timeoutMs ?? 30000);
         try {
-          const response = await fetch(url, {
+          const fetchOptions: RequestInit = {
             method: 'GET',
             headers,
             signal: controller.signal,
-          });
+          };
+          
+          // Add proxy agent if configured
+          if (this.proxyAgent) {
+            (fetchOptions as any).dispatcher = this.proxyAgent;
+          }
+          
+          const response = await fetch(url, fetchOptions);
 
           if (!response.ok) {
             throw new Error(`Failed to fetch binary: ${response.status}`);
@@ -316,20 +344,32 @@ export class PixivClient {
             Referer: 'https://app-api.pixiv.net/',
           };
 
-          const response = await fetch(url, {
+          const fetchOptions: RequestInit = {
             ...init,
             headers: {
               ...headers,
               ...(init.headers ?? {}),
             },
             signal: controller.signal,
-          });
+          };
+          
+          // Add proxy agent if configured
+          if (this.proxyAgent) {
+            (fetchOptions as any).dispatcher = this.proxyAgent;
+          }
+
+          const response = await fetch(url, fetchOptions);
 
           if (response.status === 401) {
             // Token expired, refresh and retry
             logger.warn('Received 401 from Pixiv API, refreshing token');
             await this.auth.getAccessToken();
             continue;
+          }
+
+          if (response.status === 404) {
+            // 404 means resource not found, don't retry
+            throw new Error(`Pixiv API error: ${response.status} ${response.statusText}`);
           }
 
           if (!response.ok) {
@@ -342,6 +382,13 @@ export class PixivClient {
         }
       } catch (error) {
         lastError = error;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        // Don't retry on 404 errors - resource doesn't exist
+        if (errorMessage.includes('404')) {
+          throw error;
+        }
+        
         logger.warn('Pixiv API request failed', {
           url,
           attempt: attempt + 1,
