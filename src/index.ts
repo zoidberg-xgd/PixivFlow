@@ -458,8 +458,8 @@ async function handleRandomDownload(args: {
         targetType = 'illustration';
       }
     } else {
-      // Default to novel for testing
-      targetType = 'novel';
+      // Default to illustration (as documented)
+      targetType = 'illustration';
     }
 
     // Ensure valid token exists (login if needed)

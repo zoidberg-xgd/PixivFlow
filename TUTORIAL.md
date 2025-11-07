@@ -1,6 +1,6 @@
 # 📚 PixivFlow 完整教程
 
-**从零开始，详细教学如何使用 PixivFlow 下载 Pixiv 作品**
+**从零开始，一步步学会使用 PixivFlow 下载 Pixiv 作品**
 
 ---
 
@@ -8,82 +8,153 @@
 
 本教程是 PixivFlow 的完整使用指南，适合想要深入了解和掌握所有功能的用户。如果你只是想快速上手，建议先查看 [快速开始指南](QUICKSTART.md)。
 
+### 教程特点
+
+- ✅ **从零开始**：不需要任何编程经验，只要会使用电脑即可
+- ✅ **步骤详细**：每一步都有详细说明，不会遗漏任何环节
+- ✅ **通俗易懂**：用简单直白的话解释，避免专业术语
+- ✅ **实际示例**：提供大量实际可用的命令和配置示例
+- ✅ **问题解答**：包含常见问题的解决方案
+
 ### 教程结构
 
-本教程分为 8 个章节，从基础到进阶，循序渐进：
+本教程分为 9 个章节，从基础到进阶，循序渐进：
 
-1. **第一章：准备工作** - 环境检查、项目安装、验证安装
-2. **第二章：登录 Pixiv 账号** - 登录方式选择、登录流程、故障排除
-3. **第三章：下载插画作品** - 快速体验（随机下载）、配置下载、筛选条件
-4. **第四章：下载小说作品** - 小说下载配置、随机下载小说、文件组织
-5. **第五章：配置定时任务** - Cron 表达式、时区设置、定时执行
-6. **第六章：高级自动化设置** - 多标签下载、目录组织、高级筛选
-7. **第七章：常见问题解决** - 登录问题、下载问题、配置问题
-8. **第八章：最佳实践** - 性能优化、存储优化、监控维护
+1. **第一章：了解 PixivFlow** - 什么是 PixivFlow？它能做什么？
+2. **第二章：准备工作** - 检查环境、安装项目、验证安装
+3. **第三章：首次登录** - 登录 Pixiv 账号，获取认证信息
+4. **第四章：配置下载** - 设置下载标签、数量、筛选条件
+5. **第五章：开始下载** - 测试下载、正式下载、查看结果
+6. **第六章：定时任务** - 设置自动下载，无需人工干预
+7. **第七章：高级功能** - 多标签下载、目录组织、代理设置
+8. **第八章：问题解决** - 常见问题及解决方法
+9. **第九章：最佳实践** - 性能优化、存储管理、监控维护
 
 ### 目录导航
 
-- [第一章：准备工作](#第一章准备工作)
-- [第二章：登录 Pixiv 账号](#第二章登录-pixiv-账号)
-- [第三章：下载插画作品](#第三章下载插画作品)
-- [第四章：下载小说作品](#第四章下载小说作品)
-- [第五章：配置定时任务](#第五章配置定时任务)
-- [第六章：高级自动化设置](#第六章高级自动化设置)
-- [第七章：常见问题解决](#第七章常见问题解决)
-- [第八章：最佳实践](#第八章最佳实践)
+- [第一章：了解 PixivFlow](#第一章了解-pixivflow)
+- [第二章：准备工作](#第二章准备工作)
+- [第三章：首次登录](#第三章首次登录)
+- [第四章：配置下载](#第四章配置下载)
+- [第五章：开始下载](#第五章开始下载)
+- [第六章：定时任务](#第六章定时任务)
+- [第七章：高级功能](#第七章高级功能)
+- [第八章：问题解决](#第八章问题解决)
+- [第九章：最佳实践](#第九章最佳实践)
 
 ---
 
-## 第一章：准备工作
+## 第一章：了解 PixivFlow
 
-### 1.1 环境要求
+### 1.1 什么是 PixivFlow？
 
-在开始之前，请确保你的系统满足以下要求：
+**PixivFlow** 是一个自动化下载工具，专门用于从 Pixiv（日本最大的插画分享网站）批量下载你喜欢的作品。
 
-#### 必需环境
+**简单来说**：
+- 你想下载 Pixiv 上的插画或小说
+- 手动一个个下载太麻烦
+- PixivFlow 可以帮你自动批量下载
+- 设置一次，以后自动运行
 
-| 软件 | 版本要求 | 检查命令 | 说明 |
-|------|---------|---------|------|
-| **Node.js** | 18.0.0 或更高 | `node --version` | JavaScript 运行环境，PixivFlow 基于 Node.js 开发 |
-| **npm** | 9.0.0 或更高 | `npm --version` | Node.js 的包管理器，用于安装依赖 |
-| **Python** | 3.9 或更高 | `python3 --version` | 用于登录认证（通过 gppt 工具） |
+### 1.2 PixivFlow 能做什么？
 
-> 💡 **提示**：如果你使用的是 macOS 或 Linux，Python 3 通常已经预装。Windows 用户需要单独安装。
+#### 核心功能
 
-#### 可选环境
+| 功能 | 说明 | 举个例子 |
+|------|------|---------|
+| **自动下载** | 根据你设置的标签自动下载作品 | 设置"风景"标签，自动下载所有风景插画 |
+| **智能筛选** | 按收藏数、日期等条件筛选作品 | 只下载收藏数超过 1000 的作品 |
+| **自动去重** | 自动跳过已下载的作品 | 不会重复下载同一个作品 |
+| **定时任务** | 按时间自动执行下载 | 每天凌晨 3 点自动下载新作品 |
+| **断点续传** | 下载中断后可以继续 | 网络断开后重新运行，会继续下载未完成的 |
 
-| 软件 | 用途 | 说明 |
+#### 支持的内容类型
+
+- **插画（Illustration）**：图片作品，支持多页图片
+- **小说（Novel）**：文字作品，保存为文本文件
+
+### 1.3 使用场景
+
+**场景 1：收集设计素材**
+- 每天自动下载风景、插画类高质量作品
+- 作为设计灵感和素材库
+
+**场景 2：收藏喜欢的作品**
+- 按标签批量下载喜欢的作品
+- 保存到本地，随时查看
+
+**场景 3：定期更新**
+- 每周自动下载新作品
+- 保持素材库最新
+
+### 1.4 需要准备什么？
+
+在开始之前，你需要准备：
+
+| 项目 | 要求 | 说明 |
 |------|------|------|
-| **Git** | 克隆项目 | 如果从 GitHub 下载项目，需要 Git |
-| **Chrome/Chromium** | 浏览器登录 | 如果使用浏览器登录方式（不推荐，推荐使用终端登录） |
+| **电脑** | Windows / macOS / Linux | 任何操作系统都可以 |
+| **Node.js** | 18.0.0 或更高版本 | 运行 PixivFlow 的环境 |
+| **npm** | 9.0.0 或更高版本 | 安装依赖的工具 |
+| **Pixiv 账号** | 有效账号 | 用于登录认证 |
+| **网络连接** | 能访问 Pixiv 网站 | 可能需要代理（在中国大陆） |
 
-### 1.1.1 如何检查环境？
+> 💡 **提示**：如果你还没有 Pixiv 账号，可以访问 [Pixiv 官网](https://www.pixiv.net/) 免费注册。
 
-打开终端（Terminal），运行以下命令：
+---
+
+## 第二章：准备工作
+
+### 2.1 检查环境
+
+在开始之前，先检查你的电脑是否满足要求。
+
+#### 步骤 1：打开终端
+
+- **Windows**：按 `Win + R`，输入 `cmd`，按 Enter
+- **macOS**：按 `Cmd + Space`，输入 `Terminal`，按 Enter
+- **Linux**：按 `Ctrl + Alt + T`
+
+#### 步骤 2：检查 Node.js 版本
+
+在终端中输入：
 
 ```bash
-# 检查 Node.js 版本
 node --version
-# 应该显示：v18.0.0 或更高
-
-# 检查 npm 版本
-npm --version
-# 应该显示：9.0.0 或更高
-
-# 检查 Python 版本
-python3 --version
-# 应该显示：Python 3.9.x 或更高
 ```
 
-**如果版本不符合要求**：
-- **Node.js**：访问 [Node.js 官网](https://nodejs.org/) 下载最新版本
-- **Python**：访问 [Python 官网](https://www.python.org/) 下载最新版本，或使用包管理器安装
+**期望结果**：
+- 应该显示 `v18.0.0` 或更高版本
+- 例如：`v18.17.0`、`v20.10.0`
 
-### 1.2 安装项目
+**如果没有安装或版本太低**：
+1. 访问 [Node.js 官网](https://nodejs.org/)
+2. 下载并安装最新版本
+3. 安装完成后，重新打开终端，再次检查版本
 
-#### 方式 1：从 GitHub 克隆（推荐）
+#### 步骤 3：检查 npm 版本
 
-如果你已经安装了 Git，可以使用这种方式：
+在终端中输入：
+
+```bash
+npm --version
+```
+
+**期望结果**：
+- 应该显示 `9.0.0` 或更高版本
+- 例如：`9.6.7`、`10.2.0`
+
+**说明**：
+- npm 通常随 Node.js 一起安装
+- 如果 Node.js 安装成功，npm 应该也会自动安装
+
+### 2.2 获取项目
+
+有两种方式获取项目：
+
+#### 方式 1：从 GitHub 下载（推荐）
+
+如果你已经安装了 Git：
 
 ```bash
 # 克隆项目到当前目录
@@ -91,47 +162,62 @@ git clone https://github.com/zoidberg-xgd/pixivflow.git
 
 # 进入项目目录
 cd pixivflow
-
-# 安装依赖（下载所有必需的包）
-npm install
 ```
 
 **优点**：
-- ✅ 可以随时使用 `git pull` 更新到最新版本
-- ✅ 可以查看项目历史记录
-- ✅ 可以提交问题和贡献代码
+- 可以随时使用 `git pull` 更新到最新版本
+- 可以查看项目历史记录
 
 #### 方式 2：下载 ZIP 文件
 
-如果你没有安装 Git，或者只是想快速使用：
+如果你没有安装 Git：
 
 1. 访问 [GitHub 项目页面](https://github.com/zoidberg-xgd/pixivflow)
 2. 点击右上角的 "Code" 按钮
 3. 选择 "Download ZIP"
 4. 解压下载的 ZIP 文件
-5. 在终端进入解压后的项目目录
-6. 运行 `npm install` 安装依赖
+5. 在终端中进入解压后的项目目录
 
-**优点**：
-- ✅ 不需要安装 Git
-- ✅ 下载速度快
-- ✅ 适合一次性使用
+**例如**（macOS/Linux）：
+```bash
+cd ~/Downloads/pixivflow-master
+```
 
-**缺点**：
-- ❌ 无法方便地更新到最新版本
-- ❌ 需要手动下载新版本
+**例如**（Windows）：
+```cmd
+cd C:\Users\你的用户名\Downloads\pixivflow-master
+```
 
-### 1.2.1 安装依赖说明
+### 2.3 安装依赖
 
-运行 `npm install` 后，会发生什么？
+**什么是依赖？**
 
-1. **读取配置文件**：npm 会读取 `package.json` 文件，了解需要哪些依赖
-2. **下载依赖包**：从 npm 仓库下载所有必需的包到 `node_modules/` 目录
-3. **安装 Python 工具**：如果需要，会自动安装 Python gppt 工具（用于登录）
+依赖是指 PixivFlow 运行所需的外部库和工具。安装依赖就是下载这些组件到你的项目中。
 
-**安装时间**：
-- 首次安装：通常需要 1-3 分钟，取决于网络速度
-- 后续安装：如果依赖已缓存，会更快
+#### 步骤 1：进入项目目录
+
+确保你在项目目录中：
+
+```bash
+# 查看当前目录（应该看到 package.json 文件）
+ls package.json
+
+# 如果看不到，说明不在项目目录，需要进入
+cd /path/to/pixivflow
+```
+
+#### 步骤 2：安装依赖
+
+在项目目录中运行：
+
+```bash
+npm install
+```
+
+**安装过程**：
+- 这个命令会读取 `package.json` 文件
+- 下载所有必需的依赖包到 `node_modules/` 目录
+- 首次安装通常需要 1-3 分钟，取决于网络速度
 
 **如何判断安装成功？**
 
@@ -141,32 +227,30 @@ npm install
 added 234 packages, and audited 235 packages in 45s
 ```
 
-如果看到错误信息，请检查：
-- 网络连接是否正常
-- Node.js 和 npm 版本是否符合要求
-- 是否有足够的磁盘空间
+**如果安装失败**：
+- 检查网络连接
+- 检查 Node.js 和 npm 版本是否符合要求
+- 确保有足够的磁盘空间
 
-### 1.3 验证安装
+### 2.4 验证安装
 
 安装完成后，建议运行健康检查，确保一切正常：
 
 ```bash
 # 运行健康检查
-./scripts/health-check.sh
-
-# 或使用主脚本
 ./scripts/pixiv.sh health
+
+# 或使用健康检查脚本
+./scripts/health-check.sh
 ```
 
 **健康检查会验证什么？**
-
-健康检查脚本会自动检查以下项目：
 
 | 检查项 | 说明 |
 |--------|------|
 | ✅ Node.js 版本 | 确保版本符合要求（18+） |
 | ✅ npm 版本 | 确保版本符合要求（9+） |
-| ✅ Python 版本 | 确保已安装 Python 3.9+ |
+| ✅ Python 版本 | 确保已安装 Python 3.9+（用于登录） |
 | ✅ 依赖安装 | 确保所有依赖已正确安装 |
 | ✅ 配置文件 | 检查配置文件是否存在（如果已创建） |
 | ✅ 目录权限 | 检查下载目录是否有写入权限 |
@@ -188,28 +272,18 @@ added 234 packages, and audited 235 packages in 45s
 **如果看到 ❌ 怎么办？**
 
 - 检查错误信息，根据提示解决问题
-- 查看 [常见问题解决](#第七章常见问题解决) 章节
+- 查看 [第八章：问题解决](#第八章问题解决) 章节
 - 查看 [测试指南](TEST_GUIDE.md) 获取详细帮助
 
 ---
 
-## 第二章：登录 Pixiv 账号
+## 第三章：首次登录
 
-### 2.1 为什么需要登录？
+### 3.1 为什么需要登录？
 
-**什么是 API？**
+**简单解释**：
 
-API（Application Programming Interface，应用程序接口）是 Pixiv 提供给开发者访问其服务的接口。PixivFlow 需要通过 API 来：
-- 搜索作品
-- 获取作品信息
-- 下载作品文件
-
-**为什么需要认证？**
-
-Pixiv API 需要认证才能访问，这是为了保护：
-- 防止滥用和过度请求
-- 确保只有注册用户才能使用
-- 遵守 Pixiv 的服务条款
+PixivFlow 需要访问 Pixiv 的 API（应用程序接口）来下载作品。API 就像一扇门，需要钥匙才能打开。登录就是获取这把钥匙的过程。
 
 **重要提示**：
 
@@ -221,26 +295,27 @@ Pixiv API 需要认证才能访问，这是为了保护：
 | ✅ **可随时更新** | 如果 token 过期，可以随时重新登录 |
 
 > 💡 **术语解释**：
+> - **API**：应用程序接口，是 Pixiv 提供给开发者访问其服务的接口
 > - **OAuth 2.0**：一种标准的授权协议，用于安全地访问受保护的资源
 > - **Refresh Token**：用于长期访问的认证令牌，可以刷新 access token
 > - **Access Token**：用于实际访问 API 的令牌，有效期较短（通常 1 小时）
 
-### 2.2 登录方式选择
+### 3.2 登录方式
 
 PixivFlow 支持两种登录方式：
 
 | 方式 | 特点 | 适用场景 |
 |------|------|---------|
 | **终端登录**（推荐 ⭐） | 在终端输入用户名密码，使用 Python gppt 登录 | 所有场景，特别是服务器环境 |
-| **手动输入 Token** | 直接输入已有的 refresh token | 已有 token 或从其他工具迁移 |
+| **配置向导** | 登录 + 配置一步完成 | 首次使用，想同时完成登录和配置 |
 
-### 2.3 方式一：终端登录（推荐 ⭐）
+### 3.3 方式一：终端登录（推荐 ⭐）
 
 这是最简单、最安全的方式，适合所有用户。
 
 #### 步骤 1：运行登录命令
 
-**推荐方式**（使用主控脚本，直接调用内置CLI）：
+**推荐方式**（使用主控脚本）：
 
 ```bash
 ./scripts/pixiv.sh login
@@ -249,7 +324,7 @@ PixivFlow 支持两种登录方式：
 **其他方式**：
 
 ```bash
-# 使用登录脚本（支持更多选项）
+# 使用登录脚本
 ./scripts/login.sh
 
 # 或使用 npm 命令
@@ -270,7 +345,7 @@ npm run login
 - 用户名：`your_username`
 - 账号名：`your_account_name`
 
-然后输入密码（密码不会显示在屏幕上）：
+然后输入密码（密码不会显示在屏幕上，这是正常的安全措施）：
 
 ```
 [?]: Password: 
@@ -312,7 +387,7 @@ expires_in: 3600
 
 如果看到下载成功，说明登录完成！
 
-### 2.4 方式二：使用配置向导（终端登录 + 配置）
+### 3.4 方式二：使用配置向导（登录 + 配置）
 
 如果你想同时完成登录和配置：
 
@@ -343,7 +418,7 @@ npm run setup
    - 程序自动保存 refresh token 到配置文件
    - 继续引导你完成其他配置（下载目录、标签等）
 
-### 2.5 登录故障排除
+### 3.5 登录故障排除
 
 #### 问题 1：登录超时或卡住
 
@@ -408,7 +483,7 @@ pip3 install gppt
 pip install gppt
 ```
 
-### 2.6 登录后的配置
+### 3.6 登录后的下一步
 
 登录成功后，你可以：
 
@@ -429,80 +504,93 @@ pip install gppt
 
 ---
 
-## 第三章：下载插画作品
+## 第四章：配置下载
 
-### 3.1 快速体验：随机下载
+### 4.1 什么是配置？
 
-如果你是第一次使用，建议先体验随机下载功能：
+配置就是告诉 PixivFlow：
+- 你想下载什么标签的作品
+- 每次下载多少个
+- 有什么筛选条件（如最低收藏数）
+- 是否启用定时任务
 
-```bash
-# 推荐方式（使用主控脚本）
-./scripts/pixiv.sh random
+### 4.2 配置方式
 
-# 或使用完整CLI工具
-./scripts/pixiv-cli.sh random
+有两种方式配置：
 
-# 或使用 npm 命令
-npm run random
-```
+| 方式 | 特点 | 适用场景 |
+|------|------|---------|
+| **配置向导**（推荐新手） | 交互式引导，一步步完成 | 首次使用，不熟悉配置文件 |
+| **手动编辑** | 直接编辑配置文件 | 熟悉 JSON 格式，想精确控制 |
 
-**功能说明**：
-- 🎲 自动从热门标签中随机选择一个（如：風景、イラスト、オリジナル等）
-- 🔐 如果未登录，会自动引导登录
-- 📥 下载 1 个随机作品，快速体验工具功能
+### 4.3 方式一：使用配置向导（推荐新手）
 
-#### 随机下载插画
-
-```bash
-# 随机下载一个插画作品（默认）
-npm run random
-
-# 或明确指定下载插画
-npm run random -- --illustration
-# 或
-npm run random -- -i
-```
-
-#### 随机下载小说
-
-```bash
-# 随机下载一个小说作品
-npm run random -- --novel
-# 或
-npm run random -- -n
-
-# 或使用完整命令
-node dist/index.js random --novel
-```
-
-**随机下载小说功能说明**：
-- 📚 从热门小说标签中随机选择一个（如：小説、オリジナル、ホラー等）
-- 🎲 从搜索结果中随机选择一个小说进行下载
-- 📝 下载的小说保存为文本文件（`.txt`），包含标题、作者、标签等信息
-- 💾 文件保存在 `downloads/downloads/novels/` 目录中
-
-**使用场景**：
-- 快速体验小说下载功能
-- 发现新的小说作品
-- 测试工具是否正常工作
-
-### 3.2 配置下载目标
-
-#### 方式 1：使用配置向导（推荐新手）
+#### 步骤 1：启动配置向导
 
 ```bash
 ./scripts/easy-setup.sh
+
+# 或使用 npm 命令
+npm run setup
 ```
 
-向导会引导你：
-1. 选择下载类型（插画/小说）
-2. 输入标签名称
-3. 设置下载数量
-4. 配置筛选条件（可选）
+#### 步骤 2：按照提示完成配置
 
-#### 方式 2：手动编辑配置
+配置向导会引导你完成：
 
-编辑 `config/standalone.config.json`：
+1. **🔐 账号登录**（如果还未登录）
+   - 在终端输入 Pixiv 账号和密码
+
+2. **⚙️ 下载配置**
+   - 选择下载类型（插画/小说）
+   - 输入标签名称（如：風景、イラスト）
+   - 设置下载数量（建议首次测试设为 1）
+   - 设置筛选条件（如最低收藏数）
+
+3. **⏰ 定时任务**（可选）
+   - 是否启用定时任务
+   - 设置执行时间（Cron 表达式）
+
+4. **💾 保存配置**
+   - 自动保存所有配置到 `config/standalone.config.json` 文件
+
+#### 首次测试配置建议
+
+如果你是第一次使用，建议使用以下简单配置进行测试：
+
+| 配置项 | 建议值 | 说明 |
+|--------|--------|------|
+| **搜索标签** | `イラスト` 或 `風景` | 热门标签，作品多，成功率高 |
+| **下载数量** | `1` | 首次测试只下载 1 个作品，快速验证 |
+| **最低收藏数** | `500`（可选） | 筛选高质量作品，也可以不设置 |
+| **定时任务** | `N`（否） | 测试阶段不需要定时任务 |
+| **其他选项** | 按 Enter 使用默认值 | 保持默认即可 |
+
+> 💡 **术语解释**：
+> - **标签（Tag）**：Pixiv 上用于分类作品的标签，如"风景"、"插画"、"原创"等
+> - **Refresh Token**：用于长期访问的认证令牌，登录后自动获取并保存，有效期较长
+> - **定时任务（Scheduler）**：按照设定的时间自动执行下载任务，如每天凌晨 3 点自动下载
+
+### 4.4 方式二：手动编辑配置
+
+如果你熟悉 JSON 格式，可以直接编辑配置文件。
+
+#### 步骤 1：打开配置文件
+
+配置文件位于：`config/standalone.config.json`
+
+```bash
+# 使用你喜欢的编辑器
+nano config/standalone.config.json
+# 或
+vim config/standalone.config.json
+# 或使用 VS Code
+code config/standalone.config.json
+```
+
+#### 步骤 2：编辑配置
+
+配置文件是一个 JSON 文件，格式如下：
 
 ```json
 {
@@ -521,12 +609,12 @@ node dist/index.js random --novel
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
-| `type` | 内容类型 | `"illustration"`（插画） |
+| `type` | 内容类型 | `"illustration"`（插画）或 `"novel"`（小说） |
 | `tag` | 搜索标签 | `"風景"`、`"イラスト"`、`"原神"` |
 | `limit` | 下载数量 | `20`（每次下载 20 个作品） |
 | `searchTarget` | 搜索方式 | `"partial_match_for_tags"`（部分匹配） |
 
-### 3.3 高级筛选配置
+### 4.5 高级筛选配置
 
 #### 按收藏数筛选
 
@@ -592,7 +680,7 @@ node dist/index.js random --novel
 - 日期：2024 年
 - 搜索方式：部分匹配标签
 
-### 3.4 多标签下载
+### 4.6 多标签下载
 
 可以同时配置多个标签：
 
@@ -623,41 +711,163 @@ node dist/index.js random --novel
 
 **说明**：每次运行会下载三个标签的作品
 
-### 3.5 执行下载
+### 4.7 验证配置
 
-#### 方式 1：测试下载（推荐首次使用）
+配置完成后，建议验证配置是否正确：
 
 ```bash
-./scripts/pixiv.sh test
+# 验证配置
+./scripts/config-manager.sh validate
+
+# 或查看配置
+./scripts/config-manager.sh show
 ```
 
-**功能**：
-- 下载少量作品（1-2 个）验证配置
-- 快速检查是否配置正确
+---
 
-#### 方式 2：执行一次下载
+## 第五章：开始下载
+
+### 5.1 测试下载（推荐首次使用）
+
+在正式下载之前，建议先运行一次测试，确保配置正确。
+
+#### 为什么需要测试？
+
+测试可以验证：
+- ✅ 登录是否成功（认证信息是否正确）
+- ✅ 配置是否正确（标签是否存在，数量设置是否合理）
+- ✅ 网络连接是否正常（能否访问 Pixiv API）
+- ✅ 下载功能是否正常（能否成功下载文件）
+
+#### 运行测试
 
 ```bash
+# 推荐：使用便捷脚本
+./scripts/pixiv.sh test
+
+# 或使用 npm 命令
+npm run test
+```
+
+#### 如何判断测试成功？
+
+如果一切正常，你会看到类似以下的输出：
+
+```
+════════════════════════════════════════════════════════════════
+📋 加载配置
+════════════════════════════════════════════════════════════════
+
+✓ 下载目录: ./downloads/illustrations
+✓ 数据库路径: ./data/pixiv-downloader.db
+✓ 下载目标: 1 个
+  - 类型: illustration
+  - 标签: イラスト
+  - 数量限制: 1
+
+════════════════════════════════════════════════════════════════
+🚀 开始下载
+════════════════════════════════════════════════════════════════
+
+[INFO] 开始下载任务
+[INFO] Processing illustration tag イラスト
+[INFO] Refreshed Pixiv access token
+[INFO] Saved illustration 137216582 page 1
+[INFO] Illustration tag イラスト completed {"downloaded":1}
+[INFO] 下载任务完成
+
+════════════════════════════════════════════════════════════════
+✅ 验证下载结果
+════════════════════════════════════════════════════════════════
+
+✓ 成功下载 1 个文件：
+  - 137216582_睡醒猫猫早苗_1.png (4001.32 KB)
+
+🎉 测试完成！
+```
+
+**关键信息解读**：
+- `✓ 下载目录` - 文件保存位置
+- `✓ 下载目标: 1 个` - 配置的下载数量
+- `[INFO] Saved illustration` - 成功下载作品
+- `✓ 成功下载 1 个文件` - 最终验证结果
+
+### 5.2 快速体验：随机下载
+
+如果你想快速体验工具功能，可以下载一个随机作品：
+
+```bash
+# 随机下载插画（默认）
+./scripts/pixiv.sh random
+
+# 或使用 npm 命令
+npm run random
+```
+
+**功能说明**：
+- 🎲 **自动选择标签**：从热门标签中随机选择一个（如：風景、イラスト、オリジナル等）
+- 🔍 **随机选择作品**：从搜索结果中随机选择一个作品
+- 🔐 **自动登录**：如果未登录，会自动引导登录
+- 📥 **快速体验**：下载 1 个随机作品，快速了解工具功能
+
+#### 随机下载小说
+
+```bash
+# 随机下载小说
+npm run random -- --novel
+# 或
+npm run random -- -n
+```
+
+**功能说明**：
+- 📚 从热门小说标签中随机选择一个（如：小説、オリジナル、ホラー等）
+- 🎲 从搜索结果中随机选择一个小说
+- 📝 下载的小说保存为文本文件（`.txt`），包含标题、作者、标签等信息
+- 💾 文件保存在 `downloads/downloads/novels/` 目录中
+
+### 5.3 正式下载
+
+测试成功后，可以开始正式下载了。
+
+#### 方式 1：执行一次下载（推荐）
+
+根据你的配置文件设置，执行一次下载任务：
+
+```bash
+# 使用便捷脚本（推荐）
 ./scripts/pixiv.sh once
+
+# 或使用 npm 命令
+npm run download
 ```
 
 **功能**：
 - 根据配置下载所有目标
 - 下载完成后退出
 
-#### 方式 3：使用主控脚本（推荐 ⭐）
+#### 方式 2：启动定时任务
+
+如果你配置了定时任务，可以启动后台运行：
 
 ```bash
-./scripts/pixiv.sh once
+# 启动定时任务（后台持续运行）
+./scripts/pixiv.sh run
+
+# 或使用 npm 命令
+npm run scheduler
 ```
 
-#### 方式 4：使用 npm 命令
+**功能**：
+- 启动定时任务
+- 后台持续运行
+- 根据 Cron 表达式自动执行
 
-```bash
-npm run download
-```
+> 💡 **术语解释**：
+> - **定时任务（Scheduler）**：按照设定的时间自动执行下载任务，如每天凌晨 3 点自动下载
+> - **Cron 表达式**：用于定义定时任务的时间规则，如 `0 3 * * *` 表示每天凌晨 3 点
+> - **后台运行**：程序在后台持续运行，不会占用终端窗口
 
-### 3.6 查看下载结果
+### 5.4 查看下载结果
 
 #### 文件位置
 
@@ -665,9 +875,12 @@ npm run download
 
 ```
 downloads/
-└── illustrations/
-    ├── 137216582_睡醒猫猫早苗_1.png
-    ├── 137216582_睡醒猫猫早苗_2.png
+├── illustrations/    # 插画文件
+│   ├── 137216582_睡醒猫猫早苗_1.png
+│   ├── 137216582_睡醒猫猫早苗_2.png
+│   └── ...
+└── novels/           # 小说文件
+    ├── 123456_小说标题.txt
     └── ...
 ```
 
@@ -679,7 +892,23 @@ downloads/
 
 **示例**：
 - `137216582_睡醒猫猫早苗_1.png`
-- `137216582_睡醒猫猫早苗_2.png`
+  - `137216582` - 作品 ID
+  - `睡醒猫猫早苗` - 作品标题
+  - `1` - 页码（如果是多页作品）
+  - `.png` - 文件格式
+
+#### 查看下载的文件
+
+```bash
+# 查看下载目录（列出所有文件）
+ls downloads/illustrations/
+
+# 查看文件详情（包括文件大小、修改时间等）
+ls -lh downloads/illustrations/
+
+# 查看文件数量
+ls downloads/illustrations/ | wc -l
+```
 
 #### 查看下载记录
 
@@ -688,7 +917,7 @@ downloads/
 sqlite3 data/pixiv-downloader.db "SELECT * FROM downloaded_artworks LIMIT 10;"
 ```
 
-### 3.7 智能去重和错误处理
+### 5.5 智能去重和错误处理
 
 PixivFlow 会自动记录已下载的作品，避免重复下载：
 
@@ -725,169 +954,24 @@ PixivFlow 还内置了完善的错误处理机制，自动处理无法下载的�
 
 ---
 
-## 第四章：下载小说作品
+## 第六章：定时任务
 
-### 4.1 配置小说下载
-
-小说下载配置与插画类似，只需将 `type` 改为 `"novel"`：
-
-```json
-{
-  "targets": [
-    {
-      "type": "novel",
-      "tag": "小説",
-      "limit": 10,
-      "searchTarget": "partial_match_for_tags"
-    }
-  ]
-}
-```
-
-### 4.2 小说筛选配置
-
-#### 按收藏数筛选
-
-```json
-{
-  "targets": [
-    {
-      "type": "novel",
-      "tag": "小説",
-      "limit": 20,
-      "minBookmarks": 100
-    }
-  ]
-}
-```
-
-#### 按日期范围筛选
-
-```json
-{
-  "targets": [
-    {
-      "type": "novel",
-      "tag": "オリジナル",
-      "limit": 15,
-      "startDate": "2024-01-01",
-      "endDate": "2024-12-31"
-    }
-  ]
-}
-```
-
-### 4.3 同时下载插画和小说
-
-可以在 `targets` 数组中同时配置插画和小说：
-
-```json
-{
-  "targets": [
-    {
-      "type": "illustration",
-      "tag": "風景",
-      "limit": 20
-    },
-    {
-      "type": "novel",
-      "tag": "小説",
-      "limit": 10
-    }
-  ]
-}
-```
-
-### 4.4 小说文件格式
-
-下载的小说保存为文本文件（`.txt`），包含：
-
-```
-Title: 小说标题
-Author: 作者名称
-Author ID: 作者ID
-Tag: 标签名称
-Created: 2024-01-01T00:00:00.000Z
-
----
-
-小说正文内容...
-```
-
-**文件位置**：
-
-```
-downloads/
-└── novels/
-    ├── 123456_小说标题.txt
-    └── ...
-```
-
-### 4.5 执行小说下载
-
-与插画下载相同：
-
-```bash
-# 测试下载
-./scripts/pixiv.sh test
-
-# 执行一次下载
-./scripts/pixiv.sh once
-```
-
-### 4.6 快速体验：随机下载小说
-
-如果你想快速体验小说下载功能，可以使用随机下载：
-
-```bash
-# 随机下载一个小说作品
-npm run random -- --novel
-# 或
-npm run random -- -n
-
-# 或使用完整命令
-node dist/index.js random --novel
-```
-
-**功能说明**：
-- 📚 从热门小说标签列表中随机选择一个标签（如：小説、オリジナル、ホラー、ファンタジー等）
-- 🔍 搜索该标签下的作品
-- 🎲 从搜索结果中随机选择一个小说
-- 📥 下载该小说到 `downloads/downloads/novels/` 目录
-
-**示例输出**：
-
-```
-[INFO] Checking authentication status...
-[INFO] Valid refresh token found in config
-[INFO] Randomly selected tag: ホラー (type: novel)
-[INFO] Starting random novel download...
-[INFO] Processing novel tag ホラー
-[INFO] Found 100 search results
-[INFO] Randomly selected novel 26396544 from 100 remaining results
-[INFO] Saved novel 26396544
-[INFO] Random novel download completed!
-```
-
-**适用场景**：
-- 第一次使用，想快速了解小说下载功能
-- 想发现新的小说作品，不指定特定标签
-- 测试工具是否正常工作
-
----
-
-## 第五章：配置定时任务
-
-### 5.1 什么是定时任务？
+### 6.1 什么是定时任务？
 
 定时任务允许 PixivFlow 在指定时间自动运行下载，无需人工干预。
+
+**简单来说**：
+- 你设置一个时间（如每天凌晨 3 点）
+- PixivFlow 会在那个时间自动执行下载
+- 你不需要手动运行命令
+- 程序会在后台持续运行
 
 **适用场景**：
 - 📅 每天自动收集新作品
 - 📅 每周备份收藏
 - 📅 定期更新素材库
 
-### 5.2 启用定时任务
+### 6.2 启用定时任务
 
 编辑 `config/standalone.config.json`：
 
@@ -909,7 +993,7 @@ node dist/index.js random --novel
 | `cron` | Cron 表达式 | `"0 3 * * *"`（每天 3:00） |
 | `timezone` | 时区 | `"Asia/Shanghai"`（中国标准时间） |
 
-### 5.3 Cron 表达式详解
+### 6.3 Cron 表达式详解
 
 Cron 表达式格式：`分 时 日 月 周`
 
@@ -980,7 +1064,7 @@ Cron 表达式格式：`分 时 日 月 周`
 
 **说明**：每周日 0:00（日本时间）执行
 
-### 5.4 启动定时任务
+### 6.4 启动定时任务
 
 #### 方式 1：使用主脚本（推荐）
 
@@ -993,19 +1077,13 @@ Cron 表达式格式：`分 时 日 月 周`
 - 后台持续运行
 - 根据 Cron 表达式自动执行
 
-#### 方式 2：使用主控脚本（推荐 ⭐）
-
-```bash
-./scripts/pixiv.sh run
-```
-
-#### 方式 3：使用 npm 命令
+#### 方式 2：使用 npm 命令
 
 ```bash
 npm run scheduler
 ```
 
-#### 方式 4：使用 PM2（服务器环境推荐）
+#### 方式 3：使用 PM2（服务器环境推荐）
 
 ```bash
 # 安装 PM2
@@ -1021,7 +1099,7 @@ pm2 save
 pm2 startup
 ```
 
-### 5.5 查看定时任务状态
+### 6.5 查看定时任务状态
 
 ```bash
 # 查看运行状态
@@ -1035,7 +1113,7 @@ pm2 status
 pm2 logs pixivflow
 ```
 
-### 5.6 停止定时任务
+### 6.6 停止定时任务
 
 ```bash
 # 停止运行
@@ -1045,7 +1123,7 @@ pm2 logs pixivflow
 pm2 stop pixivflow
 ```
 
-### 5.7 定时任务最佳实践
+### 6.7 定时任务最佳实践
 
 #### 1. 选择合适的时间
 
@@ -1079,9 +1157,139 @@ pm2 stop pixivflow
 
 ---
 
-## 第六章：高级自动化设置
+## 第七章：高级功能
 
-### 6.1 服务器部署
+### 7.1 多标签下载
+
+可以在 `targets` 数组中配置多个标签：
+
+```json
+{
+  "targets": [
+    {
+      "type": "illustration",
+      "tag": "風景",
+      "limit": 20,
+      "minBookmarks": 1000
+    },
+    {
+      "type": "illustration",
+      "tag": "イラスト",
+      "limit": 30,
+      "minBookmarks": 5000
+    },
+    {
+      "type": "novel",
+      "tag": "小説",
+      "limit": 10
+    }
+  ]
+}
+```
+
+**说明**：每次运行会依次下载三个标签的作品
+
+### 7.2 目录组织功能
+
+PixivFlow 支持多种目录组织方式，让文件自动分类存储：
+
+```json
+{
+  "storage": {
+    "illustrationDirectory": "./downloads/illustrations",
+    "illustrationOrganization": "byDateAndAuthor",
+    "novelDirectory": "./downloads/novels",
+    "novelOrganization": "byDate"
+  }
+}
+```
+
+**支持的组织方式**：
+
+| 模式 | 说明 | 目录结构示例 |
+|------|------|-------------|
+| `flat` | 扁平结构（默认） | `illustrations/123456_标题_1.jpg` |
+| `byAuthor` | 按作者组织 | `illustrations/作者名/123456_标题_1.jpg` |
+| `byTag` | 按标签组织 | `illustrations/标签名/123456_标题_1.jpg` |
+| `byDate` | 按日期组织 | `illustrations/2024-12/123456_标题_1.jpg` |
+| `byAuthorAndTag` | 按作者和标签 | `illustrations/作者名/标签名/123456_标题_1.jpg` |
+| `byDateAndAuthor` | 按日期和作者 | `illustrations/2024-12/作者名/123456_标题_1.jpg` |
+
+> 💡 **提示**：使用组织模式可以让下载的文件更有条理，便于管理和查找。
+
+### 7.3 使用代理
+
+如果需要通过代理访问 Pixiv，有两种方式：
+
+#### 方式 1：使用环境变量（推荐 ⭐）
+
+程序会自动从环境变量读取代理配置，无需修改配置文件：
+
+```bash
+# 设置代理环境变量（优先级：all_proxy > https_proxy > http_proxy）
+export all_proxy=socks5://127.0.0.1:6153
+# 或
+export https_proxy=http://127.0.0.1:6152
+# 或
+export http_proxy=http://127.0.0.1:6152
+
+# 然后运行程序
+./scripts/pixiv.sh run
+```
+
+**支持的代理协议**：
+- `http://` - HTTP 代理
+- `https://` - HTTPS 代理
+- `socks5://` - SOCKS5 代理
+- `socks4://` - SOCKS4 代理
+
+**环境变量优先级**：
+1. `all_proxy` 或 `ALL_PROXY`（最高优先级）
+2. `https_proxy` 或 `HTTPS_PROXY`
+3. `http_proxy` 或 `HTTP_PROXY`
+
+#### 方式 2：配置文件设置
+
+```json
+{
+  "network": {
+    "proxy": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 7890,
+      "protocol": "http"
+    }
+  }
+}
+```
+
+**注意**：如果配置文件中已启用代理，环境变量不会覆盖配置文件中的设置。
+
+**常见代理配置**：
+
+| 代理软件 | 协议 | 地址 | 端口 |
+|---------|------|------|------|
+| Clash | HTTP | `127.0.0.1` | `7890` |
+| V2Ray | HTTP | `127.0.0.1` | `10809` |
+| Shadowsocks | SOCKS5 | `127.0.0.1` | `1080` |
+
+### 7.4 服务器部署
+
+#### 使用 PM2（推荐）
+
+```bash
+# 安装 PM2
+npm install -g pm2
+
+# 启动定时任务
+pm2 start "npm run scheduler" --name pixivflow
+
+# 保存 PM2 配置
+pm2 save
+
+# 设置开机自启
+pm2 startup
+```
 
 #### 使用 systemd（Linux）
 
@@ -1123,26 +1331,9 @@ sudo systemctl status pixivflow
 sudo journalctl -u pixivflow -f
 ```
 
-#### 使用 PM2（推荐）
+### 7.5 自动监控和维护
 
-```bash
-# 安装 PM2
-npm install -g pm2
-
-# 启动应用
-pm2 start "npm run scheduler" --name pixivflow
-
-# 保存配置
-pm2 save
-
-# 设置开机自启
-pm2 startup
-pm2 save
-```
-
-### 6.2 自动监控
-
-使用自动监控脚本持续监控运行状态：
+#### 自动监控
 
 ```bash
 # 启动监控（默认 60 秒检查一次）
@@ -1162,30 +1353,7 @@ nohup ./scripts/auto-monitor.sh &
 - 错误日志
 - 磁盘空间
 
-### 6.3 自动备份
-
-设置定期自动备份配置和数据：
-
-```bash
-# 立即备份
-./scripts/auto-backup.sh
-
-# 使用 cron 设置定期备份（每天凌晨 2 点）
-crontab -e
-
-# 添加以下行：
-0 2 * * * /path/to/pixivflow/scripts/auto-backup.sh
-```
-
-**备份内容**：
-- 配置文件
-- 数据库文件
-- 下载记录
-- 日志文件
-
-### 6.4 自动维护
-
-定期运行自动维护脚本：
+#### 自动维护
 
 ```bash
 # 运行维护
@@ -1201,101 +1369,27 @@ crontab -e
 - 检查并修复损坏文件
 - 清理临时文件
 
-### 6.5 使用代理
-
-如果需要通过代理访问 Pixiv，有两种方式：
-
-#### 方式 1：使用环境变量（推荐 ⭐）
-
-程序会自动从环境变量读取代理配置，无需修改配置文件：
+#### 自动备份
 
 ```bash
-# 设置代理环境变量（优先级：all_proxy > https_proxy > http_proxy）
-export all_proxy=socks5://127.0.0.1:6153
-# 或
-export https_proxy=http://127.0.0.1:6152
-# 或
-export http_proxy=http://127.0.0.1:6152
+# 立即备份
+./scripts/auto-backup.sh
 
-# 然后运行程序
-./scripts/pixiv.sh run
+# 使用 cron 设置定期备份（每天凌晨 2 点）
+0 2 * * * /path/to/pixivflow/scripts/auto-backup.sh
 ```
 
-**支持的代理协议**：
-- `http://` - HTTP 代理
-- `https://` - HTTPS 代理
-- `socks5://` - SOCKS5 代理
-- `socks4://` - SOCKS4 代理
-
-**环境变量优先级**：
-1. `all_proxy` 或 `ALL_PROXY`（最高优先级）
-2. `https_proxy` 或 `HTTPS_PROXY`
-3. `http_proxy` 或 `HTTP_PROXY`
-
-**Windows (PowerShell)**：
-```powershell
-$env:all_proxy="socks5://127.0.0.1:6153"
-# 或
-$env:https_proxy="http://127.0.0.1:6152"
-```
-
-**Windows (CMD)**：
-```cmd
-set all_proxy=socks5://127.0.0.1:6153
-# 或
-set https_proxy=http://127.0.0.1:6152
-```
-
-#### 方式 2：配置文件设置
-
-```json
-{
-  "network": {
-    "proxy": {
-      "enabled": true,
-      "host": "127.0.0.1",
-      "port": 7890,
-      "protocol": "http"
-    }
-  }
-}
-```
-
-**注意**：如果配置文件中已启用代理，环境变量不会覆盖配置文件中的设置。
-
-**常见代理配置**：
-
-| 代理软件 | 协议 | 地址 | 端口 |
-|---------|------|------|------|
-| Clash | HTTP | `127.0.0.1` | `7890` |
-| V2Ray | HTTP | `127.0.0.1` | `10809` |
-| Shadowsocks | SOCKS5 | `127.0.0.1` | `1080` |
-
-### 6.6 多配置文件管理
-
-可以创建多个配置文件用于不同场景：
-
-```bash
-# 创建不同的配置文件
-config/
-├── standalone.config.json        # 默认配置
-├── landscape.config.json         # 风景插画配置
-├── anime.config.json             # 动漫配置
-└── novel.config.json             # 小说配置
-```
-
-使用时指定配置文件：
-
-```bash
-# 使用环境变量指定配置文件
-PIXIV_DOWNLOADER_CONFIG=config/landscape.config.json npm run download
-```
+**备份内容**：
+- 配置文件
+- 数据库文件
+- 下载记录
+- 日志文件
 
 ---
 
-## 第七章：常见问题解决
+## 第八章：问题解决
 
-### 7.1 登录问题
+### 8.1 登录问题
 
 #### 问题：登录超时
 
@@ -1303,22 +1397,25 @@ PIXIV_DOWNLOADER_CONFIG=config/landscape.config.json npm run download
 
 **解决方法**：
 
-1. 设置代理（如果在中国大陆）：
-   ```bash
-   export HTTPS_PROXY=http://127.0.0.1:7890
-   npm run login
-   ```
+1. **设置代理**（如果在中国大陆）：
 
-2. 检查网络连接：
-   ```bash
-   ping app-api.pixiv.net
-   ```
+```bash
+export HTTPS_PROXY=http://127.0.0.1:7890
+npm run login
+```
 
-3. 检查 Python 和 gppt：
-   ```bash
-   python3 --version
-   pip3 list | grep gppt
-   ```
+2. **检查网络连接**：
+
+```bash
+ping app-api.pixiv.net
+```
+
+3. **检查 Python 和 gppt**：
+
+```bash
+python3 --version
+pip3 list | grep gppt
+```
 
 #### 问题：认证失败
 
@@ -1327,21 +1424,21 @@ PIXIV_DOWNLOADER_CONFIG=config/landscape.config.json npm run download
 **解决方法**：
 
 ```bash
-# 重新登录
+# 方法 1：重新登录（推荐）
 npm run login
 
-# 或检查 token 是否过期
-./scripts/config-manager.sh validate
+# 方法 2：重新运行配置向导
+./scripts/easy-setup.sh
 ```
 
-### 7.2 下载问题
+### 8.2 下载问题
 
 #### 问题：找不到匹配的作品
 
 **症状**：搜索结果为空或下载数量为 0
 
 **可能原因**：
-- 标签拼写错误
+- 标签拼写错误或不存在
 - 筛选条件过于严格
 - 网络连接问题
 
@@ -1349,7 +1446,7 @@ npm run login
 
 1. 尝试常见标签：`イラスト`、`風景`、`art`
 2. 降低 `minBookmarks` 值
-3. 检查网络连接
+3. 检查网络连接和防火墙设置
 4. 在 Pixiv 网站上搜索确认标签存在
 
 #### 问题：下载速度慢
@@ -1366,31 +1463,6 @@ npm run login
 3. 增加重试次数和超时时间
 4. 使用代理服务器
 
-#### 问题：下载失败
-
-**症状**：部分作品下载失败
-
-**解决方法**：
-
-1. 查看详细日志：
-   ```bash
-   ./scripts/pixiv.sh logs | tail -n 100
-   ```
-
-2. 增加重试次数：
-   ```json
-   {
-     "network": {
-       "retries": 5
-     }
-   }
-   ```
-
-3. 检查磁盘空间：
-   ```bash
-   df -h
-   ```
-
 #### 问题：遇到已删除或私有的作品
 
 **症状**：下载过程中提示某些作品无法下载
@@ -1398,32 +1470,25 @@ npm run login
 **说明**：
 PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 
-- ✅ **自动跳过已删除作品**：如果作品已被作者删除（404 错误），会自动跳过并继续下载其他作品
+- ✅ **自动跳过已删除作品**：如果作品已被作者删除，会自动跳过并继续下载其他作品
 - ✅ **自动跳过私有作品**：如果作品设置为私有或需要特殊权限，会自动跳过
-- ✅ **自动跳过无法访问的作品**：如果作品因其他原因无法访问，会自动跳过
+- ✅ **自动跳过无法访问的作品**：如果作品因其他原因无法访问（如 404 错误），会自动跳过
 - ✅ **记录跳过数量**：在下载完成后会显示跳过的作品数量
 - ✅ **不会中断流程**：单个作品下载失败不会影响整个下载任务
 
 **日志示例**：
 
 ```
-[DEBUG] Novel 123456 not found (deleted or private), skipping
-[WARN] Failed to download novel 789012, { error: 'Network timeout' }
 [INFO] Skipped 3 novel(s) (deleted, private, or inaccessible)
-[INFO] Novel tag 小説 completed, { downloaded: 47 }
+[INFO] Illustration tag 風景 completed, { downloaded: 47 }
 ```
 
-**日志级别说明**：
-- **DEBUG 级别**：404 错误（已删除或私有作品）使用 debug 级别，默认不显示，可通过日志级别配置查看
-- **WARN 级别**：其他错误（如网络超时、权限问题等）使用 warn 级别，会显示在日志中
-- **INFO 级别**：任务完成时显示跳过的作品总数和成功下载的数量
+**说明**：
+- 404 错误会使用 `debug` 级别日志（静默跳过）
+- 其他错误会使用 `warn` 级别日志（记录但继续）
+- 所有跳过的作品数量会在任务结束时统一显示
 
-**这是正常行为**：
-- 在批量下载时，遇到已删除或私有的作品是正常现象
-- PixivFlow 会自动处理这些情况，无需手动干预
-- 下载任务会继续执行，直到完成所有可下载的作品
-
-### 7.3 定时任务问题
+### 8.3 定时任务问题
 
 #### 问题：定时任务没有运行
 
@@ -1431,29 +1496,34 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 
 **解决方法**：
 
-1. 检查配置：
-   ```bash
-   ./scripts/config-manager.sh validate
-   ```
+1. **检查配置**：
 
-2. 查看运行状态：
-   ```bash
-   ./scripts/pixiv.sh status
-   ```
+```bash
+./scripts/config-manager.sh validate
+```
 
-3. 检查日志：
-   ```bash
-   ./scripts/pixiv.sh logs
-   ```
+2. **查看运行状态**：
 
-4. 确保程序持续运行：
-   ```bash
-   # 使用 PM2 管理进程
-   pm2 start "npm run scheduler" --name pixivflow
-   pm2 save
-   ```
+```bash
+./scripts/pixiv.sh status
+```
 
-### 7.4 配置问题
+3. **检查日志**：
+
+```bash
+./scripts/pixiv.sh logs
+```
+
+4. **确保程序持续运行**：
+
+```bash
+# 使用 PM2 管理进程
+pm2 start "npm run scheduler" --name pixivflow
+pm2 save
+pm2 startup
+```
+
+### 8.4 配置问题
 
 #### 问题：配置文件格式错误
 
@@ -1461,34 +1531,39 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 
 **解决方法**：
 
-1. 验证配置：
-   ```bash
-   ./scripts/config-manager.sh validate
-   ```
+1. **验证配置**：
 
-2. 查看配置：
-   ```bash
-   ./scripts/config-manager.sh show
-   ```
+```bash
+./scripts/config-manager.sh validate
+```
 
-3. 使用配置向导重新配置：
-   ```bash
-   ./scripts/easy-setup.sh
-   ```
+2. **查看配置**：
 
-### 7.5 获取帮助
+```bash
+./scripts/config-manager.sh show
+```
+
+3. **使用配置向导重新配置**：
+
+```bash
+./scripts/easy-setup.sh
+```
+
+### 8.5 获取帮助
 
 如果问题仍未解决：
 
 1. **查看日志**：
-   ```bash
-   ./scripts/pixiv.sh logs
-   ```
+
+```bash
+./scripts/pixiv.sh logs
+```
 
 2. **运行健康检查**：
-   ```bash
-   ./scripts/pixiv.sh health
-   ```
+
+```bash
+./scripts/pixiv.sh health
+```
 
 3. **查看文档**：
    - [README.md](README.md) - 项目主文档
@@ -1501,13 +1576,13 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 
 ---
 
-## 第八章：最佳实践
+## 第九章：最佳实践
 
-### 8.1 安全建议
+### 9.1 安全建议
 
 #### 保护配置文件
 
-- ✅ **不要分享配置文件**：`config/standalone.config.json` 包含敏感认证信息
+- ✅ **不要分享配置文件**：`config/standalone.config.json` 包含敏感认证信息（refresh_token）
 - ✅ **不要提交到 Git**：确保配置文件在 `.gitignore` 中（已默认排除）
 - ✅ **定期备份**：使用 `./scripts/auto-backup.sh` 备份配置和数据
 - ✅ **使用强密码**：保护你的 Pixiv 账号
@@ -1521,7 +1596,7 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 2. 修改 Pixiv 账户密码
 3. 重新运行配置向导获取新的 token
 
-### 8.2 性能优化
+### 9.2 性能优化
 
 #### 合理设置并发数
 
@@ -1532,6 +1607,11 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
   }
 }
 ```
+
+**建议**：
+- 网络良好：3-5 个并发
+- 网络一般：1-3 个并发
+- 避免设置过高，可能导致被限流
 
 #### 控制下载数量
 
@@ -1547,6 +1627,11 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 }
 ```
 
+**建议**：
+- 单次下载：20-50 个作品
+- 定时任务：10-30 个作品
+- 避免设置过大，可能导致下载时间过长
+
 #### 调整超时时间
 
 ```json
@@ -1557,7 +1642,12 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 }
 ```
 
-### 8.3 存储管理
+**建议**：
+- 网络良好：30000ms（30秒）
+- 网络较慢：60000ms（60秒）
+- 使用代理：根据代理速度调整
+
+### 9.3 存储管理
 
 #### 定期清理日志
 
@@ -1568,7 +1658,9 @@ PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
 
 #### 使用目录组织功能分类存储（推荐）
 
-PixivFlow 支持多种目录组织方式，让文件自动分类存储：
+PixivFlow 支持多种目录组织方式，让文件自动分类存储，便于管理和查找。
+
+**配置示例**：
 
 ```json
 {
@@ -1582,23 +1674,69 @@ PixivFlow 支持多种目录组织方式，让文件自动分类存储：
 ```
 
 **支持的组织方式**：
-- `flat` - 扁平结构（默认）
-- `byAuthor` - 按作者组织
-- `byTag` - 按标签组织
-- `byDate` - 按日期组织（YYYY-MM）
-- `byAuthorAndTag` - 按作者和标签
-- `byDateAndAuthor` - 按日期和作者
 
-**目录结构示例**（使用 `byDateAndAuthor`）：
+| 模式 | 说明 | 适用场景 | 目录结构示例 |
+|------|------|---------|-------------|
+| `flat` | 扁平结构（默认） | 文件少，不需要分类 | `illustrations/123456_标题_1.jpg` |
+| `byAuthor` | 按作者组织 | 关注特定作者 | `illustrations/作者名/123456_标题_1.jpg` |
+| `byTag` | 按标签组织 | 按主题分类 | `illustrations/風景/123456_标题_1.jpg` |
+| `byDate` | 按日期组织（YYYY-MM） | 按时间顺序查看 | `illustrations/2024-12/123456_标题_1.jpg` |
+| `byAuthorAndTag` | 按作者和标签 | 既想按作者又想按主题 | `illustrations/作者名/風景/123456_标题_1.jpg` |
+| `byDateAndAuthor` | 按日期和作者 | 按时间顺序，再按作者分类 | `illustrations/2024-12/作者名/123456_标题_1.jpg` |
+
+**详细目录结构示例**：
+
+**1. 使用 `byAuthor`（按作者组织）**：
+```
+downloads/
+└── illustrations/
+    ├── 作者A/
+    │   ├── 123456_作品1_1.jpg
+    │   └── 123457_作品2_1.jpg
+    └── 作者B/
+        └── 123458_作品3_1.jpg
+```
+
+**2. 使用 `byTag`（按标签组织）**：
+```
+downloads/
+└── illustrations/
+    ├── 風景/
+    │   ├── 123456_风景1_1.jpg
+    │   └── 123457_风景2_1.jpg
+    └── イラスト/
+        └── 123458_插画1_1.jpg
+```
+
+**3. 使用 `byDateAndAuthor`（按日期和作者组织）**：
 ```
 downloads/
 └── illustrations/
     └── 2024-12/
         ├── 作者A/
-        │   └── 123456_作品_1.jpg
+        │   ├── 123456_作品1_1.jpg
+        │   └── 123457_作品2_1.jpg
         └── 作者B/
-            └── 123457_作品_1.jpg
+            └── 123458_作品3_1.jpg
 ```
+
+**4. 使用 `byAuthorAndTag`（按作者和标签组织）**：
+```
+downloads/
+└── illustrations/
+    └── 作者A/
+        ├── 風景/
+        │   └── 123456_风景作品_1.jpg
+        └── イラスト/
+            └── 123457_插画作品_1.jpg
+```
+
+**选择建议**：
+- 📁 **文件少（< 1000）**：使用 `flat` 或 `byAuthor`
+- 📁 **关注特定作者**：使用 `byAuthor` 或 `byDateAndAuthor`
+- 📁 **按主题分类**：使用 `byTag` 或 `byAuthorAndTag`
+- 📁 **长期使用**：使用 `byDate` 或 `byDateAndAuthor`，便于按时间查找
+- 📁 **大量文件**：使用 `byDateAndAuthor` 或 `byAuthorAndTag`，避免单目录文件过多
 
 详细说明请参考 [配置指南](STANDALONE-SETUP-GUIDE.md#4-存储配置)。
 
@@ -1609,7 +1747,12 @@ downloads/
 0 2 * * * /path/to/pixivflow/scripts/auto-backup.sh
 ```
 
-### 8.4 错误处理机制
+**备份内容**：
+- 配置文件（包含认证信息）
+- 数据库文件（下载记录）
+- 日志文件
+
+### 9.4 错误处理机制
 
 #### 自动错误处理
 
@@ -1642,7 +1785,7 @@ PixivFlow 内置了完善的错误处理机制，确保下载任务的稳定性�
 - ✅ 404 错误是正常现象，无需担心
 - ✅ 其他错误（如网络超时）可能需要调整网络配置
 
-### 8.5 监控和维护
+### 9.5 监控和维护
 
 #### 定期健康检查
 
@@ -1651,6 +1794,14 @@ PixivFlow 内置了完善的错误处理机制，确保下载任务的稳定性�
 ./scripts/health-check.sh
 ```
 
+**检查内容**：
+- Node.js 和 npm 版本
+- Python 版本
+- 依赖安装状态
+- 配置文件有效性
+- 目录权限
+- 网络连接
+
 #### 监控运行状态
 
 ```bash
@@ -1658,14 +1809,24 @@ PixivFlow 内置了完善的错误处理机制，确保下载任务的稳定性�
 ./scripts/auto-monitor.sh
 ```
 
+**监控内容**：
+- 进程运行状态
+- CPU 和内存使用
+- 下载进度
+- 错误日志
+- 磁盘空间
+
 #### 查看下载统计
 
 ```bash
 # 使用 SQLite 查看
 sqlite3 data/pixiv-downloader.db "SELECT COUNT(*) FROM downloaded_artworks;"
+
+# 查看最近下载的作品
+sqlite3 data/pixiv-downloader.db "SELECT * FROM downloaded_artworks ORDER BY created_at DESC LIMIT 10;"
 ```
 
-### 8.6 使用建议
+### 9.6 使用建议
 
 #### 首次使用
 
@@ -1678,12 +1839,14 @@ sqlite3 data/pixiv-downloader.db "SELECT COUNT(*) FROM downloaded_artworks;"
 1. ✅ 定期检查运行状态：`./scripts/pixiv.sh status`
 2. ✅ 查看日志：`./scripts/pixiv.sh logs`
 3. ✅ 定期备份配置和数据
+4. ✅ 定期清理旧日志文件
 
 #### 服务器部署
 
 1. ✅ 使用 PM2 或 systemd 管理进程
 2. ✅ 设置自动监控和备份
 3. ✅ 定期检查磁盘空间和日志
+4. ✅ 配置日志轮转，避免日志文件过大
 
 ---
 
@@ -1691,13 +1854,14 @@ sqlite3 data/pixiv-downloader.db "SELECT COUNT(*) FROM downloaded_artworks;"
 
 | 文档 | 说明 |
 |------|------|
-| [README.md](README.md) | 项目主文档 |
-| [START_HERE.md](START_HERE.md) | 新手完整指南 |
-| [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手 |
-| [LOGIN_GUIDE.md](LOGIN_GUIDE.md) | 登录详解 |
-| [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md) | 配置详解 |
-| [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | 脚本详解 |
-| [TEST_GUIDE.md](TEST_GUIDE.md) | 测试指南 |
+| [README.md](README.md) | 项目主文档，包含项目介绍和快速开始 |
+| [START_HERE.md](START_HERE.md) | 新手完整指南，从安装到使用 |
+| [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手指南 |
+| [LOGIN_GUIDE.md](LOGIN_GUIDE.md) | 登录详解，包含各种登录方式 |
+| [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md) | 配置详解，包含所有配置选项 |
+| [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | 脚本详解，包含所有可用脚本 |
+| [TEST_GUIDE.md](TEST_GUIDE.md) | 测试指南，帮助验证安装和配置 |
+| [RANKING_DOWNLOAD_GUIDE.md](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
 
 ---
 
@@ -1708,4 +1872,3 @@ sqlite3 data/pixiv-downloader.db "SELECT COUNT(*) FROM downloaded_artworks;"
 Made with ❤️ by [zoidberg-xgd](https://github.com/zoidberg-xgd)
 
 </div>
-
