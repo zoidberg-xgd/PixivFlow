@@ -335,7 +335,6 @@ Detailed guide: [Script Usage Guide](SCRIPTS_GUIDE.md)
 | [📝 CHANGELOG (中文)](CHANGELOG.md) | 版本更新日志 |
 | [🤝 CONTRIBUTING](CONTRIBUTING_EN.md) | Contributing guide |
 | [🤝 CONTRIBUTING (中文)](CONTRIBUTING.md) | 贡献指南 |
-| [📊 TEST_REPORT](TEST_REPORT.md) | Test report |
 
 ---
 
@@ -946,14 +945,6 @@ npm run download
 ```
 
 **Note**: If proxy is enabled in config file, environment variables won't override config file settings.
-
-**Common Proxy Configurations**:
-
-| Proxy Software | Protocol | Address | Port |
-|----------------|----------|---------|------|
-| Clash | HTTP | `127.0.0.1` | `7890` |
-| V2Ray | HTTP | `127.0.0.1` | `10809` |
-| Shadowsocks | SOCKS5 | `127.0.0.1` | `1080` |
 
 ---
 

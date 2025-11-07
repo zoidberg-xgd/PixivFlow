@@ -335,7 +335,6 @@ npm run login
 | [📝 CHANGELOG (EN)](CHANGELOG_EN.md) | Version Changelog |
 | [🤝 CONTRIBUTING](CONTRIBUTING.md) | 贡献指南 |
 | [🤝 CONTRIBUTING (EN)](CONTRIBUTING_EN.md) | Contributing Guide |
-| [📊 TEST_REPORT](TEST_REPORT.md) | 测试报告 |
 
 ---
 
@@ -946,14 +945,6 @@ npm run download
 ```
 
 **注意**：如果配置文件中已启用代理，环境变量不会覆盖配置文件中的设置。
-
-**常见代理配置**：
-
-| 代理软件 | 协议 | 地址 | 端口 |
-|---------|------|------|------|
-| Clash | HTTP | `127.0.0.1` | `7890` |
-| V2Ray | HTTP | `127.0.0.1` | `10809` |
-| Shadowsocks | SOCKS5 | `127.0.0.1` | `1080` |
 
 ---
 
