@@ -30,6 +30,180 @@ class DownloadManager {
             }
         }
     }
+    /**
+     * Calculate popularity score for an illustration or novel
+     * Uses total_bookmarks (preferred) or bookmark_count as primary metric
+     */
+    getPopularityScore(item) {
+        // Prefer total_bookmarks, fallback to bookmark_count
+        const bookmarks = item.total_bookmarks ?? item.bookmark_count ?? 0;
+        // Use view count as secondary metric (weighted lower)
+        const views = item.total_view ?? item.view_count ?? 0;
+        // Combined score: bookmarks are primary, views are secondary (divide by 1000 to normalize)
+        return bookmarks + (views / 1000);
+    }
+    /**
+     * Sort items by popularity and log top results
+     */
+    sortByPopularityAndLog(items, limit, itemType) {
+        if (items.length === 0) {
+            return;
+        }
+        items.sort((a, b) => {
+            const scoreA = this.getPopularityScore(a);
+            const scoreB = this.getPopularityScore(b);
+            return scoreB - scoreA; // Descending order
+        });
+        const topN = Math.min(items.length, limit);
+        const typeLabel = itemType === 'illustration' ? 'Illust' : 'Novel';
+        logger_1.logger.info(`Sorted ${items.length} matching ${itemType}s by popularity`);
+        for (let i = 0; i < topN; i++) {
+            const item = items[i];
+            const bookmarks = item.total_bookmarks ?? item.bookmark_count ?? 0;
+            const views = item.total_view ?? item.view_count ?? 0;
+            logger_1.logger.info(`  Rank ${i + 1}: ${typeLabel} ${item.id} - ${bookmarks} bookmarks, ${views} views`, {
+                [`${itemType}Id`]: item.id,
+                title: item.title,
+                bookmarks,
+                views,
+            });
+        }
+    }
+    /**
+     * Sort items by date (newest first)
+     */
+    sortByDate(items, ascending = false) {
+        items.sort((a, b) => {
+            const dateA = a.create_date ? new Date(a.create_date).getTime() : 0;
+            const dateB = b.create_date ? new Date(b.create_date).getTime() : 0;
+            return ascending ? dateA - dateB : dateB - dateA;
+        });
+    }
+    /**
+     * Process items in parallel with concurrency control
+     */
+    async processInParallel(items, processor, concurrency = 3) {
+        const results = [];
+        // Process in batches to control concurrency
+        for (let i = 0; i < items.length; i += concurrency) {
+            const batch = items.slice(i, i + concurrency);
+            const batchResults = await Promise.allSettled(batch.map(item => processor(item)));
+            for (const result of batchResults) {
+                if (result.status === 'fulfilled') {
+                    results.push({ success: true, result: result.value });
+                }
+                else {
+                    results.push({ success: false, error: result.reason });
+                }
+            }
+        }
+        return results;
+    }
+    /**
+     * Handle download error and determine if should skip
+     */
+    handleDownloadError(error, itemId, itemType, itemTitle) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const is404 = errorMessage.includes('404');
+        if (is404) {
+            logger_1.logger.debug(`${itemType === 'illustration' ? 'Illustration' : 'Novel'} ${itemId} not found (deleted or private), skipping`);
+            return { shouldSkip: true, is404: true, message: errorMessage };
+        }
+        else {
+            logger_1.logger.warn(`Failed to download ${itemType} ${itemId}`, {
+                error: errorMessage,
+                ...(itemTitle && { [`${itemType}Title`]: itemTitle }),
+                [`${itemType}Id`]: itemId,
+            });
+            return { shouldSkip: true, is404: false, message: errorMessage };
+        }
+    }
+    /**
+     * Generic download loop for illustrations or novels
+     */
+    async downloadItems(items, target, itemType, downloadFn) {
+        let downloaded = 0;
+        let skippedCount = 0;
+        const tagForLog = target.filterTag || target.tag || 'unknown';
+        const targetLimit = target.limit || (itemType === 'illustration' ? 10 : 10);
+        // Batch check for already downloaded items to optimize database queries
+        const itemIds = items.map(item => String(item.id));
+        const downloadedIds = this.database.getDownloadedIds(itemIds, itemType);
+        // Random selection mode
+        if (target.random && items.length > 0) {
+            // Filter out already downloaded items
+            let available = items.filter(item => !downloadedIds.has(String(item.id)));
+            if (available.length === 0) {
+                logger_1.logger.info('All search results have already been downloaded');
+            }
+            else {
+                // Try random items until we find one that works or exhaust all options
+                const maxAttempts = Math.min(available.length, 50);
+                const triedIds = new Set();
+                for (let attempt = 0; attempt < maxAttempts && downloaded < targetLimit; attempt++) {
+                    // Filter out already tried items
+                    const remaining = available.filter(item => !triedIds.has(item.id));
+                    if (remaining.length === 0) {
+                        logger_1.logger.info(`All available ${itemType}s have been tried`);
+                        break;
+                    }
+                    // Randomly select from remaining items
+                    const randomIndex = Math.floor(Math.random() * remaining.length);
+                    const randomItem = remaining[randomIndex];
+                    triedIds.add(randomItem.id);
+                    const typeLabel = itemType === 'illustration' ? 'Illustration' : 'Novel';
+                    logger_1.logger.info(`Randomly selected ${typeLabel.toLowerCase()} ${randomItem.id} from ${remaining.length} remaining results (attempt ${attempt + 1}/${maxAttempts})`);
+                    try {
+                        await downloadFn(randomItem, tagForLog);
+                        downloaded++;
+                        if (itemType === 'novel') {
+                            logger_1.logger.info(`Successfully downloaded novel ${randomItem.id} (${downloaded}/${targetLimit})`);
+                        }
+                        // If we only need one and got it, we're done
+                        if (targetLimit === 1) {
+                            break;
+                        }
+                    }
+                    catch (error) {
+                        skippedCount++;
+                        const { shouldSkip } = this.handleDownloadError(error, randomItem.id, itemType, randomItem.title);
+                        if (!shouldSkip) {
+                            // For non-skip errors, continue trying
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // Sequential download mode
+            for (let i = 0; i < items.length && downloaded < targetLimit; i++) {
+                const item = items[i];
+                if (downloadedIds.has(String(item.id))) {
+                    logger_1.logger.debug(`${itemType === 'illustration' ? 'Illustration' : 'Novel'} ${item.id} already downloaded, skipping`);
+                    continue;
+                }
+                try {
+                    await downloadFn(item, tagForLog);
+                    downloaded++;
+                    if (itemType === 'novel') {
+                        logger_1.logger.info(`Successfully downloaded novel ${item.id} (${downloaded}/${targetLimit})`);
+                    }
+                    // If we only need one and got it, we're done
+                    if (targetLimit === 1) {
+                        break;
+                    }
+                }
+                catch (error) {
+                    skippedCount++;
+                    this.handleDownloadError(error, item.id, itemType, item.title);
+                    // Continue to next item
+                    continue;
+                }
+            }
+        }
+        return { downloaded, skipped: skippedCount };
+    }
     async handleIllustrationTarget(target) {
         const mode = target.mode || 'search';
         const displayTag = target.filterTag || target.tag || 'unknown';
@@ -45,128 +219,94 @@ class DownloadManager {
                     rankingDate = this.getYesterdayDate();
                 }
                 // Fetch more illustrations if filtering, to account for deleted/private works
-                const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 5, 50) : target.limit;
+                // Increase fetch limit significantly to get enough matches for sorting
+                const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 10, 100) : target.limit;
                 logger_1.logger.info(`Fetching ranking illustrations (mode: ${rankingMode}, date: ${rankingDate})`);
                 illusts = await this.client.getRankingIllustrations(rankingMode, rankingDate, fetchLimit);
+                // If ranking API returns no results, fallback to search mode with popularity sort
+                if (illusts.length === 0) {
+                    logger_1.logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
+                    logger_1.logger.info(`Searching for illustrations with tag: ${target.filterTag || target.tag || 'unknown'}, sorted by popularity`);
+                    const searchTarget = {
+                        ...target,
+                        tag: target.filterTag || target.tag,
+                        sort: 'popular_desc',
+                        limit: target.filterTag ? Math.max((target.limit || 10) * 2, 50) : target.limit,
+                    };
+                    illusts = await this.client.searchIllustrations(searchTarget);
+                    logger_1.logger.info(`Found ${illusts.length} illustration(s) from search mode (sorted by popularity)`);
+                }
                 // Filter by tag if specified
                 if (target.filterTag) {
                     logger_1.logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
+                    logger_1.logger.info(`Will collect all matching illustrations, then sort by popularity and select top ${target.limit || 10}`);
+                    // Use parallel processing to fetch details with tags
+                    const concurrency = this.config.download?.concurrency || 3;
+                    logger_1.logger.info(`Processing ${illusts.length} illustrations in parallel (concurrency: ${concurrency})`);
+                    const results = await this.processInParallel(illusts, async (illust) => {
+                        const { illust: detail, tags } = await this.client.getIllustDetailWithTags(illust.id);
+                        return { detail, tags, illustId: illust.id };
+                    }, concurrency);
                     const filtered = [];
                     let skippedCount = 0;
-                    for (const illust of illusts) {
-                        if (filtered.length >= (target.limit || 10)) {
-                            break;
-                        }
-                        // Get detail with tags
-                        try {
-                            const { illust: detail, tags } = await this.client.getIllustDetailWithTags(illust.id);
+                    const filterTagLower = target.filterTag.toLowerCase();
+                    for (const result of results) {
+                        if (result.success) {
+                            const { detail, tags } = result.result;
                             const tagNames = tags.map(t => t.name.toLowerCase());
                             const translatedNames = tags.map(t => t.translated_name?.toLowerCase()).filter(Boolean);
-                            const filterTagLower = target.filterTag.toLowerCase();
                             if (tagNames.includes(filterTagLower) || translatedNames.includes(filterTagLower)) {
                                 filtered.push(detail);
                             }
                         }
-                        catch (error) {
-                            // Skip illustrations that are deleted, private, or inaccessible
+                        else {
                             skippedCount++;
-                            const errorMessage = error instanceof Error ? error.message : String(error);
-                            if (errorMessage.includes('404')) {
-                                // Silently skip deleted illustrations
-                            }
-                            else {
-                                logger_1.logger.warn(`Failed to get tags for illust ${illust.id}`, { error: errorMessage });
+                            const errorMessage = result.error.message;
+                            if (!errorMessage.includes('404')) {
+                                // Try to get illust ID from error if available
+                                const illustId = result.error instanceof Error && 'illustId' in result.error
+                                    ? result.error.illustId
+                                    : 'unknown';
+                                logger_1.logger.warn(`Failed to get tags for illust ${illustId}`, { error: errorMessage });
                             }
                         }
                     }
                     if (skippedCount > 0) {
                         logger_1.logger.info(`Skipped ${skippedCount} illustration(s) (deleted, private, or inaccessible)`);
                     }
-                    illusts = filtered;
+                    logger_1.logger.info(`Found ${filtered.length} illustration(s) matching tag ${target.filterTag}`);
+                    // Sort by popularity and log top results
+                    this.sortByPopularityAndLog(filtered, target.limit || 10, 'illustration');
+                    // Select top N
+                    illusts = filtered.slice(0, target.limit || 10);
+                    logger_1.logger.info(`Selected top ${illusts.length} illustration(s) by popularity`);
                 }
             }
             else {
                 // Search by tag (default mode)
-                illusts = await this.client.searchIllustrations(target);
-            }
-            let downloaded = 0;
-            let skippedCount = 0;
-            const tagForLog = target.filterTag || target.tag || 'unknown';
-            // Random selection mode
-            if (target.random && illusts.length > 0) {
-                // Filter out already downloaded items
-                let available = illusts.filter(illust => !this.database.hasDownloaded(String(illust.id), 'illustration'));
-                if (available.length === 0) {
-                    logger_1.logger.info('All search results have already been downloaded');
+                // Optimize fetch limit for search mode to handle 404s better
+                // If using popularity sort, fetch more results to ensure we get enough valid ones
+                const targetLimit = target.limit || 10;
+                const searchLimit = target.sort === 'popular_desc'
+                    ? (targetLimit <= 5 ? Math.max(targetLimit * 20, 100) : targetLimit * 2)
+                    : (targetLimit <= 5 ? Math.max(targetLimit * 10, 50) : targetLimit * 2);
+                const searchTarget = { ...target, limit: searchLimit };
+                if (searchLimit > targetLimit) {
+                    logger_1.logger.info(`Fetching up to ${searchLimit} search results to find ${targetLimit} valid illustration(s)`);
                 }
-                else {
-                    // Try random illustrations until we find one that works or exhaust all options
-                    const maxAttempts = Math.min(available.length, 50); // Limit attempts to avoid infinite loops
-                    const triedIds = new Set();
-                    for (let attempt = 0; attempt < maxAttempts && downloaded < (target.limit || 1); attempt++) {
-                        // Filter out already tried illustrations
-                        const remaining = available.filter(illust => !triedIds.has(illust.id));
-                        if (remaining.length === 0) {
-                            logger_1.logger.info('All available illustrations have been tried');
-                            break;
-                        }
-                        // Randomly select from remaining illustrations
-                        const randomIndex = Math.floor(Math.random() * remaining.length);
-                        const randomIllust = remaining[randomIndex];
-                        triedIds.add(randomIllust.id);
-                        logger_1.logger.info(`Randomly selected illustration ${randomIllust.id} from ${remaining.length} remaining results (attempt ${attempt + 1}/${maxAttempts})`);
-                        try {
-                            await this.downloadIllustration(randomIllust, tagForLog);
-                            downloaded++;
-                            // If we only need one and got it, we're done
-                            if ((target.limit || 1) === 1) {
-                                break;
-                            }
-                        }
-                        catch (error) {
-                            // Skip illustrations that are deleted, private, or inaccessible
-                            skippedCount++;
-                            const errorMessage = error instanceof Error ? error.message : String(error);
-                            if (errorMessage.includes('404')) {
-                                logger_1.logger.debug(`Illustration ${randomIllust.id} not found (deleted or private), trying another random illustration...`);
-                                // Continue to next random selection
-                                continue;
-                            }
-                            else {
-                                logger_1.logger.warn(`Failed to download illustration ${randomIllust.id}`, { error: errorMessage });
-                                // For non-404 errors, continue trying (might be temporary issues)
-                                continue;
-                            }
-                        }
-                    }
+                illusts = await this.client.searchIllustrations(searchTarget);
+                logger_1.logger.info(`Found ${illusts.length} search results`);
+                // If using popularity sort, results are already sorted by API
+                // But we can still apply our own sorting for consistency
+                if (target.sort === 'popular_desc') {
+                    this.sortByPopularityAndLog(illusts, targetLimit, 'illustration');
                 }
             }
-            else {
-                for (const illust of illusts) {
-                    if (this.database.hasDownloaded(String(illust.id), 'illustration')) {
-                        logger_1.logger.debug(`Illustration ${illust.id} already downloaded, skipping`);
-                        continue;
-                    }
-                    try {
-                        await this.downloadIllustration(illust, tagForLog);
-                        downloaded++;
-                    }
-                    catch (error) {
-                        // Skip illustrations that are deleted, private, or inaccessible
-                        skippedCount++;
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        if (errorMessage.includes('404')) {
-                            logger_1.logger.debug(`Illustration ${illust.id} not found (deleted or private), skipping`);
-                        }
-                        else {
-                            logger_1.logger.warn(`Failed to download illustration ${illust.id}`, { error: errorMessage });
-                        }
-                    }
-                }
-            }
+            const { downloaded, skipped: skippedCount } = await this.downloadItems(illusts, target, 'illustration', (illust, tag) => this.downloadIllustration(illust, tag));
             if (skippedCount > 0) {
                 logger_1.logger.info(`Skipped ${skippedCount} illustration(s) (deleted, private, or inaccessible)`);
             }
+            const tagForLog = target.filterTag || target.tag || 'unknown';
             this.database.logExecution(tagForLog, 'illustration', 'success', `${downloaded} items downloaded`);
             logger_1.logger.info(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
         }
@@ -259,159 +399,105 @@ class DownloadManager {
                     rankingDate = this.getYesterdayDate();
                 }
                 // Fetch more novels if filtering, to account for deleted/private novels
-                const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 5, 50) : target.limit;
+                // Increase fetch limit significantly when filtering to handle high 404 rates
+                const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 10, 100) : target.limit;
                 logger_1.logger.info(`Fetching ranking novels (mode: ${rankingMode}, date: ${rankingDate})`);
                 novels = await this.client.getRankingNovels(rankingMode, rankingDate, fetchLimit);
+                logger_1.logger.info(`Fetched ${novels.length} novels from ranking API (ordered by Pixiv ranking algorithm)`);
+                // If ranking API returns no results, fallback to search mode with popularity sort
+                if (novels.length === 0) {
+                    logger_1.logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
+                    logger_1.logger.info(`Searching for novels with tag: ${target.filterTag || target.tag || 'unknown'}, sorted by popularity`);
+                    const searchTarget = {
+                        ...target,
+                        tag: target.filterTag || target.tag,
+                        sort: 'popular_desc',
+                        limit: target.filterTag ? Math.max((target.limit || 10) * 2, 50) : target.limit,
+                    };
+                    novels = await this.client.searchNovels(searchTarget);
+                    logger_1.logger.info(`Found ${novels.length} novel(s) from search mode (sorted by popularity)`);
+                }
                 // Filter by tag if specified
                 if (target.filterTag) {
                     logger_1.logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
+                    logger_1.logger.info(`Will collect all matching novels, then sort by popularity and select top ${target.limit || 10}`);
+                    // Use parallel processing to fetch details with tags
+                    const concurrency = this.config.download?.concurrency || 3;
+                    logger_1.logger.info(`Processing ${novels.length} novels in parallel (concurrency: ${concurrency})`);
+                    const results = await this.processInParallel(novels, async (novel) => {
+                        const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
+                        return { detail, tags, novelId: novel.id };
+                    }, concurrency);
                     const filtered = [];
                     let skippedCount = 0;
-                    for (const novel of novels) {
-                        if (filtered.length >= (target.limit || 10)) {
-                            break;
-                        }
-                        // Get detail with tags
-                        try {
-                            const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
+                    const filterTagLower = target.filterTag.toLowerCase();
+                    for (const result of results) {
+                        if (result.success) {
+                            const { detail, tags } = result.result;
                             const tagNames = tags.map(t => t.name.toLowerCase());
                             const translatedNames = tags.map(t => t.translated_name?.toLowerCase()).filter(Boolean);
-                            const filterTagLower = target.filterTag.toLowerCase();
                             if (tagNames.includes(filterTagLower) || translatedNames.includes(filterTagLower)) {
                                 filtered.push(detail);
                             }
                         }
-                        catch (error) {
-                            // Skip novels that are deleted, private, or inaccessible
+                        else {
                             skippedCount++;
-                            const errorMessage = error instanceof Error ? error.message : String(error);
-                            if (errorMessage.includes('404')) {
-                                // Silently skip deleted novels
-                            }
-                            else {
-                                logger_1.logger.warn(`Failed to get tags for novel ${novel.id}`, { error: errorMessage });
+                            const errorMessage = result.error.message;
+                            if (!errorMessage.includes('404')) {
+                                // Try to get novel ID from error if available
+                                const novelId = result.error instanceof Error && 'novelId' in result.error
+                                    ? result.error.novelId
+                                    : 'unknown';
+                                logger_1.logger.warn(`Failed to get tags for novel ${novelId}`, { error: errorMessage });
                             }
                         }
                     }
                     if (skippedCount > 0) {
                         logger_1.logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);
                     }
-                    novels = filtered;
+                    logger_1.logger.info(`Found ${filtered.length} novel(s) matching tag ${target.filterTag}`);
+                    // Sort by popularity and log top results
+                    this.sortByPopularityAndLog(filtered, target.limit || 10, 'novel');
+                    // Select top N
+                    novels = filtered.slice(0, target.limit || 10);
+                    logger_1.logger.info(`Selected top ${novels.length} novel(s) by popularity`);
+                    if (novels.length === 0 && filtered.length === 0) {
+                        logger_1.logger.warn(`No novels found matching tag "${target.filterTag}" after checking ranking results. This could mean:`);
+                        logger_1.logger.warn(`  1. The tag "${target.filterTag}" is not present in the ranking results`);
+                        logger_1.logger.warn(`  2. All matching novels were deleted or made private`);
+                        logger_1.logger.warn(`  3. Try using search mode instead of ranking mode for better results`);
+                    }
                 }
             }
             else {
                 // Search by tag (default mode)
-                // For search mode, fetch more results upfront to handle 404s
-                // If limit is small (especially 1), fetch many more to ensure we can find valid novels
+                // Optimize fetch limit for search mode to handle 404s better
+                // If using popularity sort, fetch more results to ensure we get enough valid ones
                 const targetLimit = target.limit || 10;
-                const searchLimit = targetLimit <= 5 ? Math.max(targetLimit * 20, 100) : targetLimit * 2;
+                const searchLimit = target.sort === 'popular_desc'
+                    ? (targetLimit <= 5 ? Math.max(targetLimit * 20, 100) : targetLimit * 2)
+                    : (targetLimit <= 5 ? Math.max(targetLimit * 10, 50) : targetLimit * 2);
                 const searchTarget = { ...target, limit: searchLimit };
-                logger_1.logger.info(`Fetching up to ${searchLimit} search results to find ${targetLimit} valid novel(s)`);
+                if (searchLimit > targetLimit) {
+                    logger_1.logger.info(`Fetching up to ${searchLimit} search results to find ${targetLimit} valid novel(s)`);
+                }
                 novels = await this.client.searchNovels(searchTarget);
                 logger_1.logger.info(`Found ${novels.length} search results`);
+                // If using popularity sort, results are already sorted by API
+                // But we can still apply our own sorting for consistency
+                if (target.sort === 'popular_desc') {
+                    this.sortByPopularityAndLog(novels, targetLimit, 'novel');
+                }
             }
-            let downloaded = 0;
-            let skippedCount = 0;
-            const tagForLog = target.filterTag || target.tag || 'unknown';
             const targetLimit = target.limit || 10;
-            // Random selection mode
-            if (target.random && novels.length > 0) {
-                // Filter out already downloaded items
-                let available = novels.filter(novel => !this.database.hasDownloaded(String(novel.id), 'novel'));
-                if (available.length === 0) {
-                    logger_1.logger.info('All search results have already been downloaded');
-                }
-                else {
-                    // Try random novels until we find one that works or exhaust all options
-                    const maxAttempts = Math.min(available.length, 50); // Limit attempts to avoid infinite loops
-                    const triedIds = new Set();
-                    for (let attempt = 0; attempt < maxAttempts && downloaded < targetLimit; attempt++) {
-                        // Filter out already tried novels
-                        const remaining = available.filter(novel => !triedIds.has(novel.id));
-                        if (remaining.length === 0) {
-                            logger_1.logger.info('All available novels have been tried');
-                            break;
-                        }
-                        // Randomly select from remaining novels
-                        const randomIndex = Math.floor(Math.random() * remaining.length);
-                        const randomNovel = remaining[randomIndex];
-                        triedIds.add(randomNovel.id);
-                        logger_1.logger.info(`Randomly selected novel ${randomNovel.id} from ${remaining.length} remaining results (attempt ${attempt + 1}/${maxAttempts})`);
-                        try {
-                            await this.downloadNovel(randomNovel, tagForLog);
-                            downloaded++;
-                            logger_1.logger.info(`Successfully downloaded novel ${randomNovel.id} (${downloaded}/${targetLimit})`);
-                            // If we only need one and got it, we're done
-                            if (targetLimit === 1) {
-                                break;
-                            }
-                        }
-                        catch (error) {
-                            // Skip novels that are deleted, private, or inaccessible
-                            skippedCount++;
-                            const errorMessage = error instanceof Error ? error.message : String(error);
-                            if (errorMessage.includes('404')) {
-                                logger_1.logger.debug(`Novel ${randomNovel.id} not found (deleted or private), trying another random novel...`);
-                                // Continue to next random selection
-                                continue;
-                            }
-                            else {
-                                logger_1.logger.warn(`Failed to download novel ${randomNovel.id}`, {
-                                    error: errorMessage,
-                                    novelTitle: randomNovel.title,
-                                    novelId: randomNovel.id
-                                });
-                                // For non-404 errors, continue trying (might be temporary issues)
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                // Smart retry logic: try each novel in order, skip 404s and continue
-                for (let i = 0; i < novels.length && downloaded < targetLimit; i++) {
-                    const novel = novels[i];
-                    if (this.database.hasDownloaded(String(novel.id), 'novel')) {
-                        logger_1.logger.debug(`Novel ${novel.id} already downloaded, skipping`);
-                        continue;
-                    }
-                    try {
-                        await this.downloadNovel(novel, tagForLog);
-                        downloaded++;
-                        logger_1.logger.info(`Successfully downloaded novel ${novel.id} (${downloaded}/${targetLimit})`);
-                        // If we only need one and got it, we're done
-                        if (targetLimit === 1) {
-                            break;
-                        }
-                    }
-                    catch (error) {
-                        // Skip novels that are deleted, private, or inaccessible
-                        skippedCount++;
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        if (errorMessage.includes('404')) {
-                            logger_1.logger.debug(`Novel ${novel.id} not found (deleted or private), trying next result...`);
-                            // Continue to next novel
-                            continue;
-                        }
-                        else {
-                            logger_1.logger.warn(`Failed to download novel ${novel.id}`, {
-                                error: errorMessage,
-                                novelTitle: novel.title,
-                                novelId: novel.id
-                            });
-                            // For non-404 errors, continue trying (might be temporary issues)
-                            continue;
-                        }
-                    }
-                }
-            }
+            const { downloaded, skipped: skippedCount } = await this.downloadItems(novels, target, 'novel', (novel, tag) => this.downloadNovel(novel, tag));
             if (downloaded < targetLimit && skippedCount > 0) {
                 logger_1.logger.warn(`Only downloaded ${downloaded} out of ${targetLimit} requested novel(s). ${skippedCount} novel(s) were skipped due to 404 errors or other issues.`);
             }
             if (skippedCount > 0) {
                 logger_1.logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);
             }
+            const tagForLog = target.filterTag || target.tag || 'unknown';
             this.database.logExecution(tagForLog, 'novel', 'success', `${downloaded} items downloaded`);
             logger_1.logger.info(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
         }
@@ -422,30 +508,34 @@ class DownloadManager {
         }
     }
     /**
-     * Get today's date in YYYY-MM-DD format (Japan timezone)
+     * Format date in YYYY-MM-DD format (Japan timezone)
      * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
-    getTodayDate() {
-        // Get current time in Japan timezone (JST = UTC+9)
-        const now = new Date();
+    formatDateInJST(date) {
         const formatter = new Intl.DateTimeFormat('en-US', {
             timeZone: 'Asia/Tokyo',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
         });
-        const parts = formatter.formatToParts(now);
+        const parts = formatter.formatToParts(date);
         const year = parts.find(p => p.type === 'year').value;
         const month = parts.find(p => p.type === 'month').value;
         const day = parts.find(p => p.type === 'day').value;
         return `${year}-${month}-${day}`;
     }
     /**
+     * Get today's date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
+     */
+    getTodayDate() {
+        return this.formatDateInJST(new Date());
+    }
+    /**
      * Get yesterday's date in YYYY-MM-DD format (Japan timezone)
      * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
     getYesterdayDate() {
-        // Get current time in Japan timezone (JST = UTC+9)
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
             timeZone: 'Asia/Tokyo',
@@ -462,22 +552,21 @@ class DownloadManager {
         // We create a date at noon JST to avoid timezone edge cases
         const jstNoon = new Date(Date.UTC(year, month, day, 3, 0, 0, 0)); // 12:00 JST = 03:00 UTC
         jstNoon.setUTCDate(jstNoon.getUTCDate() - 1);
-        // Format the yesterday date
-        const yesterdayParts = formatter.formatToParts(jstNoon);
-        const yesterdayYear = yesterdayParts.find(p => p.type === 'year').value;
-        const yesterdayMonth = yesterdayParts.find(p => p.type === 'month').value;
-        const yesterdayDay = yesterdayParts.find(p => p.type === 'day').value;
-        return `${yesterdayYear}-${yesterdayMonth}-${yesterdayDay}`;
+        return this.formatDateInJST(jstNoon);
     }
     async downloadIllustration(illust, tag) {
         const detail = await this.client.getIllustDetail(illust.id);
         const pages = this.getIllustrationPages(detail);
-        for (let index = 0; index < pages.length; index++) {
-            const page = pages[index];
+        // Use parallel download for multiple pages to improve performance
+        const concurrency = this.config.download?.concurrency || 3;
+        const downloadConcurrency = Math.min(concurrency, pages.length);
+        if (pages.length > 1) {
+            logger_1.logger.debug(`Downloading ${pages.length} pages for illustration ${detail.id} in parallel (concurrency: ${downloadConcurrency})`);
+        }
+        const downloadResults = await this.processInParallel(pages.map((page, index) => ({ page, index })), async ({ page, index }) => {
             const originalUrl = this.resolveImageUrl(page, detail);
             if (!originalUrl) {
-                logger_1.logger.warn('Original image url missing', { illustId: detail.id, index });
-                continue;
+                throw new Error(`Original image url missing for page ${index + 1}`);
             }
             const extension = this.extractExtension(originalUrl) ?? '.jpg';
             const fileName = this.fileService.sanitizeFileName(`${detail.id}_${detail.title}_${index + 1}${extension}`);
@@ -488,16 +577,35 @@ class DownloadManager {
             };
             const buffer = await this.client.downloadImage(originalUrl);
             const filePath = await this.fileService.saveImage(buffer, fileName, metadata);
-            this.database.insertDownload({
-                pixivId: String(detail.id),
-                type: 'illustration',
-                tag,
-                title: detail.title,
-                filePath,
-                author: detail.user?.name,
-                userId: detail.user?.id,
-            });
-            logger_1.logger.info(`Saved illustration ${detail.id} page ${index + 1}`, { filePath });
+            return { filePath, index: index + 1 };
+        }, downloadConcurrency);
+        // Insert download records and log results
+        let successCount = 0;
+        for (const result of downloadResults) {
+            if (result.success) {
+                this.database.insertDownload({
+                    pixivId: String(detail.id),
+                    type: 'illustration',
+                    tag,
+                    title: detail.title,
+                    filePath: result.result.filePath,
+                    author: detail.user?.name,
+                    userId: detail.user?.id,
+                });
+                logger_1.logger.info(`Saved illustration ${detail.id} page ${result.result.index}`, {
+                    filePath: result.result.filePath
+                });
+                successCount++;
+            }
+            else {
+                logger_1.logger.warn(`Failed to download page ${result.error.message}`, {
+                    illustId: detail.id,
+                    error: result.error.message
+                });
+            }
+        }
+        if (successCount === 0) {
+            throw new Error(`Failed to download any pages for illustration ${detail.id}`);
         }
     }
     async downloadNovel(novel, tag) {

@@ -35,6 +35,11 @@ export interface PixivIllust {
     };
   }>;
   create_date: string;
+  // Popularity metrics (may not be present in all API responses)
+  total_bookmarks?: number;
+  total_view?: number;
+  bookmark_count?: number;
+  view_count?: number;
 }
 
 export type PixivIllustPage = NonNullable<PixivIllust['meta_pages']>[number];
@@ -44,6 +49,11 @@ export interface PixivNovel {
   title: string;
   user: PixivUser;
   create_date: string;
+  // Popularity metrics (may not be present in all API responses)
+  total_bookmarks?: number;
+  total_view?: number;
+  bookmark_count?: number;
+  view_count?: number;
 }
 
 export interface PixivNovelTextResponse {
@@ -83,7 +93,7 @@ export class PixivClient {
     let nextUrl: string | null = this.createRequestUrl('v1/search/illust', {
       word: target.tag,
       search_target: target.searchTarget ?? 'partial_match_for_tags',
-      sort: 'date_desc',
+      sort: target.sort ?? 'date_desc',
       filter: 'for_ios',
       include_translated_tag_results: 'true',
     });
@@ -253,15 +263,52 @@ export class PixivClient {
     novel: PixivNovel;
     tags: Array<{ name: string; translated_name?: string }>;
   }> {
-    const url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
-    const response = await this.request<{
-      novel: PixivNovel & { tags: Array<{ name: string; translated_name?: string }> };
-    }>(url, { method: 'GET' });
-    
-    const tags = response.novel.tags || [];
-    const { tags: _, ...novel } = response.novel;
-    
-    return { novel, tags };
+    // Try v2 API first, fallback to v1 if needed
+    let url = this.createRequestUrl('v2/novel/detail', { novel_id: String(novelId) });
+    logger.debug('Fetching novel detail with tags', { novelId, url });
+    try {
+      const response = await this.request<{
+        novel: PixivNovel & { tags: Array<{ name: string; translated_name?: string }> };
+      }>(url, { method: 'GET' });
+      
+      const tags = response.novel.tags || [];
+      const { tags: _, ...novel } = response.novel;
+      
+      return { novel, tags };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // If v2 fails with 404 or endpoint error, try v1
+      if (errorMessage.includes('404') || errorMessage.includes('end-point')) {
+        logger.debug('v2 API failed, trying v1 for novel detail with tags', { novelId });
+        url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
+        try {
+          const response = await this.request<{
+            novel: PixivNovel & { tags: Array<{ name: string; translated_name?: string }> };
+          }>(url, { method: 'GET' });
+          
+          const tags = response.novel.tags || [];
+          const { tags: _, ...novel } = response.novel;
+          
+          return { novel, tags };
+        } catch (v1Error) {
+          logger.error('Failed to get novel detail with tags (both v1 and v2)', { 
+            novelId, 
+            v2Url: this.createRequestUrl('v2/novel/detail', { novel_id: String(novelId) }),
+            v1Url: url,
+            v2Error: errorMessage,
+            v1Error: v1Error instanceof Error ? v1Error.message : String(v1Error)
+          });
+          throw v1Error;
+        }
+      } else {
+        logger.error('Failed to get novel detail with tags', { 
+          novelId, 
+          url,
+          error: errorMessage
+        });
+        throw error;
+      }
+    }
   }
 
   public async getIllustDetail(illustId: number): Promise<PixivIllust> {

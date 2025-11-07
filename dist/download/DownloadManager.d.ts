@@ -10,8 +10,38 @@ export declare class DownloadManager {
     constructor(config: StandaloneConfig, client: PixivClient, database: Database, fileService: FileService);
     initialise(): Promise<void>;
     runAllTargets(): Promise<void>;
+    /**
+     * Calculate popularity score for an illustration or novel
+     * Uses total_bookmarks (preferred) or bookmark_count as primary metric
+     */
+    private getPopularityScore;
+    /**
+     * Sort items by popularity and log top results
+     */
+    private sortByPopularityAndLog;
+    /**
+     * Sort items by date (newest first)
+     */
+    private sortByDate;
+    /**
+     * Process items in parallel with concurrency control
+     */
+    private processInParallel;
+    /**
+     * Handle download error and determine if should skip
+     */
+    private handleDownloadError;
+    /**
+     * Generic download loop for illustrations or novels
+     */
+    private downloadItems;
     private handleIllustrationTarget;
     private handleNovelTarget;
+    /**
+     * Format date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
+     */
+    private formatDateInJST;
     /**
      * Get today's date in YYYY-MM-DD format (Japan timezone)
      * Pixiv rankings are based on Japan time (JST, UTC+9)

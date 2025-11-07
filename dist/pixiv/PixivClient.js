@@ -37,7 +37,7 @@ class PixivClient {
         let nextUrl = this.createRequestUrl('v1/search/illust', {
             word: target.tag,
             search_target: target.searchTarget ?? 'partial_match_for_tags',
-            sort: 'date_desc',
+            sort: target.sort ?? 'date_desc',
             filter: 'for_ios',
             include_translated_tag_results: 'true',
         });
@@ -148,11 +148,47 @@ class PixivClient {
      * Get novel detail with tags for filtering
      */
     async getNovelDetailWithTags(novelId) {
-        const url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
-        const response = await this.request(url, { method: 'GET' });
-        const tags = response.novel.tags || [];
-        const { tags: _, ...novel } = response.novel;
-        return { novel, tags };
+        // Try v2 API first, fallback to v1 if needed
+        let url = this.createRequestUrl('v2/novel/detail', { novel_id: String(novelId) });
+        logger_1.logger.debug('Fetching novel detail with tags', { novelId, url });
+        try {
+            const response = await this.request(url, { method: 'GET' });
+            const tags = response.novel.tags || [];
+            const { tags: _, ...novel } = response.novel;
+            return { novel, tags };
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            // If v2 fails with 404 or endpoint error, try v1
+            if (errorMessage.includes('404') || errorMessage.includes('end-point')) {
+                logger_1.logger.debug('v2 API failed, trying v1 for novel detail with tags', { novelId });
+                url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
+                try {
+                    const response = await this.request(url, { method: 'GET' });
+                    const tags = response.novel.tags || [];
+                    const { tags: _, ...novel } = response.novel;
+                    return { novel, tags };
+                }
+                catch (v1Error) {
+                    logger_1.logger.error('Failed to get novel detail with tags (both v1 and v2)', {
+                        novelId,
+                        v2Url: this.createRequestUrl('v2/novel/detail', { novel_id: String(novelId) }),
+                        v1Url: url,
+                        v2Error: errorMessage,
+                        v1Error: v1Error instanceof Error ? v1Error.message : String(v1Error)
+                    });
+                    throw v1Error;
+                }
+            }
+            else {
+                logger_1.logger.error('Failed to get novel detail with tags', {
+                    novelId,
+                    url,
+                    error: errorMessage
+                });
+                throw error;
+            }
+        }
     }
     async getIllustDetail(illustId) {
         const url = this.createRequestUrl('v1/illust/detail', { illust_id: String(illustId) });

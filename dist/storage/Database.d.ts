@@ -32,6 +32,11 @@ export declare class Database {
     getToken(key: string): AccessTokenStore | null;
     setToken(key: string, value: AccessTokenStore): void;
     hasDownloaded(pixivId: string, type: 'illustration' | 'novel'): boolean;
+    /**
+     * Batch check if multiple items are already downloaded
+     * Returns a Set of pixivIds that are already downloaded
+     */
+    getDownloadedIds(pixivIds: string[], type: 'illustration' | 'novel'): Set<string>;
     insertDownload(record: DownloadRecordInput): void;
     logExecution(tag: string, type: 'illustration' | 'novel', status: ExecutionStatus, message?: string): void;
     /**

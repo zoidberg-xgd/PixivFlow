@@ -80,6 +80,20 @@ class Database {
         const row = stmt.get(pixivId, type);
         return !!row;
     }
+    /**
+     * Batch check if multiple items are already downloaded
+     * Returns a Set of pixivIds that are already downloaded
+     */
+    getDownloadedIds(pixivIds, type) {
+        if (pixivIds.length === 0) {
+            return new Set();
+        }
+        // Use parameterized query with IN clause for better performance
+        const placeholders = pixivIds.map(() => '?').join(',');
+        const stmt = this.db.prepare(`SELECT pixiv_id FROM downloads WHERE pixiv_id IN (${placeholders}) AND type = ?`);
+        const rows = stmt.all(...pixivIds, type);
+        return new Set(rows.map(row => row.pixiv_id));
+    }
     insertDownload(record) {
         const stmt = this.db.prepare(`INSERT OR IGNORE INTO downloads (pixiv_id, type, tag, title, file_path, author, user_id)
        VALUES (@pixiv_id, @type, @tag, @title, @file_path, @author, @user_id)`);

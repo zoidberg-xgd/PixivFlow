@@ -29,6 +29,10 @@ export interface PixivIllust {
         };
     }>;
     create_date: string;
+    total_bookmarks?: number;
+    total_view?: number;
+    bookmark_count?: number;
+    view_count?: number;
 }
 export type PixivIllustPage = NonNullable<PixivIllust['meta_pages']>[number];
 export interface PixivNovel {
@@ -36,6 +40,10 @@ export interface PixivNovel {
     title: string;
     user: PixivUser;
     create_date: string;
+    total_bookmarks?: number;
+    total_view?: number;
+    bookmark_count?: number;
+    view_count?: number;
 }
 export interface PixivNovelTextResponse {
     novel_text: string;
