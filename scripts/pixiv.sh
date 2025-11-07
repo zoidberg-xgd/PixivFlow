@@ -38,10 +38,19 @@ ensure_config() {
 }
 
 ensure_build() {
-    if ! check_build; then
+    if [[ ! -f "dist/index.js" ]]; then
         log_info "首次运行，正在编译..."
-        npm run build
+        npm run build || {
+            log_error "编译失败"
+            exit 1
+        }
     fi
+}
+
+# 调用内置CLI
+call_cli() {
+    ensure_build
+    node dist/index.js "$@"
 }
 
 # ============================================================================
@@ -63,9 +72,11 @@ show_help() {
 
 📝 核心命令:
     setup       交互式配置向导（首次必须运行）
+    login       登录 Pixiv 账号（交互式）
     run         启动定时下载器（持续运行）
     once        立即执行一次下载任务
     test        快速测试（下载1个文件验证配置）
+    random      随机下载一个热门标签作品
     status      查看下载统计和最近记录
     stop        停止正在运行的下载器
     logs        查看日志
@@ -83,7 +94,9 @@ show_help() {
 
 💡 示例:
     $0 setup                # 首次配置
+    $0 login                # 登录账号
     $0 test                 # 测试配置
+    $0 random               # 随机下载
     $0 once                 # 手动下载一次
     $0 run                  # 启动定时器
     $0 status               # 查看统计
@@ -134,18 +147,32 @@ cmd_setup() {
     fi
 }
 
+cmd_login() {
+    print_header "Pixiv 登录"
+    
+    ensure_node
+    ensure_deps
+    
+    log_info "启动登录流程..."
+    echo
+    
+    call_cli login "$@"
+    
+    echo
+    log_success "登录完成！"
+}
+
 cmd_run() {
     print_header "启动定时下载器"
     
     ensure_config
     ensure_deps
-    ensure_build
     
     log_info "下载器已启动（按 Ctrl+C 停止）"
     log_info "日志: data/pixiv-downloader.log"
     echo
     
-    npm run scheduler
+    call_cli scheduler
 }
 
 cmd_once() {
@@ -153,9 +180,8 @@ cmd_once() {
     
     ensure_config
     ensure_deps
-    ensure_build
     
-    npm run download
+    call_cli download
     
     echo
     log_success "任务完成！运行 '$0 status' 查看结果"
@@ -166,10 +192,15 @@ cmd_test() {
     
     ensure_config
     ensure_deps
-    ensure_build
     
     log_info "执行测试下载..."
-    npm run test:download
+    
+    if [[ -f "dist/test-download.js" ]]; then
+        node dist/test-download.js
+    else
+        log_warn "测试脚本未找到，使用内置测试功能"
+        call_cli download --once
+    fi
     
     echo
     if [[ -d "downloads/illustrations" ]] && [[ $(find downloads/illustrations -type f 2>/dev/null | wc -l) -gt 0 ]]; then
@@ -180,6 +211,20 @@ cmd_test() {
     else
         log_warn "未找到下载文件，请检查配置"
     fi
+}
+
+cmd_random() {
+    print_header "随机下载"
+    
+    ensure_deps
+    
+    log_info "随机选择一个热门标签并下载一个作品..."
+    echo
+    
+    call_cli random "$@"
+    
+    echo
+    log_success "随机下载完成！"
 }
 
 cmd_status() {
@@ -226,7 +271,25 @@ cmd_status() {
 cmd_stop() {
     print_header "停止下载器"
     
-    stop_process "$DIST_MAIN"
+    # 查找运行中的下载器进程
+    local pids
+    pids=$(pgrep -f "dist/index.js.*scheduler" 2>/dev/null || true)
+    
+    if [[ -z "$pids" ]]; then
+        log_info "没有运行中的下载器"
+        return 0
+    fi
+    
+    log_info "停止进程: $pids"
+    kill -TERM $pids 2>/dev/null || true
+    sleep 2
+    
+    if pgrep -f "dist/index.js.*scheduler" >/dev/null 2>&1; then
+        log_warn "强制停止进程"
+        kill -9 $pids 2>/dev/null || true
+    fi
+    
+    log_success "下载器已停止"
 }
 
 cmd_logs() {
@@ -321,8 +384,7 @@ cmd_clean() {
     print_header "清理项目"
     
     log_info "清理编译产物..."
-    safe_remove "dist/standalone/*.js"
-    safe_remove "dist/standalone/*.map"
+    safe_remove "dist"
     
     log_info "清理临时文件..."
     safe_remove ".tmp"
@@ -386,9 +448,11 @@ main() {
     case "$command" in
         # 核心命令
         setup)      cmd_setup "$@" ;;
+        login)      cmd_login "$@" ;;
         run)        cmd_run "$@" ;;
         once)       cmd_once "$@" ;;
         test)       cmd_test "$@" ;;
+        random)     cmd_random "$@" ;;
         status)     cmd_status "$@" ;;
         stop)       cmd_stop "$@" ;;
         logs)       cmd_logs "$@" ;;

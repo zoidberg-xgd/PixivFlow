@@ -44,13 +44,15 @@ class DownloadManager {
                 if (rankingDate === 'YESTERDAY') {
                     rankingDate = this.getYesterdayDate();
                 }
-                const fetchLimit = target.filterTag ? (target.limit || 10) * 3 : target.limit; // Fetch more if filtering
+                // Fetch more illustrations if filtering, to account for deleted/private works
+                const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 5, 50) : target.limit;
                 logger_1.logger.info(`Fetching ranking illustrations (mode: ${rankingMode}, date: ${rankingDate})`);
                 illusts = await this.client.getRankingIllustrations(rankingMode, rankingDate, fetchLimit);
                 // Filter by tag if specified
                 if (target.filterTag) {
                     logger_1.logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
                     const filtered = [];
+                    let skippedCount = 0;
                     for (const illust of illusts) {
                         if (filtered.length >= (target.limit || 10)) {
                             break;
@@ -66,8 +68,19 @@ class DownloadManager {
                             }
                         }
                         catch (error) {
-                            logger_1.logger.warn(`Failed to get tags for illust ${illust.id}`, { error });
+                            // Skip illustrations that are deleted, private, or inaccessible
+                            skippedCount++;
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            if (errorMessage.includes('404')) {
+                                // Silently skip deleted illustrations
+                            }
+                            else {
+                                logger_1.logger.warn(`Failed to get tags for illust ${illust.id}`, { error: errorMessage });
+                            }
                         }
+                    }
+                    if (skippedCount > 0) {
+                        logger_1.logger.info(`Skipped ${skippedCount} illustration(s) (deleted, private, or inaccessible)`);
                     }
                     illusts = filtered;
                 }
@@ -92,14 +105,31 @@ class DownloadManager {
                 }
             }
             let downloaded = 0;
+            let skippedCount = 0;
             const tagForLog = target.filterTag || target.tag;
             for (const illust of illusts) {
                 if (this.database.hasDownloaded(String(illust.id), 'illustration')) {
                     logger_1.logger.debug(`Illustration ${illust.id} already downloaded, skipping`);
                     continue;
                 }
-                await this.downloadIllustration(illust, tagForLog);
-                downloaded++;
+                try {
+                    await this.downloadIllustration(illust, tagForLog);
+                    downloaded++;
+                }
+                catch (error) {
+                    // Skip illustrations that are deleted, private, or inaccessible
+                    skippedCount++;
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    if (errorMessage.includes('404')) {
+                        logger_1.logger.debug(`Illustration ${illust.id} not found (deleted or private), skipping`);
+                    }
+                    else {
+                        logger_1.logger.warn(`Failed to download illustration ${illust.id}`, { error: errorMessage });
+                    }
+                }
+            }
+            if (skippedCount > 0) {
+                logger_1.logger.info(`Skipped ${skippedCount} illustration(s) (deleted, private, or inaccessible)`);
             }
             this.database.logExecution(tagForLog, 'illustration', 'success', `${downloaded} items downloaded`);
             logger_1.logger.info(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
@@ -124,13 +154,15 @@ class DownloadManager {
                 if (rankingDate === 'YESTERDAY') {
                     rankingDate = this.getYesterdayDate();
                 }
-                const fetchLimit = target.filterTag ? (target.limit || 10) * 3 : target.limit; // Fetch more if filtering
+                // Fetch more novels if filtering, to account for deleted/private novels
+                const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 5, 50) : target.limit;
                 logger_1.logger.info(`Fetching ranking novels (mode: ${rankingMode}, date: ${rankingDate})`);
                 novels = await this.client.getRankingNovels(rankingMode, rankingDate, fetchLimit);
                 // Filter by tag if specified
                 if (target.filterTag) {
                     logger_1.logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
                     const filtered = [];
+                    let skippedCount = 0;
                     for (const novel of novels) {
                         if (filtered.length >= (target.limit || 10)) {
                             break;
@@ -146,8 +178,19 @@ class DownloadManager {
                             }
                         }
                         catch (error) {
-                            logger_1.logger.warn(`Failed to get tags for novel ${novel.id}`, { error });
+                            // Skip novels that are deleted, private, or inaccessible
+                            skippedCount++;
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            if (errorMessage.includes('404')) {
+                                // Silently skip deleted novels
+                            }
+                            else {
+                                logger_1.logger.warn(`Failed to get tags for novel ${novel.id}`, { error: errorMessage });
+                            }
                         }
+                    }
+                    if (skippedCount > 0) {
+                        logger_1.logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);
                     }
                     novels = filtered;
                 }
@@ -172,14 +215,31 @@ class DownloadManager {
                 }
             }
             let downloaded = 0;
+            let skippedCount = 0;
             const tagForLog = target.filterTag || target.tag;
             for (const novel of novels) {
                 if (this.database.hasDownloaded(String(novel.id), 'novel')) {
                     logger_1.logger.debug(`Novel ${novel.id} already downloaded, skipping`);
                     continue;
                 }
-                await this.downloadNovel(novel, tagForLog);
-                downloaded++;
+                try {
+                    await this.downloadNovel(novel, tagForLog);
+                    downloaded++;
+                }
+                catch (error) {
+                    // Skip novels that are deleted, private, or inaccessible
+                    skippedCount++;
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    if (errorMessage.includes('404')) {
+                        logger_1.logger.debug(`Novel ${novel.id} not found (deleted or private), skipping`);
+                    }
+                    else {
+                        logger_1.logger.warn(`Failed to download novel ${novel.id}`, { error: errorMessage });
+                    }
+                }
+            }
+            if (skippedCount > 0) {
+                logger_1.logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);
             }
             this.database.logExecution(tagForLog, 'novel', 'success', `${downloaded} items downloaded`);
             logger_1.logger.info(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
@@ -191,25 +251,52 @@ class DownloadManager {
         }
     }
     /**
-     * Get today's date in YYYY-MM-DD format
+     * Get today's date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
     getTodayDate() {
+        // Get current time in Japan timezone (JST = UTC+9)
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Tokyo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+        const parts = formatter.formatToParts(now);
+        const year = parts.find(p => p.type === 'year').value;
+        const month = parts.find(p => p.type === 'month').value;
+        const day = parts.find(p => p.type === 'day').value;
         return `${year}-${month}-${day}`;
     }
     /**
-     * Get yesterday's date in YYYY-MM-DD format
+     * Get yesterday's date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
     getYesterdayDate() {
+        // Get current time in Japan timezone (JST = UTC+9)
         const now = new Date();
-        now.setDate(now.getDate() - 1);
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Tokyo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+        // Get current date components in JST
+        const todayParts = formatter.formatToParts(now);
+        const year = parseInt(todayParts.find(p => p.type === 'year').value, 10);
+        const month = parseInt(todayParts.find(p => p.type === 'month').value, 10) - 1; // 0-indexed
+        const day = parseInt(todayParts.find(p => p.type === 'day').value, 10);
+        // Create a date object in JST and subtract one day
+        // We create a date at noon JST to avoid timezone edge cases
+        const jstNoon = new Date(Date.UTC(year, month, day, 3, 0, 0, 0)); // 12:00 JST = 03:00 UTC
+        jstNoon.setUTCDate(jstNoon.getUTCDate() - 1);
+        // Format the yesterday date
+        const yesterdayParts = formatter.formatToParts(jstNoon);
+        const yesterdayYear = yesterdayParts.find(p => p.type === 'year').value;
+        const yesterdayMonth = yesterdayParts.find(p => p.type === 'month').value;
+        const yesterdayDay = yesterdayParts.find(p => p.type === 'day').value;
+        return `${yesterdayYear}-${yesterdayMonth}-${yesterdayDay}`;
     }
     async downloadIllustration(illust, tag) {
         const detail = await this.client.getIllustDetail(illust.id);

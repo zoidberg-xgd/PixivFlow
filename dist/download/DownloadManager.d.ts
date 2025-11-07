@@ -13,11 +13,13 @@ export declare class DownloadManager {
     private handleIllustrationTarget;
     private handleNovelTarget;
     /**
-     * Get today's date in YYYY-MM-DD format
+     * Get today's date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
     private getTodayDate;
     /**
-     * Get yesterday's date in YYYY-MM-DD format
+     * Get yesterday's date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
     private getYesterdayDate;
     private downloadIllustration;

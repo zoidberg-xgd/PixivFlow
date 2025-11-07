@@ -359,9 +359,10 @@ async function handleRefresh(args) {
 /**
  * Handle download command
  */
-async function handleDownload() {
+async function handleDownload(args) {
     try {
-        const configPath = (0, config_1.getConfigPath)();
+        const configPathArg = args ? args.options.config || undefined : undefined;
+        const configPath = (0, config_1.getConfigPath)(configPathArg);
         const config = (0, config_1.loadConfig)(configPath);
         // Apply initial delay if configured
         if (config.initialDelay && config.initialDelay > 0) {
@@ -533,7 +534,7 @@ async function bootstrap() {
     }
     // Handle download command
     if (command === 'download') {
-        await handleDownload();
+        await handleDownload(args);
         return;
     }
     // Handle random download command

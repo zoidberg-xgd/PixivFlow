@@ -240,7 +240,19 @@ PixivFlow 支持两种登录方式：
 
 #### 步骤 1：运行登录命令
 
+**推荐方式**（使用主控脚本，直接调用内置CLI）：
+
 ```bash
+./scripts/pixiv.sh login
+```
+
+**其他方式**：
+
+```bash
+# 使用登录脚本（支持更多选项）
+./scripts/login.sh
+
+# 或使用 npm 命令
 npm run login
 ```
 
@@ -262,6 +274,12 @@ npm run login
 
 ```
 [?]: Password: 
+```
+
+**💡 提示**：也可以使用无头登录（通过参数提供用户名密码）：
+
+```bash
+./scripts/pixiv.sh login -u your_username -p your_password
 ```
 
 #### 步骤 3：等待登录完成
@@ -287,6 +305,9 @@ expires_in: 3600
 ```bash
 # 运行测试下载，验证登录是否成功
 ./scripts/pixiv.sh test
+
+# 或尝试随机下载一个作品
+./scripts/pixiv.sh random
 ```
 
 如果看到下载成功，说明登录完成！
@@ -415,6 +436,13 @@ pip install gppt
 如果你是第一次使用，建议先体验随机下载功能：
 
 ```bash
+# 推荐方式（使用主控脚本）
+./scripts/pixiv.sh random
+
+# 或使用完整CLI工具
+./scripts/pixiv-cli.sh random
+
+# 或使用 npm 命令
 npm run random
 ```
 
@@ -582,7 +610,13 @@ npm run random
 - 根据配置下载所有目标
 - 下载完成后退出
 
-#### 方式 3：使用 npm 命令
+#### 方式 3：使用主控脚本（推荐 ⭐）
+
+```bash
+./scripts/pixiv.sh once
+```
+
+#### 方式 4：使用 npm 命令
 
 ```bash
 npm run download
@@ -619,7 +653,7 @@ downloads/
 sqlite3 data/pixiv-downloader.db "SELECT * FROM downloaded_artworks LIMIT 10;"
 ```
 
-### 3.7 智能去重
+### 3.7 智能去重和错误处理
 
 PixivFlow 会自动记录已下载的作品，避免重复下载：
 
@@ -633,6 +667,26 @@ PixivFlow 会自动记录已下载的作品，避免重复下载：
 [INFO] Illustration 137216582 already downloaded, skipping
 [INFO] Saved illustration 137125017 page 1
 ```
+
+#### 自动错误处理
+
+PixivFlow 还内置了完善的错误处理机制，自动处理无法下载的作品：
+
+- ✅ **自动跳过已删除作品**：如果作品已被作者删除（404 错误），会自动跳过
+- ✅ **自动跳过私有作品**：如果作品设置为私有，会自动跳过
+- ✅ **自动跳过无法访问的作品**：如果作品因其他原因无法访问，会自动跳过
+- ✅ **记录跳过数量**：在下载完成后会显示跳过的作品数量
+- ✅ **不会中断流程**：单个作品下载失败不会影响整个下载任务
+
+**错误处理示例**：
+
+```
+[DEBUG] Illustration 123456 not found (deleted or private), skipping
+[INFO] Skipped 3 illustration(s) (deleted, private, or inaccessible)
+[INFO] Illustration tag 風景 completed, { downloaded: 47 }
+```
+
+> 💡 **提示**：在批量下载时，遇到已删除或私有的作品是正常现象。PixivFlow 会自动处理这些情况，无需手动干预。
 
 ---
 
@@ -865,13 +919,19 @@ Cron 表达式格式：`分 时 日 月 周`
 - 后台持续运行
 - 根据 Cron 表达式自动执行
 
-#### 方式 2：使用 npm 命令
+#### 方式 2：使用主控脚本（推荐 ⭐）
+
+```bash
+./scripts/pixiv.sh run
+```
+
+#### 方式 3：使用 npm 命令
 
 ```bash
 npm run scheduler
 ```
 
-#### 方式 3：使用 PM2（服务器环境推荐）
+#### 方式 4：使用 PM2（服务器环境推荐）
 
 ```bash
 # 安装 PM2
@@ -1224,6 +1284,38 @@ npm run login
    df -h
    ```
 
+#### 问题：遇到已删除或私有的作品
+
+**症状**：下载过程中提示某些作品无法下载
+
+**说明**：
+PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
+
+- ✅ **自动跳过已删除作品**：如果作品已被作者删除（404 错误），会自动跳过并继续下载其他作品
+- ✅ **自动跳过私有作品**：如果作品设置为私有或需要特殊权限，会自动跳过
+- ✅ **自动跳过无法访问的作品**：如果作品因其他原因无法访问，会自动跳过
+- ✅ **记录跳过数量**：在下载完成后会显示跳过的作品数量
+- ✅ **不会中断流程**：单个作品下载失败不会影响整个下载任务
+
+**日志示例**：
+
+```
+[DEBUG] Novel 123456 not found (deleted or private), skipping
+[WARN] Failed to download novel 789012, { error: 'Network timeout' }
+[INFO] Skipped 3 novel(s) (deleted, private, or inaccessible)
+[INFO] Novel tag 小説 completed, { downloaded: 47 }
+```
+
+**日志级别说明**：
+- **DEBUG 级别**：404 错误（已删除或私有作品）使用 debug 级别，默认不显示，可通过日志级别配置查看
+- **WARN 级别**：其他错误（如网络超时、权限问题等）使用 warn 级别，会显示在日志中
+- **INFO 级别**：任务完成时显示跳过的作品总数和成功下载的数量
+
+**这是正常行为**：
+- 在批量下载时，遇到已删除或私有的作品是正常现象
+- PixivFlow 会自动处理这些情况，无需手动干预
+- 下载任务会继续执行，直到完成所有可下载的作品
+
 ### 7.3 定时任务问题
 
 #### 问题：定时任务没有运行
@@ -1410,7 +1502,40 @@ downloads/
 0 2 * * * /path/to/pixivflow/scripts/auto-backup.sh
 ```
 
-### 8.4 监控和维护
+### 8.4 错误处理机制
+
+#### 自动错误处理
+
+PixivFlow 内置了完善的错误处理机制，确保下载任务的稳定性：
+
+**自动处理的错误类型**：
+- ✅ **404 错误**：作品已删除或不存在，自动跳过（使用 DEBUG 级别日志）
+- ✅ **403 错误**：作品为私有或需要特殊权限，自动跳过
+- ✅ **网络超时**：网络连接超时，自动跳过并记录（使用 WARN 级别日志）
+- ✅ **其他错误**：任何无法访问的作品，自动跳过并记录
+
+**错误处理特点**：
+- 🔄 **不中断流程**：单个作品失败不会影响整个下载任务
+- 📊 **统计跳过数量**：任务结束时显示跳过的作品总数
+- 📝 **详细日志记录**：所有错误都会记录在日志中，便于排查问题
+- 🎯 **智能区分**：区分不同类型的错误，使用不同的日志级别
+
+**日志示例**：
+
+```
+[DEBUG] Illustration 123456 not found (deleted or private), skipping
+[WARN] Failed to download illustration 789012, { error: 'Network timeout' }
+[INFO] Skipped 5 illustration(s) (deleted, private, or inaccessible)
+[INFO] Illustration tag 風景 completed, { downloaded: 45 }
+```
+
+**最佳实践**：
+- ✅ 定期查看日志，了解跳过的作品情况
+- ✅ 如果跳过数量异常多，检查网络连接或筛选条件
+- ✅ 404 错误是正常现象，无需担心
+- ✅ 其他错误（如网络超时）可能需要调整网络配置
+
+### 8.5 监控和维护
 
 #### 定期健康检查
 
@@ -1433,11 +1558,11 @@ downloads/
 sqlite3 data/pixiv-downloader.db "SELECT COUNT(*) FROM downloaded_artworks;"
 ```
 
-### 8.5 使用建议
+### 8.6 使用建议
 
 #### 首次使用
 
-1. ✅ 先运行 `npm run login` 登录
+1. ✅ 先运行 `./scripts/pixiv.sh login` 登录（或 `npm run login`）
 2. ✅ 运行 `./scripts/pixiv.sh test` 测试下载
 3. ✅ 确认配置正确后再启用定时任务
 

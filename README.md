@@ -39,7 +39,7 @@ PixivFlow 是一个**完全独立运行**的 Pixiv 作品下载工具，无需�
 | **🎯 精准筛选** | 按标签、收藏数、日期范围筛选作品 |
 | **🎲 随机下载** | 一键下载随机热门标签作品，快速体验 |
 | **💾 智能去重** | SQLite 数据库记录历史，自动跳过已下载 |
-| **🔄 稳定可靠** | 自动重试、断点续传、错误恢复 |
+| **🔄 稳定可靠** | 自动重试、断点续传、错误恢复、智能跳过已删除/私有作品 |
 | **📊 完整日志** | 详细的运行日志和下载统计报告 |
 | **🔐 安全登录** | 通过 Python gppt 库实现 OAuth 2.0 PKCE 流程，支持终端登录 |
 
@@ -145,7 +145,7 @@ npm run setup
 
 ## 🛠️ 脚本工具
 
-PixivFlow 提供了丰富的脚本工具，让你无需记忆复杂的 npm 命令：
+PixivFlow 提供了丰富的脚本工具，让你无需记忆复杂的 npm 命令。所有脚本都直接调用内置 CLI 功能，性能更好、响应更快。
 
 ### 🎯 主控脚本（最常用）
 
@@ -155,22 +155,33 @@ PixivFlow 提供了丰富的脚本工具，让你无需记忆复杂的 npm 命�
 
 | 命令 | 说明 |
 |------|------|
+| `setup` | 交互式配置向导（首次必须运行） |
+| `login` | 登录 Pixiv 账号（交互式，直接调用内置CLI） |
 | `test` | 测试下载（下载少量作品验证配置） |
 | `once` | 执行一次下载 |
+| `random` | 随机下载一个热门标签作品 |
 | `run` | 启动定时任务（后台持续运行） |
 | `stop` | 停止运行的定时任务 |
 | `status` | 查看当前运行状态 |
 | `health` | 健康检查（检查配置、网络等） |
 | `logs` | 查看运行日志 |
 
+**💡 提示**：所有命令都直接调用内置 CLI，无需通过 npm scripts，响应更快。
+
 ### 🔐 登录管理
 
 ```bash
-# 登录 Pixiv 账号（推荐，默认使用 Python gppt）
+# 方式1：使用主控脚本（推荐）
+./scripts/pixiv.sh login
+
+# 方式2：使用登录脚本（支持更多选项）
+./scripts/login.sh
+
+# 方式3：使用 npm 命令
 npm run login
 
-# 查看登录帮助
-npm run login -- --help
+# 无头登录（通过参数提供用户名密码）
+./scripts/pixiv.sh login -u your_username -p your_password
 ```
 
 ### ⚙️ 配置管理
@@ -209,7 +220,26 @@ npm run login -- --help
 ./scripts/auto-backup.sh
 ```
 
-**💡 提示**：所有脚本都支持 `--help` 查看详细用法。
+### 🎨 高级 CLI 工具
+
+```bash
+# 使用完整 CLI 工具（直接调用内置功能）
+./scripts/pixiv-cli.sh <command>
+
+# 可用命令：
+./scripts/pixiv-cli.sh login [options]    # 登录
+./scripts/pixiv-cli.sh refresh <token>     # 刷新令牌
+./scripts/pixiv-cli.sh download            # 执行下载
+./scripts/pixiv-cli.sh random              # 随机下载
+./scripts/pixiv-cli.sh scheduler           # 启动定时任务
+./scripts/pixiv-cli.sh stats               # 查看统计
+./scripts/pixiv-cli.sh export              # 导出数据
+```
+
+**💡 提示**：
+- 所有脚本都支持 `--help` 查看详细用法
+- 脚本直接调用内置 CLI（`dist/index.js`），无需通过 npm，性能更好
+- 推荐使用 `./scripts/pixiv.sh` 作为主要入口
 
 详细说明：[脚本使用指南](SCRIPTS_GUIDE.md)
 
@@ -600,6 +630,33 @@ pm2 startup
 2. 减少并发下载数量
 3. 增加重试次数和超时时间
 4. 使用代理服务器（如果需要）
+
+---
+
+### ❓ 遇到已删除或私有的作品？
+
+**症状**：下载过程中提示某些作品无法下载
+
+**说明**：
+PixivFlow 内置了完善的错误处理机制，会自动处理以下情况：
+
+- ✅ **自动跳过已删除作品**：如果作品已被作者删除，会自动跳过并继续下载其他作品
+- ✅ **自动跳过私有作品**：如果作品设置为私有或需要特殊权限，会自动跳过
+- ✅ **自动跳过无法访问的作品**：如果作品因其他原因无法访问（如 404 错误），会自动跳过
+- ✅ **记录跳过数量**：在下载完成后会显示跳过的作品数量
+- ✅ **不会中断流程**：单个作品下载失败不会影响整个下载任务
+
+**日志示例**：
+
+```
+[INFO] Skipped 3 novel(s) (deleted, private, or inaccessible)
+[INFO] Illustration tag 風景 completed, { downloaded: 47 }
+```
+
+**说明**：
+- 404 错误会使用 `debug` 级别日志（静默跳过）
+- 其他错误会使用 `warn` 级别日志（记录但继续）
+- 所有跳过的作品数量会在任务结束时统一显示
 
 ---
 

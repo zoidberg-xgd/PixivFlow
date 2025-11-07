@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # PixivFlow - 完整 CLI 工具
-# 描述: 提供高级命令行功能和直接调用接口
+# 描述: 提供高级命令行功能和直接调用内置CLI接口
 ################################################################################
 
 # 加载共享库
@@ -10,6 +10,40 @@ source "$SCRIPT_DIR/lib/common.sh"
 
 # 初始化环境
 init_script
+
+# ============================================================================
+# 核心检查函数
+# ============================================================================
+
+ensure_node() {
+    if ! check_node || ! check_npm; then
+        log_info "请安装 Node.js: https://nodejs.org/"
+        exit 1
+    fi
+}
+
+ensure_deps() {
+    if ! check_dependencies; then
+        log_error "依赖未安装，请运行: npm install"
+        exit 1
+    fi
+}
+
+ensure_build() {
+    if [[ ! -f "dist/index.js" ]]; then
+        log_info "首次运行，正在编译..."
+        npm run build || {
+            log_error "编译失败"
+            exit 1
+        }
+    fi
+}
+
+# 调用内置CLI
+call_cli() {
+    ensure_build
+    node dist/index.js "$@"
+}
 
 # ============================================================================
 # 帮助信息
@@ -21,28 +55,37 @@ show_help() {
 ║                  PixivFlow - 完整 CLI 工具                     ║
 ╚════════════════════════════════════════════════════════════════╝
 
-🎯 高级命令:
-    download <tag>      下载指定标签的作品
-    search <keyword>    搜索作品
-    info <id>           查看作品信息
-    stats               查看下载统计
-    export              导出数据
+🎯 内置CLI命令（直接调用）:
+    login [options]         登录 Pixiv 账号
+    refresh <token>         刷新访问令牌
+    download                执行下载任务
+    random                  随机下载一个作品
+    scheduler               启动定时任务
+
+📊 数据统计:
+    stats                   查看下载统计
+    export                  导出下载数据
 
 🔧 选项:
-    --limit <n>         限制数量
-    --min-bookmarks <n> 最低收藏数
-    --type <type>       类型（illustration/novel）
-    --help              显示帮助
+    -u, --username <id>     Pixiv 用户名
+    -p, --password <pass>   Pixiv 密码
+    -c, --config <path>     配置文件路径
+    -j, --json              输出 JSON 格式
+    --help                  显示帮助
 
 💡 示例:
-    $0 download 風景 --limit 10
-    $0 search イラスト --min-bookmarks 1000
-    $0 info 123456
-    $0 stats
-    $0 export
+    $0 login                        # 交互式登录
+    $0 login -u user -p pass        # 无头登录
+    $0 refresh <refresh_token>       # 刷新令牌
+    $0 download                     # 执行下载
+    $0 random                       # 随机下载
+    $0 scheduler                    # 启动定时任务
+    $0 stats                        # 查看统计
+    $0 export                       # 导出数据
 
 📚 文档:
     详细用法请参考: SCRIPTS_GUIDE.md
+    主控脚本: ./scripts/pixiv.sh
 
 EOF
 }
@@ -51,54 +94,60 @@ EOF
 # 核心命令
 # ============================================================================
 
+cmd_login() {
+    print_header "Pixiv 登录"
+    
+    ensure_node
+    ensure_deps
+    
+    call_cli login "$@"
+}
+
+cmd_refresh() {
+    local token="$1"
+    
+    if [[ -z "$token" ]]; then
+        log_error "请提供 refresh token"
+        echo "用法: $0 refresh <refresh_token>"
+        exit 1
+    fi
+    
+    print_header "刷新令牌"
+    
+    ensure_node
+    ensure_deps
+    
+    call_cli refresh "$token"
+}
+
 cmd_download() {
-    local tag="$1"
-    shift
+    print_header "执行下载"
     
-    if [[ -z "$tag" ]]; then
-        log_error "请指定标签"
-        echo "用法: $0 download <tag> [options]"
-        exit 1
-    fi
+    ensure_node
+    ensure_deps
     
-    print_header "下载作品"
-    
-    log_info "标签: $tag"
-    log_info "选项: $*"
-    
-    # 这里可以调用 Node.js 实现
-    log_warn "功能开发中..."
-    log_info "请使用 './scripts/pixiv.sh once' 或 'npm run download' 代替"
+    call_cli download "$@"
 }
 
-cmd_search() {
-    local keyword="$1"
+cmd_random() {
+    print_header "随机下载"
     
-    if [[ -z "$keyword" ]]; then
-        log_error "请指定搜索关键词"
-        echo "用法: $0 search <keyword>"
-        exit 1
-    fi
+    ensure_node
+    ensure_deps
     
-    print_header "搜索作品"
-    
-    log_info "关键词: $keyword"
-    log_warn "功能开发中..."
+    call_cli random "$@"
 }
 
-cmd_info() {
-    local work_id="$1"
+cmd_scheduler() {
+    print_header "启动定时任务"
     
-    if [[ -z "$work_id" ]]; then
-        log_error "请指定作品 ID"
-        echo "用法: $0 info <id>"
-        exit 1
-    fi
+    ensure_node
+    ensure_deps
     
-    print_header "作品信息"
+    log_info "定时任务已启动（按 Ctrl+C 停止）"
+    echo
     
-    log_info "作品 ID: $work_id"
-    log_warn "功能开发中..."
+    call_cli scheduler
 }
 
 cmd_stats() {
@@ -179,11 +228,18 @@ main() {
     shift 2>/dev/null || true
     
     case "$command" in
-        download)   cmd_download "$@" ;;
-        search)     cmd_search "$@" ;;
-        info)       cmd_info "$@" ;;
+        # 内置CLI命令
+        login)      cmd_login "$@" ;;
+        refresh)   cmd_refresh "$@" ;;
+        download)  cmd_download "$@" ;;
+        random)     cmd_random "$@" ;;
+        scheduler) cmd_scheduler "$@" ;;
+        
+        # 数据统计
         stats)      cmd_stats "$@" ;;
         export)     cmd_export "$@" ;;
+        
+        # 帮助
         help|-h|--help)
             show_help
             ;;

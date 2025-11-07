@@ -205,9 +205,9 @@ npm run login -- --help
 
 ---
 
-### pixiv.sh - 主控制脚本
+### pixiv.sh - 主控制脚本 ⭐ 推荐
 
-**最常用的脚本**，提供所有日常操作。
+**最常用的脚本**，提供所有日常操作。**直接调用内置 CLI 功能**，性能更好、响应更快。
 
 #### 基本用法
 
@@ -220,14 +220,18 @@ npm run login -- --help
 | 命令 | 说明 | 示例 |
 |------|------|------|
 | `setup` | 运行配置向导 | `./scripts/pixiv.sh setup` |
+| `login` | 登录 Pixiv 账号（直接调用内置CLI） | `./scripts/pixiv.sh login` |
 | `test` | 测试下载（推荐首次使用） | `./scripts/pixiv.sh test` |
 | `once` | 执行一次下载 | `./scripts/pixiv.sh once` |
+| `random` | 随机下载一个热门标签作品 | `./scripts/pixiv.sh random` |
 | `run` | 启动定时任务 | `./scripts/pixiv.sh run` |
 | `stop` | 停止运行 | `./scripts/pixiv.sh stop` |
 | `status` | 查看状态 | `./scripts/pixiv.sh status` |
 | `health` | 健康检查 | `./scripts/pixiv.sh health` |
 | `logs` | 查看日志 | `./scripts/pixiv.sh logs` |
 | `help` | 显示帮助 | `./scripts/pixiv.sh help` |
+
+**💡 技术说明**：所有命令都直接调用内置 CLI（`dist/index.js`），无需通过 npm scripts，响应更快。
 
 #### 使用示例
 
@@ -237,16 +241,25 @@ npm run login -- --help
 # 1. 运行配置向导
 ./scripts/pixiv.sh setup
 
-# 2. 测试下载
+# 2. 登录账号（如果配置向导未完成登录）
+./scripts/pixiv.sh login
+
+# 3. 测试下载
 ./scripts/pixiv.sh test
 
-# 3. 启动定时任务
+# 4. 启动定时任务
 ./scripts/pixiv.sh run
 ```
 
 ##### 日常使用
 
 ```bash
+# 登录账号（如果需要重新登录）
+./scripts/pixiv.sh login
+
+# 随机下载一个作品（快速体验）
+./scripts/pixiv.sh random
+
 # 立即下载一次
 ./scripts/pixiv.sh once
 
@@ -258,6 +271,19 @@ npm run login -- --help
 
 # 停止运行
 ./scripts/pixiv.sh stop
+```
+
+##### 登录功能
+
+```bash
+# 交互式登录（在终端输入用户名密码）
+./scripts/pixiv.sh login
+
+# 无头登录（通过参数提供用户名密码）
+./scripts/pixiv.sh login -u your_username -p your_password
+
+# 查看登录帮助
+./scripts/pixiv.sh login --help
 ```
 
 ##### 环境检查
@@ -311,7 +337,7 @@ npm run login -- --help
 
 ### pixiv-cli.sh - 完整 CLI 工具
 
-**高级命令行工具**，提供更多控制选项。
+**高级命令行工具**，**直接调用内置 CLI 功能**，提供完整的命令行接口。
 
 #### 基本用法
 
@@ -319,30 +345,51 @@ npm run login -- --help
 ./scripts/pixiv-cli.sh <command> [options]
 ```
 
-#### 高级命令
+#### 内置 CLI 命令
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `download` | 下载指定标签 | `./scripts/pixiv-cli.sh download 風景 --limit 10` |
-| `search` | 搜索作品 | `./scripts/pixiv-cli.sh search イラスト` |
-| `info` | 查看作品信息 | `./scripts/pixiv-cli.sh info 123456` |
+| `login` | 登录 Pixiv 账号 | `./scripts/pixiv-cli.sh login` |
+| `refresh` | 刷新访问令牌 | `./scripts/pixiv-cli.sh refresh <token>` |
+| `download` | 执行下载任务 | `./scripts/pixiv-cli.sh download` |
+| `random` | 随机下载一个作品 | `./scripts/pixiv-cli.sh random` |
+| `scheduler` | 启动定时任务 | `./scripts/pixiv-cli.sh scheduler` |
 | `stats` | 查看下载统计 | `./scripts/pixiv-cli.sh stats` |
+| `export` | 导出下载数据 | `./scripts/pixiv-cli.sh export` |
 
 #### 使用示例
 
 ```bash
-# 下载指定标签
-./scripts/pixiv-cli.sh download 風景 --limit 20
+# 登录账号
+./scripts/pixiv-cli.sh login
+./scripts/pixiv-cli.sh login -u username -p password  # 无头登录
 
-# 搜索作品
-./scripts/pixiv-cli.sh search イラスト --min-bookmarks 1000
+# 刷新令牌
+./scripts/pixiv-cli.sh refresh <refresh_token>
+
+# 执行下载
+./scripts/pixiv-cli.sh download
+
+# 随机下载
+./scripts/pixiv-cli.sh random
+
+# 启动定时任务
+./scripts/pixiv-cli.sh scheduler
 
 # 查看统计
 ./scripts/pixiv-cli.sh stats
 
+# 导出数据
+./scripts/pixiv-cli.sh export
+
 # 显示帮助
 ./scripts/pixiv-cli.sh --help
 ```
+
+**💡 技术说明**：
+- 所有命令都直接调用内置 CLI（`dist/index.js`）
+- 与 `pixiv.sh` 的区别：`pixiv-cli.sh` 提供更底层的 CLI 接口，适合高级用户
+- 推荐普通用户使用 `pixiv.sh`，高级用户使用 `pixiv-cli.sh`
 
 ---
 

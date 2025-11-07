@@ -14,7 +14,7 @@ set -euo pipefail
 readonly PROJECT_NAME="PixivFlow"
 readonly PROJECT_VERSION="2.0.0"
 readonly CONFIG_FILE="config/standalone.config.json"
-readonly DIST_MAIN="dist/standalone/index.js"
+readonly DIST_MAIN="dist/index.js"
 readonly DATABASE_PATH="data/pixiv-downloader.db"
 readonly LOG_DIR="logs"
 

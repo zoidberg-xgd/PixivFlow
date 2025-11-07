@@ -371,9 +371,13 @@ async function handleRefresh(args: {
 /**
  * Handle download command
  */
-async function handleDownload(): Promise<void> {
+async function handleDownload(args?: {
+  options: Record<string, string | boolean>;
+  positional: string[];
+}): Promise<void> {
   try {
-    const configPath = getConfigPath();
+    const configPathArg = args ? (args.options.config as string) || undefined : undefined;
+    const configPath = getConfigPath(configPathArg);
     const config = loadConfig(configPath);
 
     // Apply initial delay if configured
@@ -581,7 +585,7 @@ async function bootstrap() {
 
   // Handle download command
   if (command === 'download') {
-    await handleDownload();
+    await handleDownload(args);
     return;
   }
 

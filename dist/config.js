@@ -40,15 +40,33 @@ const DEFAULT_CONFIG = {
     initialDelay: 0,
 };
 /**
- * Get yesterday's date in YYYY-MM-DD format
+ * Get yesterday's date in YYYY-MM-DD format (Japan timezone)
+ * Pixiv rankings are based on Japan time (JST, UTC+9)
  */
 function getYesterdayDate() {
+    // Get current time in Japan timezone (JST = UTC+9)
     const now = new Date();
-    now.setDate(now.getDate() - 1);
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    // Get current date components in JST
+    const todayParts = formatter.formatToParts(now);
+    const year = parseInt(todayParts.find(p => p.type === 'year').value, 10);
+    const month = parseInt(todayParts.find(p => p.type === 'month').value, 10) - 1; // 0-indexed
+    const day = parseInt(todayParts.find(p => p.type === 'day').value, 10);
+    // Create a date object in JST and subtract one day
+    // We create a date at noon JST to avoid timezone edge cases
+    const jstNoon = new Date(Date.UTC(year, month, day, 3, 0, 0, 0)); // 12:00 JST = 03:00 UTC
+    jstNoon.setUTCDate(jstNoon.getUTCDate() - 1);
+    // Format the yesterday date
+    const yesterdayParts = formatter.formatToParts(jstNoon);
+    const yesterdayYear = yesterdayParts.find(p => p.type === 'year').value;
+    const yesterdayMonth = yesterdayParts.find(p => p.type === 'month').value;
+    const yesterdayDay = yesterdayParts.find(p => p.type === 'day').value;
+    return `${yesterdayYear}-${yesterdayMonth}-${yesterdayDay}`;
 }
 /**
  * Apply default values to configuration
