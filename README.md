@@ -18,7 +18,7 @@
 
 [快速开始](#-快速开始) • [功能特性](#-功能特性) • [文档](#-文档导航) • [脚本工具](#-脚本工具) • [使用场景](#-使用场景)
 
-[English](#) | [中文](#)
+[English](README_EN.md) | [中文](#)
 
 </div>
 
@@ -332,7 +332,9 @@ npm run login
 | 文档 | 说明 |
 |------|------|
 | [📝 CHANGELOG](CHANGELOG.md) | 版本更新日志 |
+| [📝 CHANGELOG (EN)](CHANGELOG_EN.md) | Version Changelog |
 | [🤝 CONTRIBUTING](CONTRIBUTING.md) | 贡献指南 |
+| [🤝 CONTRIBUTING (EN)](CONTRIBUTING_EN.md) | Contributing Guide |
 | [📊 TEST_REPORT](TEST_REPORT.md) | 测试报告 |
 
 ---
