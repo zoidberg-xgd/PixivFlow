@@ -413,8 +413,9 @@ function validateConfig(config, location) {
     }
     else {
         config.targets.forEach((target, index) => {
-            if (!target.tag || target.tag.trim() === '') {
-                errors.push(`targets[${index}].tag: Required field is missing or empty`);
+            // Tag is required for search mode, optional for ranking, series, or single novel mode
+            if (target.mode !== 'ranking' && !target.seriesId && !target.novelId && (!target.tag || target.tag.trim() === '')) {
+                errors.push(`targets[${index}].tag: Required field is missing or empty (required for search mode, optional for ranking/series/single novel mode)`);
             }
             if (target.type && !['illustration', 'novel'].includes(target.type)) {
                 errors.push(`targets[${index}].type: Must be "illustration" or "novel"`);

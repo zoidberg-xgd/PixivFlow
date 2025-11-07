@@ -33,7 +33,7 @@ export class DownloadManager {
 
   private async handleIllustrationTarget(target: TargetConfig) {
     const mode = target.mode || 'search';
-    const displayTag = target.filterTag || target.tag;
+    const displayTag = target.filterTag || target.tag || 'unknown';
     logger.info(`Processing illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag}`);
     
     try {
@@ -99,7 +99,7 @@ export class DownloadManager {
       
       let downloaded = 0;
       let skippedCount = 0;
-      const tagForLog = target.filterTag || target.tag;
+      const tagForLog = target.filterTag || target.tag || 'unknown';
 
       // Random selection mode
       if (target.random && illusts.length > 0) {
@@ -190,8 +190,82 @@ export class DownloadManager {
   }
 
   private async handleNovelTarget(target: TargetConfig) {
+    // Check if this is a single novel download
+    if (target.novelId) {
+      logger.info(`Processing single novel ${target.novelId}`);
+      try {
+        if (this.database.hasDownloaded(String(target.novelId), 'novel')) {
+          logger.info(`Novel ${target.novelId} already downloaded, skipping`);
+          return;
+        }
+
+        // Get novel detail first
+        const detail = await this.client.getNovelDetail(target.novelId);
+        const novel: PixivNovel = {
+          id: detail.id,
+          title: detail.title,
+          user: detail.user,
+          create_date: detail.create_date,
+        };
+
+        await this.downloadNovel(novel, `novel-${target.novelId}`);
+        logger.info(`Successfully downloaded novel ${target.novelId}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to download novel ${target.novelId}`, {
+          error: errorMessage,
+        });
+        throw error;
+      }
+      return;
+    }
+    
+    // Check if this is a series download
+    if (target.seriesId) {
+      logger.info(`Processing novel series ${target.seriesId}`);
+      try {
+        const novels = await this.client.getNovelSeries(target.seriesId);
+        logger.info(`Found ${novels.length} novels in series ${target.seriesId}`);
+        
+        let downloaded = 0;
+        const targetLimit = target.limit || novels.length; // Default to all novels in series
+        
+        for (let i = 0; i < novels.length && downloaded < targetLimit; i++) {
+          const novel = novels[i];
+          
+          if (this.database.hasDownloaded(String(novel.id), 'novel')) {
+            logger.debug(`Novel ${novel.id} already downloaded, skipping`);
+            continue;
+          }
+
+          try {
+            await this.downloadNovel(novel, `series-${target.seriesId}`);
+            downloaded++;
+            logger.info(`Successfully downloaded novel ${novel.id} from series (${downloaded}/${Math.min(targetLimit, novels.length)})`);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.warn(`Failed to download novel ${novel.id} from series`, { 
+              error: errorMessage,
+              novelTitle: novel.title,
+              novelId: novel.id
+            });
+            // Continue with next novel
+            continue;
+          }
+        }
+        
+        logger.info(`Series download completed: ${downloaded} novel(s) downloaded from series ${target.seriesId}`);
+        return;
+      } catch (error) {
+        logger.error(`Failed to download novel series ${target.seriesId}`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }
+    
     const mode = target.mode || 'search';
-    const displayTag = target.filterTag || target.tag;
+    const displayTag = target.filterTag || target.tag || 'unknown';
     logger.info(`Processing novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag}`);
     
     try {
@@ -264,7 +338,7 @@ export class DownloadManager {
       
       let downloaded = 0;
       let skippedCount = 0;
-      const tagForLog = target.filterTag || target.tag;
+      const tagForLog = target.filterTag || target.tag || 'unknown';
       const targetLimit = target.limit || 10;
 
       // Random selection mode
@@ -313,7 +387,11 @@ export class DownloadManager {
                 // Continue to next random selection
                 continue;
               } else {
-                logger.warn(`Failed to download novel ${randomNovel.id}`, { error: errorMessage });
+                logger.warn(`Failed to download novel ${randomNovel.id}`, { 
+                  error: errorMessage,
+                  novelTitle: randomNovel.title,
+                  novelId: randomNovel.id
+                });
                 // For non-404 errors, continue trying (might be temporary issues)
                 continue;
               }
@@ -347,7 +425,11 @@ export class DownloadManager {
               // Continue to next novel
               continue;
             } else {
-              logger.warn(`Failed to download novel ${novel.id}`, { error: errorMessage });
+              logger.warn(`Failed to download novel ${novel.id}`, { 
+                error: errorMessage,
+                novelTitle: novel.title,
+                novelId: novel.id
+              });
               // For non-404 errors, continue trying (might be temporary issues)
               continue;
             }
@@ -470,41 +552,45 @@ export class DownloadManager {
   }
 
   private async downloadNovel(novel: PixivNovel, tag: string) {
+    // First verify the novel exists and get updated details
+    const detail = await this.client.getNovelDetail(novel.id);
+    
+    // Then get the novel text
     const text = await this.client.getNovelText(novel.id);
 
     const header = [
-      `Title: ${novel.title}`,
-      `Author: ${novel.user?.name ?? 'Unknown'}`,
-      `Author ID: ${novel.user?.id ?? 'Unknown'}`,
+      `Title: ${detail.title}`,
+      `Author: ${detail.user?.name ?? 'Unknown'}`,
+      `Author ID: ${detail.user?.id ?? 'Unknown'}`,
       `Tag: ${tag}`,
-      `Created: ${new Date(novel.create_date).toISOString()}`,
+      `Created: ${new Date(detail.create_date).toISOString()}`,
       '',
       '---',
       '',
     ].join('\n');
 
     const content = `${header}\n${text}`;
-    const fileName = this.fileService.sanitizeFileName(`${novel.id}_${novel.title}.txt`);
+    const fileName = this.fileService.sanitizeFileName(`${detail.id}_${detail.title}.txt`);
     
     const metadata: FileMetadata = {
-      author: novel.user?.name,
+      author: detail.user?.name,
       tag: tag,
-      date: novel.create_date ? new Date(novel.create_date) : new Date(),
+      date: detail.create_date ? new Date(detail.create_date) : new Date(),
     };
     
     const filePath = await this.fileService.saveText(content, fileName, metadata);
 
     this.database.insertDownload({
-      pixivId: String(novel.id),
+      pixivId: String(detail.id),
       type: 'novel',
       tag,
-      title: novel.title,
+      title: detail.title,
       filePath,
-      author: novel.user?.name,
-      userId: novel.user?.id,
+      author: detail.user?.name,
+      userId: detail.user?.id,
     });
 
-    logger.info(`Saved novel ${novel.id}`, { filePath });
+    logger.info(`Saved novel ${detail.id}`, { filePath });
   }
 
   private getIllustrationPages(detail: PixivIllust): PixivIllustPage[] {

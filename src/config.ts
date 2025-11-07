@@ -8,7 +8,7 @@ export type TargetType = 'illustration' | 'novel';
 
 export interface TargetConfig {
   type: TargetType;
-  tag: string;
+  tag?: string;
   /**
    * Maximum works to download per execution for this tag.
    */
@@ -55,6 +55,18 @@ export interface TargetConfig {
    * When enabled, limit specifies how many results to fetch, then randomly selects one to download
    */
   random?: boolean;
+  /**
+   * Novel series ID (only used when type='novel')
+   * If specified, downloads all novels in the series
+   * Example: series ID 14690617 from URL https://www.pixiv.net/novel/series/14690617
+   */
+  seriesId?: number;
+  /**
+   * Novel ID (only used when type='novel')
+   * If specified, downloads a single novel by ID
+   * Example: novel ID 26132156 from URL https://www.pixiv.net/novel/show.php?id=26132156
+   */
+  novelId?: number;
 }
 
 export interface PixivCredentialConfig {
@@ -660,8 +672,9 @@ function validateConfig(config: Partial<StandaloneConfig>, location: string): vo
     errors.push('targets: At least one target must be configured');
   } else {
     config.targets.forEach((target, index) => {
-      if (!target.tag || target.tag.trim() === '') {
-        errors.push(`targets[${index}].tag: Required field is missing or empty`);
+      // Tag is required for search mode, optional for ranking, series, or single novel mode
+      if (target.mode !== 'ranking' && !target.seriesId && !target.novelId && (!target.tag || target.tag.trim() === '')) {
+        errors.push(`targets[${index}].tag: Required field is missing or empty (required for search mode, optional for ranking/series/single novel mode)`);
       }
       if (target.type && !['illustration', 'novel'].includes(target.type)) {
         errors.push(`targets[${index}].type: Must be "illustration" or "novel"`);

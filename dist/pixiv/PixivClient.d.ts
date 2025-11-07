@@ -83,7 +83,12 @@ export declare class PixivClient {
         }>;
     }>;
     getIllustDetail(illustId: number): Promise<PixivIllust>;
+    getNovelDetail(novelId: number): Promise<PixivNovel>;
     getNovelText(novelId: number): Promise<string>;
+    /**
+     * Get all novels in a series
+     */
+    getNovelSeries(seriesId: number): Promise<PixivNovel[]>;
     downloadImage(originalUrl: string): Promise<ArrayBuffer>;
     private fetchBinary;
     private createRequestUrl;

@@ -1,7 +1,7 @@
 export type TargetType = 'illustration' | 'novel';
 export interface TargetConfig {
     type: TargetType;
-    tag: string;
+    tag?: string;
     /**
      * Maximum works to download per execution for this tag.
      */
@@ -48,6 +48,18 @@ export interface TargetConfig {
      * When enabled, limit specifies how many results to fetch, then randomly selects one to download
      */
     random?: boolean;
+    /**
+     * Novel series ID (only used when type='novel')
+     * If specified, downloads all novels in the series
+     * Example: series ID 14690617 from URL https://www.pixiv.net/novel/series/14690617
+     */
+    seriesId?: number;
+    /**
+     * Novel ID (only used when type='novel')
+     * If specified, downloads a single novel by ID
+     * Example: novel ID 26132156 from URL https://www.pixiv.net/novel/show.php?id=26132156
+     */
+    novelId?: number;
 }
 export interface PixivCredentialConfig {
     clientId: string;

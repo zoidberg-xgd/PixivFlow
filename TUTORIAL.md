@@ -14,8 +14,8 @@
 
 1. **第一章：准备工作** - 环境检查、项目安装、验证安装
 2. **第二章：登录 Pixiv 账号** - 登录方式选择、登录流程、故障排除
-3. **第三章：下载插画作品** - 快速体验、配置下载、筛选条件
-4. **第四章：下载小说作品** - 小说下载配置、文件组织
+3. **第三章：下载插画作品** - 快速体验（随机下载）、配置下载、筛选条件
+4. **第四章：下载小说作品** - 小说下载配置、随机下载小说、文件组织
 5. **第五章：配置定时任务** - Cron 表达式、时区设置、定时执行
 6. **第六章：高级自动化设置** - 多标签下载、目录组织、高级筛选
 7. **第七章：常见问题解决** - 登录问题、下载问题、配置问题
@@ -451,6 +451,41 @@ npm run random
 - 🔐 如果未登录，会自动引导登录
 - 📥 下载 1 个随机作品，快速体验工具功能
 
+#### 随机下载插画
+
+```bash
+# 随机下载一个插画作品（默认）
+npm run random
+
+# 或明确指定下载插画
+npm run random -- --illustration
+# 或
+npm run random -- -i
+```
+
+#### 随机下载小说
+
+```bash
+# 随机下载一个小说作品
+npm run random -- --novel
+# 或
+npm run random -- -n
+
+# 或使用完整命令
+node dist/index.js random --novel
+```
+
+**随机下载小说功能说明**：
+- 📚 从热门小说标签中随机选择一个（如：小説、オリジナル、ホラー等）
+- 🎲 从搜索结果中随机选择一个小说进行下载
+- 📝 下载的小说保存为文本文件（`.txt`），包含标题、作者、标签等信息
+- 💾 文件保存在 `downloads/downloads/novels/` 目录中
+
+**使用场景**：
+- 快速体验小说下载功能
+- 发现新的小说作品
+- 测试工具是否正常工作
+
 ### 3.2 配置下载目标
 
 #### 方式 1：使用配置向导（推荐新手）
@@ -799,6 +834,45 @@ downloads/
 # 执行一次下载
 ./scripts/pixiv.sh once
 ```
+
+### 4.6 快速体验：随机下载小说
+
+如果你想快速体验小说下载功能，可以使用随机下载：
+
+```bash
+# 随机下载一个小说作品
+npm run random -- --novel
+# 或
+npm run random -- -n
+
+# 或使用完整命令
+node dist/index.js random --novel
+```
+
+**功能说明**：
+- 📚 从热门小说标签列表中随机选择一个标签（如：小説、オリジナル、ホラー、ファンタジー等）
+- 🔍 搜索该标签下的作品
+- 🎲 从搜索结果中随机选择一个小说
+- 📥 下载该小说到 `downloads/downloads/novels/` 目录
+
+**示例输出**：
+
+```
+[INFO] Checking authentication status...
+[INFO] Valid refresh token found in config
+[INFO] Randomly selected tag: ホラー (type: novel)
+[INFO] Starting random novel download...
+[INFO] Processing novel tag ホラー
+[INFO] Found 100 search results
+[INFO] Randomly selected novel 26396544 from 100 remaining results
+[INFO] Saved novel 26396544
+[INFO] Random novel download completed!
+```
+
+**适用场景**：
+- 第一次使用，想快速了解小说下载功能
+- 想发现新的小说作品，不指定特定标签
+- 测试工具是否正常工作
 
 ---
 

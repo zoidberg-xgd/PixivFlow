@@ -417,9 +417,18 @@ const POPULAR_TAGS = [
   'beautiful', 'nature', 'sky', 'sunset', 'flower'
 ];
 
+// 小说热门标签列表
+const POPULAR_NOVEL_TAGS = [
+  'オリジナル', '創作', '小説', '物語', 'ストーリー',
+  '恋愛', 'ファンタジー', '日常', '青春', '冒険',
+  'ミステリー', 'ホラー', 'SF', '歴史', '現代',
+  'original', 'story', 'novel', 'romance', 'fantasy',
+  'daily', 'youth', 'adventure', 'mystery', 'horror'
+];
+
 /**
  * Handle random download command
- * This will ensure user is logged in, then download a random image
+ * This will ensure user is logged in, then download a random work (illustration or novel)
  */
 async function handleRandomDownload(args: {
   options: Record<string, string | boolean>;
@@ -430,6 +439,28 @@ async function handleRandomDownload(args: {
     const username = (args.options.username || args.options.u) as string | undefined;
     const password = (args.options.password || args.options.p) as string | undefined;
     const headless = !!(args.options.headless || args.options.h);
+    
+    // Check if user wants to download novel or illustration
+    // Default to novel if --novel is specified, otherwise check --type, default to illustration
+    const typeArg = args.options.type as string | undefined;
+    const novelFlag = !!(args.options.novel || args.options.n);
+    const illustrationFlag = !!(args.options.illustration || args.options.i);
+    
+    let targetType: 'illustration' | 'novel' = 'illustration';
+    if (novelFlag) {
+      targetType = 'novel';
+    } else if (illustrationFlag) {
+      targetType = 'illustration';
+    } else if (typeArg) {
+      if (typeArg.toLowerCase() === 'novel') {
+        targetType = 'novel';
+      } else if (typeArg.toLowerCase() === 'illustration') {
+        targetType = 'illustration';
+      }
+    } else {
+      // Default to novel for testing
+      targetType = 'novel';
+    }
 
     // Ensure valid token exists (login if needed)
     logger.info('Checking authentication status...');
@@ -445,22 +476,45 @@ async function handleRandomDownload(args: {
     const resolvedConfigPath = getConfigPath(configPath);
     const config = loadConfig(resolvedConfigPath);
 
-    // Randomly select a tag
-    const randomTag = POPULAR_TAGS[Math.floor(Math.random() * POPULAR_TAGS.length)];
-    logger.info(`Randomly selected tag: ${randomTag}`);
-
-    // Create temporary config to download only 1 image
-    const tempConfig = {
-      ...config,
-      targets: [
-        {
-          type: 'illustration' as const,
-          tag: randomTag,
-          limit: 1,
-          searchTarget: 'partial_match_for_tags' as const,
-        },
-      ],
-    };
+    // Use tag search with random selection for both novels and illustrations
+    let tempConfig;
+    if (targetType === 'novel') {
+      // Use tag search with random selection for novels
+      const tagList = POPULAR_NOVEL_TAGS;
+      const randomTag = tagList[Math.floor(Math.random() * tagList.length)];
+      logger.info(`Randomly selected tag: ${randomTag} (type: ${targetType})`);
+      
+      tempConfig = {
+        ...config,
+        targets: [
+          {
+            type: targetType,
+            tag: randomTag,
+            limit: 1,
+            searchTarget: 'partial_match_for_tags' as const,
+            random: true, // Enable random selection
+          },
+        ],
+      };
+    } else {
+      // Use tag search with random selection for illustrations
+      const tagList = POPULAR_TAGS;
+      const randomTag = tagList[Math.floor(Math.random() * tagList.length)];
+      logger.info(`Randomly selected tag: ${randomTag} (type: ${targetType})`);
+      
+      tempConfig = {
+        ...config,
+        targets: [
+          {
+            type: targetType,
+            tag: randomTag,
+            limit: 1,
+            searchTarget: 'partial_match_for_tags' as const,
+            random: true, // Enable random selection
+          },
+        ],
+      };
+    }
     const database = new Database(config.storage!.databasePath!);
     database.migrate();
 
@@ -470,9 +524,9 @@ async function handleRandomDownload(args: {
     const downloadManager = new DownloadManager(tempConfig, pixivClient, database, fileService);
 
     await downloadManager.initialise();
-    logger.info('Starting random download...');
+    logger.info(`Starting random ${targetType} download...`);
     await downloadManager.runAllTargets();
-    logger.info('Random download completed!');
+    logger.info(`Random ${targetType} download completed!`);
 
     database.close();
     process.exit(0);

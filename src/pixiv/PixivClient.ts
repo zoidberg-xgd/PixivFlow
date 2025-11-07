@@ -76,6 +76,9 @@ export class PixivClient {
   }
 
   public async searchIllustrations(target: TargetConfig): Promise<PixivIllust[]> {
+    if (!target.tag) {
+      throw new Error('tag is required for illustration search');
+    }
     const results: PixivIllust[] = [];
     let nextUrl: string | null = this.createRequestUrl('v1/search/illust', {
       word: target.tag,
@@ -107,6 +110,9 @@ export class PixivClient {
   }
 
   public async searchNovels(target: TargetConfig): Promise<PixivNovel[]> {
+    if (!target.tag) {
+      throw new Error('tag is required for novel search');
+    }
     const results: PixivNovel[] = [];
     let nextUrl: string | null = this.createRequestUrl('v1/search/novel', {
       word: target.tag,
@@ -264,10 +270,136 @@ export class PixivClient {
     return response.illust;
   }
 
+  public async getNovelDetail(novelId: number): Promise<PixivNovel> {
+    // Try v2 API first, fallback to v1 if needed
+    let url = this.createRequestUrl('v2/novel/detail', { novel_id: String(novelId) });
+    logger.debug('Fetching novel detail', { novelId, url });
+    try {
+      const response = await this.request<{ novel: PixivNovel }>(url, { method: 'GET' });
+      logger.debug('Novel detail response received', { novelId, hasNovel: !!response.novel });
+      return response.novel;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // If v2 fails with 404, try v1
+      if (errorMessage.includes('404') || errorMessage.includes('end-point')) {
+        logger.debug('v2 API failed, trying v1', { novelId });
+        url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
+        try {
+          const response = await this.request<{ novel: PixivNovel }>(url, { method: 'GET' });
+          logger.debug('Novel detail response received (v1)', { novelId, hasNovel: !!response.novel });
+          return response.novel;
+        } catch (v1Error) {
+          logger.error('Failed to get novel detail (both v1 and v2)', { 
+            novelId, 
+            v2Url: this.createRequestUrl('v2/novel/detail', { novel_id: String(novelId) }),
+            v1Url: url,
+            v2Error: errorMessage,
+            v1Error: v1Error instanceof Error ? v1Error.message : String(v1Error)
+          });
+          throw v1Error;
+        }
+      } else {
+        logger.error('Failed to get novel detail', { 
+          novelId, 
+          url,
+          error: errorMessage
+        });
+        throw error;
+      }
+    }
+  }
+
   public async getNovelText(novelId: number): Promise<string> {
-    const url = this.createRequestUrl('v2/novel/text', { novel_id: String(novelId) });
-    const response = await this.request<PixivNovelTextResponse>(url, { method: 'GET' });
-    return response.novel_text;
+    // Try v1 API first (v2/novel/text doesn't exist)
+    const url = this.createRequestUrl('v1/novel/text', { novel_id: String(novelId) });
+    logger.debug('Fetching novel text', { novelId, url });
+    try {
+      const response = await this.request<PixivNovelTextResponse>(url, { method: 'GET' });
+      return response.novel_text;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('API endpoint failed, trying web scraping fallback', { 
+        novelId, 
+        url,
+        error: errorMessage
+      });
+      
+      // Fallback: Try to get text from web page
+      try {
+        const webUrl = `https://www.pixiv.net/ajax/novel/${novelId}`;
+        const token = await this.auth.getAccessToken();
+        const webResponse = await fetch(webUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'User-Agent': this.config.pixiv.userAgent,
+            'Referer': 'https://www.pixiv.net/',
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (webResponse.ok) {
+          const webData: any = await webResponse.json();
+          if (webData.body && webData.body.content) {
+            logger.info('Successfully retrieved novel text from web API', { novelId });
+            return webData.body.content;
+          }
+        }
+      } catch (webError) {
+        logger.debug('Web API fallback failed', { novelId, error: webError });
+      }
+      
+      throw new Error(`Unable to retrieve novel text for novel ${novelId}: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Get all novels in a series
+   */
+  public async getNovelSeries(seriesId: number): Promise<PixivNovel[]> {
+    const results: PixivNovel[] = [];
+    let nextUrl: string | null = this.createRequestUrl('v1/novel/series', {
+      series_id: String(seriesId),
+    });
+
+    while (nextUrl) {
+      const requestUrl: string = nextUrl;
+      const response: any = await this.request<any>(requestUrl, { method: 'GET' });
+      
+      // Debug: log response structure
+      logger.debug('Novel series API response', { 
+        keys: Object.keys(response),
+        hasNovelSeriesDetail: !!response.novel_series_detail,
+        hasSeriesContent: !!response.novel_series_detail?.series_content
+      });
+
+      // Handle different possible response structures
+      let seriesContent: Array<{ id: number; title: string; user: PixivUser; create_date: string }> = [];
+      
+      if (response.novel_series_detail?.series_content) {
+        seriesContent = response.novel_series_detail.series_content;
+      } else if (response.series_content) {
+        seriesContent = response.series_content;
+      } else if (Array.isArray(response.novels)) {
+        // Fallback: if response has novels array directly
+        seriesContent = response.novels;
+      } else {
+        logger.warn('Unexpected novel series response structure', { response });
+        throw new Error(`Unexpected response structure from novel series API. Response keys: ${Object.keys(response).join(', ')}`);
+      }
+
+      for (const content of seriesContent) {
+        results.push({
+          id: content.id,
+          title: content.title,
+          user: content.user,
+          create_date: content.create_date,
+        });
+      }
+
+      nextUrl = response.next_url || null;
+    }
+
+    return results;
   }
 
   public async downloadImage(originalUrl: string): Promise<ArrayBuffer> {
@@ -369,11 +501,29 @@ export class PixivClient {
 
           if (response.status === 404) {
             // 404 means resource not found, don't retry
-            throw new Error(`Pixiv API error: ${response.status} ${response.statusText}`);
+            // Try to get response body for debugging
+            let errorBody = '';
+            try {
+              const text = await response.text();
+              errorBody = text;
+              logger.debug('404 response body', { url, body: text });
+            } catch (e) {
+              // Ignore errors reading body
+            }
+            throw new Error(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
           }
 
           if (!response.ok) {
-            throw new Error(`Pixiv API error: ${response.status} ${response.statusText}`);
+            // Try to get response body for debugging
+            let errorBody = '';
+            try {
+              const text = await response.text();
+              errorBody = text;
+              logger.debug('Error response body', { url, status: response.status, body: text });
+            } catch (e) {
+              // Ignore errors reading body
+            }
+            throw new Error(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
           }
 
           return (await response.json()) as T;

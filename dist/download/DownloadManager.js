@@ -32,7 +32,7 @@ class DownloadManager {
     }
     async handleIllustrationTarget(target) {
         const mode = target.mode || 'search';
-        const displayTag = target.filterTag || target.tag;
+        const displayTag = target.filterTag || target.tag || 'unknown';
         logger_1.logger.info(`Processing illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag}`);
         try {
             let illusts = [];
@@ -91,7 +91,7 @@ class DownloadManager {
             }
             let downloaded = 0;
             let skippedCount = 0;
-            const tagForLog = target.filterTag || target.tag;
+            const tagForLog = target.filterTag || target.tag || 'unknown';
             // Random selection mode
             if (target.random && illusts.length > 0) {
                 // Filter out already downloaded items
@@ -177,8 +177,76 @@ class DownloadManager {
         }
     }
     async handleNovelTarget(target) {
+        // Check if this is a single novel download
+        if (target.novelId) {
+            logger_1.logger.info(`Processing single novel ${target.novelId}`);
+            try {
+                if (this.database.hasDownloaded(String(target.novelId), 'novel')) {
+                    logger_1.logger.info(`Novel ${target.novelId} already downloaded, skipping`);
+                    return;
+                }
+                // Get novel detail first
+                const detail = await this.client.getNovelDetail(target.novelId);
+                const novel = {
+                    id: detail.id,
+                    title: detail.title,
+                    user: detail.user,
+                    create_date: detail.create_date,
+                };
+                await this.downloadNovel(novel, `novel-${target.novelId}`);
+                logger_1.logger.info(`Successfully downloaded novel ${target.novelId}`);
+            }
+            catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                logger_1.logger.error(`Failed to download novel ${target.novelId}`, {
+                    error: errorMessage,
+                });
+                throw error;
+            }
+            return;
+        }
+        // Check if this is a series download
+        if (target.seriesId) {
+            logger_1.logger.info(`Processing novel series ${target.seriesId}`);
+            try {
+                const novels = await this.client.getNovelSeries(target.seriesId);
+                logger_1.logger.info(`Found ${novels.length} novels in series ${target.seriesId}`);
+                let downloaded = 0;
+                const targetLimit = target.limit || novels.length; // Default to all novels in series
+                for (let i = 0; i < novels.length && downloaded < targetLimit; i++) {
+                    const novel = novels[i];
+                    if (this.database.hasDownloaded(String(novel.id), 'novel')) {
+                        logger_1.logger.debug(`Novel ${novel.id} already downloaded, skipping`);
+                        continue;
+                    }
+                    try {
+                        await this.downloadNovel(novel, `series-${target.seriesId}`);
+                        downloaded++;
+                        logger_1.logger.info(`Successfully downloaded novel ${novel.id} from series (${downloaded}/${Math.min(targetLimit, novels.length)})`);
+                    }
+                    catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        logger_1.logger.warn(`Failed to download novel ${novel.id} from series`, {
+                            error: errorMessage,
+                            novelTitle: novel.title,
+                            novelId: novel.id
+                        });
+                        // Continue with next novel
+                        continue;
+                    }
+                }
+                logger_1.logger.info(`Series download completed: ${downloaded} novel(s) downloaded from series ${target.seriesId}`);
+                return;
+            }
+            catch (error) {
+                logger_1.logger.error(`Failed to download novel series ${target.seriesId}`, {
+                    error: error instanceof Error ? error.message : String(error),
+                });
+                throw error;
+            }
+        }
         const mode = target.mode || 'search';
-        const displayTag = target.filterTag || target.tag;
+        const displayTag = target.filterTag || target.tag || 'unknown';
         logger_1.logger.info(`Processing novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag}`);
         try {
             let novels = [];
@@ -244,7 +312,7 @@ class DownloadManager {
             }
             let downloaded = 0;
             let skippedCount = 0;
-            const tagForLog = target.filterTag || target.tag;
+            const tagForLog = target.filterTag || target.tag || 'unknown';
             const targetLimit = target.limit || 10;
             // Random selection mode
             if (target.random && novels.length > 0) {
@@ -288,7 +356,11 @@ class DownloadManager {
                                 continue;
                             }
                             else {
-                                logger_1.logger.warn(`Failed to download novel ${randomNovel.id}`, { error: errorMessage });
+                                logger_1.logger.warn(`Failed to download novel ${randomNovel.id}`, {
+                                    error: errorMessage,
+                                    novelTitle: randomNovel.title,
+                                    novelId: randomNovel.id
+                                });
                                 // For non-404 errors, continue trying (might be temporary issues)
                                 continue;
                             }
@@ -323,7 +395,11 @@ class DownloadManager {
                             continue;
                         }
                         else {
-                            logger_1.logger.warn(`Failed to download novel ${novel.id}`, { error: errorMessage });
+                            logger_1.logger.warn(`Failed to download novel ${novel.id}`, {
+                                error: errorMessage,
+                                novelTitle: novel.title,
+                                novelId: novel.id
+                            });
                             // For non-404 errors, continue trying (might be temporary issues)
                             continue;
                         }
@@ -425,35 +501,38 @@ class DownloadManager {
         }
     }
     async downloadNovel(novel, tag) {
+        // First verify the novel exists and get updated details
+        const detail = await this.client.getNovelDetail(novel.id);
+        // Then get the novel text
         const text = await this.client.getNovelText(novel.id);
         const header = [
-            `Title: ${novel.title}`,
-            `Author: ${novel.user?.name ?? 'Unknown'}`,
-            `Author ID: ${novel.user?.id ?? 'Unknown'}`,
+            `Title: ${detail.title}`,
+            `Author: ${detail.user?.name ?? 'Unknown'}`,
+            `Author ID: ${detail.user?.id ?? 'Unknown'}`,
             `Tag: ${tag}`,
-            `Created: ${new Date(novel.create_date).toISOString()}`,
+            `Created: ${new Date(detail.create_date).toISOString()}`,
             '',
             '---',
             '',
         ].join('\n');
         const content = `${header}\n${text}`;
-        const fileName = this.fileService.sanitizeFileName(`${novel.id}_${novel.title}.txt`);
+        const fileName = this.fileService.sanitizeFileName(`${detail.id}_${detail.title}.txt`);
         const metadata = {
-            author: novel.user?.name,
+            author: detail.user?.name,
             tag: tag,
-            date: novel.create_date ? new Date(novel.create_date) : new Date(),
+            date: detail.create_date ? new Date(detail.create_date) : new Date(),
         };
         const filePath = await this.fileService.saveText(content, fileName, metadata);
         this.database.insertDownload({
-            pixivId: String(novel.id),
+            pixivId: String(detail.id),
             type: 'novel',
             tag,
-            title: novel.title,
+            title: detail.title,
             filePath,
-            author: novel.user?.name,
-            userId: novel.user?.id,
+            author: detail.user?.name,
+            userId: detail.user?.id,
         });
-        logger_1.logger.info(`Saved novel ${novel.id}`, { filePath });
+        logger_1.logger.info(`Saved novel ${detail.id}`, { filePath });
     }
     getIllustrationPages(detail) {
         if (detail.meta_pages && detail.meta_pages.length > 0) {
