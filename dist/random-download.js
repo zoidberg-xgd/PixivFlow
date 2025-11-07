@@ -16,7 +16,8 @@ const POPULAR_TAGS = [
 ];
 async function randomDownload() {
     try {
-        const config = (0, config_1.loadConfig)();
+        const configPath = (0, config_1.getConfigPath)();
+        const config = (0, config_1.loadConfig)(configPath);
         // 随机选择一个标签
         const randomTag = POPULAR_TAGS[Math.floor(Math.random() * POPULAR_TAGS.length)];
         logger_1.logger.info(`随机选择标签: ${randomTag}`);
@@ -34,7 +35,7 @@ async function randomDownload() {
         };
         const database = new Database_1.Database(config.storage.databasePath);
         database.migrate();
-        const auth = new AuthClient_1.PixivAuth(config.pixiv, config.network, database);
+        const auth = new AuthClient_1.PixivAuth(config.pixiv, config.network, database, configPath);
         const pixivClient = new PixivClient_1.PixivClient(auth, config);
         const fileService = new FileService_1.FileService(config.storage);
         const downloadManager = new DownloadManager_1.DownloadManager(tempConfig, pixivClient, database, fileService);

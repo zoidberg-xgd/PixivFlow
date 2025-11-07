@@ -4,7 +4,8 @@ export declare class PixivAuth {
     private readonly credentials;
     private readonly network;
     private readonly database;
-    constructor(credentials: PixivCredentialConfig, network: NetworkConfig, database: Database);
+    private configPath?;
+    constructor(credentials: PixivCredentialConfig, network: NetworkConfig, database: Database, configPath?: string);
     getAccessToken(): Promise<string>;
     private refreshAccessToken;
     private generateClientHash;

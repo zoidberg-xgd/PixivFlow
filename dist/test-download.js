@@ -46,9 +46,9 @@ async function testDownload() {
     console.log('║        Test Script: Login & Download                           ║');
     console.log('║                                                                ║');
     console.log('╚════════════════════════════════════════════════════════════════╝\n');
-    const configPath = path.join(process.cwd(), 'config', 'standalone.config.json');
+    const defaultConfigPath = path.join(process.cwd(), 'config', 'standalone.config.json');
     // 检查是否已有配置文件
-    if (!fs.existsSync(configPath)) {
+    if (!fs.existsSync(defaultConfigPath)) {
         console.log('❌ 未找到配置文件！');
         console.log('\n请先运行配置向导创建配置：');
         console.log('  npm run standalone:setup\n');
@@ -60,7 +60,7 @@ async function testDownload() {
     console.log('════════════════════════════════════════════════════════════════');
     console.log('📋 加载配置');
     console.log('════════════════════════════════════════════════════════════════\n');
-    const configContent = fs.readFileSync(configPath, 'utf-8');
+    const configContent = fs.readFileSync(defaultConfigPath, 'utf-8');
     const config = JSON.parse(configContent);
     console.log(`✓ 下载目录: ${config.storage.illustrationDirectory}`);
     console.log(`✓ 数据库路径: ${config.storage.databasePath}`);
@@ -77,17 +77,18 @@ async function testDownload() {
     console.log('════════════════════════════════════════════════════════════════\n');
     console.log('正在启动下载器...\n');
     // 动态导入并运行主程序
-    const { loadConfig } = await Promise.resolve().then(() => __importStar(require('./config')));
+    const { loadConfig, getConfigPath } = await Promise.resolve().then(() => __importStar(require('./config')));
     const { DownloadManager } = await Promise.resolve().then(() => __importStar(require('./download/DownloadManager')));
     const { FileService } = await Promise.resolve().then(() => __importStar(require('./download/FileService')));
     const { logger } = await Promise.resolve().then(() => __importStar(require('./logger')));
     const { PixivAuth } = await Promise.resolve().then(() => __importStar(require('./pixiv/AuthClient')));
     const { PixivClient } = await Promise.resolve().then(() => __importStar(require('./pixiv/PixivClient')));
     const { Database } = await Promise.resolve().then(() => __importStar(require('./storage/Database')));
-    const loadedConfig = loadConfig();
+    const resolvedConfigPath = getConfigPath();
+    const loadedConfig = loadConfig(resolvedConfigPath);
     const database = new Database(loadedConfig.storage.databasePath);
     database.migrate();
-    const auth = new PixivAuth(loadedConfig.pixiv, loadedConfig.network, database);
+    const auth = new PixivAuth(loadedConfig.pixiv, loadedConfig.network, database, resolvedConfigPath);
     const pixivClient = new PixivClient(auth, loadedConfig);
     const fileService = new FileService(loadedConfig.storage);
     const downloadManager = new DownloadManager(loadedConfig, pixivClient, database, fileService);

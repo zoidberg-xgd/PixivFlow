@@ -6,12 +6,21 @@
 
 ## 📋 概述
 
-**PixivFlow** 使用 **纯终端登录** 安全登录流程：
+**PixivFlow** 提供了两种登录方式：
 
-- ✅ **纯终端登录**：在终端中输入用户名和密码，不打开浏览器
-- ✅ **安全无头模式**：无需浏览器，直接在终端完成登录
+### 方式一：终端登录（推荐 ⭐）
+
+- ✅ **纯终端登录**：在终端中输入用户名和密码
+- ✅ **使用 Python gppt**：通过 gppt 库进行登录，避免被检测
 - ✅ **自动获取认证**：程序自动获取并保存认证信息
 - ✅ **长期有效**：refresh_token 长期有效，无需频繁登录
+- ✅ **适用场景**：所有环境，特别是服务器环境
+
+### 方式二：手动输入 Token
+
+- ✅ **直接输入 refresh token**：如果您已经有 refresh token，可以直接输入
+- ✅ **跳过登录流程**：无需再次登录
+- ✅ **适用场景**：已有 token 或从其他工具迁移
 
 ---
 
@@ -19,22 +28,64 @@
 
 ### 方式 1：使用 npm 登录命令（推荐 ⭐ 最简单）
 
+这是最简单、最安全的方式，适合所有用户。
+
+#### 步骤 1：运行登录命令
+
 ```bash
-# 最简单的方式：在终端输入用户名和密码（无头模式，不打开浏览器）
 npm run login
 ```
 
-**功能说明**：
-- ✅ 默认交互式登录：在终端提示输入用户名和密码
-- ✅ 无头模式：不打开浏览器，更安全
-- ✅ 自动更新配置：登录成功后自动更新配置文件中的 refresh token
-- ✅ 默认使用 Python gppt：自动使用 gppt 进行登录，避免被检测
+#### 步骤 2：输入账号信息
 
-**使用示例**：
+程序会提示你输入：
+
+```
+[+]: ID can be email address, username, or account name.
+[?]: Pixiv ID: 
+```
+
+**输入你的 Pixiv 账号**（可以是以下任意一种）：
+- 邮箱地址：`your_email@example.com`
+- 用户名：`your_username`
+- 账号名：`your_account_name`
+
+然后输入密码（密码不会显示在屏幕上，输入时显示 `*`）：
+
+```
+[?]: Password: 
+```
+
+#### 步骤 3：等待登录完成
+
+程序会自动：
+1. ✅ 使用 Python gppt 进行登录（避免被检测）
+2. ✅ 获取 refresh token
+3. ✅ 保存到配置文件 `config/standalone.config.json`
+4. ✅ 显示登录成功信息
+
+**成功示例**：
+
+```
+[+]: Success!
+access_token: xxxxxx
+refresh_token: xxxxxx
+expires_in: 3600
+[+]: Config updated at /path/to/config/standalone.config.json
+```
+
+#### 步骤 4：验证登录
+
 ```bash
-# 默认交互式登录（推荐，自动使用 Python gppt）
-npm run login
+# 运行测试下载，验证登录是否成功
+./scripts/pixiv.sh test
+```
 
+如果看到下载成功，说明登录完成！
+
+#### 其他使用方式
+
+```bash
 # 无头登录（通过参数提供用户名密码）
 npm run login -- --headless -u your_username -p your_password
 
@@ -42,9 +93,14 @@ npm run login -- --headless -u your_username -p your_password
 export PIXIV_USERNAME="your_username"
 export PIXIV_PASSWORD="your_password"
 npm run login -- --headless
+
+# 查看帮助
+npm run login -- --help
 ```
 
-### 方式 2：使用配置向导（纯终端登录 + 交互式配置）
+### 方式 2：使用配置向导（终端登录 + 交互式配置）
+
+如果你想同时完成登录和配置，可以使用配置向导：
 
 ```bash
 # 使用便捷脚本
@@ -54,14 +110,45 @@ npm run login -- --headless
 npm run setup
 ```
 
-**登录过程**：
+#### 详细步骤
 
-1. 🔐 **终端输入账号** → 在终端中输入 Pixiv 用户名和密码（无头模式，不打开浏览器）
-2. ⚙️ **交互式配置** → 配置下载目录、标签、调度等选项
-3. ✅ **完成配置** → 配置文件自动保存
+**步骤 1：启动向导**
+
+运行命令后，程序会：
+- ✅ 检查环境依赖（Node.js、npm）
+- ✅ 引导你选择登录方式
+
+**步骤 2：选择登录方式**
+
+向导会提示你选择：
+1. **自动登录**（推荐）- 在终端输入用户名和密码
+2. **手动输入** - 如果您已经有 refresh token
+
+**步骤 3：完成登录**
+
+如果选择自动登录：
+- ✅ 在终端中输入 Pixiv 用户名/邮箱和密码
+- ✅ 程序使用 Python gppt 进行登录
+- ✅ 自动获取 refresh token
+- ✅ 保存到配置文件
+
+如果选择手动输入：
+- ✅ 直接输入你的 refresh token
+- ✅ 跳过登录流程
+
+**步骤 4：完成其他配置**
+
+向导继续引导你完成：
+- 📁 下载目录路径
+- 🗄️ 数据库路径
+- 🏷️ 下载标签
+- 📊 下载数量
+- ⏰ 定时任务设置
+
+完成后，配置保存到 `config/standalone.config.json`
 
 **功能说明**：
-- ✅ 纯终端登录：在终端中输入用户名和密码，不打开浏览器
+- ✅ 终端登录：使用 Python gppt，安全可靠
 - ✅ 交互式配置：引导您完成所有配置选项
 - ✅ 自动保存：登录和配置信息自动保存到配置文件
 
@@ -92,64 +179,58 @@ npm run setup
 
 ## 📝 登录流程详解
 
-### 步骤 1：启动配置向导
+### 终端登录流程（推荐）
 
-运行配置向导后，程序会：
+#### 步骤 1：运行登录命令
 
-1. ✅ 检查环境依赖（Node.js、npm）
-2. ✅ 生成 OAuth 安全参数
-3. ✅ 启动本地回调服务器（监听 `localhost:8899`）
-4. ✅ 自动打开浏览器到 Pixiv 登录页面
-
----
-
-### 步骤 2：浏览器登录
-
-浏览器会自动打开以下 URL：
-
-```
-https://app-api.pixiv.net/web/v1/login?code_challenge=...&code_challenge_method=S256&client=pixiv-android
+```bash
+npm run login
 ```
 
-#### 你需要做的：
+#### 步骤 2：输入账号信息
 
-1. **登录 Pixiv 账号**
-   - 输入用户名/邮箱和密码
-   - 完成验证码（如果有）
+程序会提示输入用户名和密码（密码输入时显示 `*`，不会显示实际字符）。
 
-2. **授权应用**
-   - 点击"授权"或"允许"按钮
-   - 确认权限请求
+#### 步骤 3：自动登录
 
-3. **等待跳转**
-   - 授权成功后自动跳转到 `localhost:8899/callback`
-   - 看到"认证成功！"消息
-   - 可以关闭浏览器
+程序使用 Python gppt 库进行登录：
+1. ✅ 初始化 GetPixivToken（可能需要几秒钟）
+2. ✅ 调用登录函数
+3. ✅ 获取 refresh token 和 access token
 
----
+#### 步骤 4：保存配置
 
-### 步骤 3：自动获取令牌
+程序自动：
+1. ✅ 获取 refresh token
+2. ✅ 保存到配置文件 `config/standalone.config.json`
+3. ✅ 显示登录成功信息
 
-配置向导自动完成：
+### 手动输入 Token 流程
 
-1. ✅ 接收授权码（从浏览器回调）
-2. ✅ 使用授权码换取 `refresh_token`
-3. ✅ 保存 `refresh_token` 到配置文件
-4. ✅ 验证认证信息有效性
+如果你已经有 refresh token（例如从其他工具获取），可以直接输入：
 
----
+#### 步骤 1：运行配置向导
 
-### 步骤 4：完成配置
+```bash
+./scripts/easy-setup.sh
+```
 
-向导继续引导你完成其他配置：
+#### 步骤 2：选择手动输入
 
-- 📁 下载目录路径
-- 🗄️ 数据库路径
-- 🏷️ 下载标签
-- 📊 下载数量
-- ⏰ 定时任务设置
+当提示选择登录方式时，选择 `2`（手动输入）
 
-完成后，配置保存到 `config/standalone.config.json`
+#### 步骤 3：输入 refresh token
+
+输入你的 refresh token（通常是一串很长的字符串）
+
+#### 步骤 4：完成配置
+
+向导继续引导你完成其他配置选项
+
+**注意**：
+- ⚠️ refresh token 等同于你的账号密码，请妥善保管
+- ⚠️ 不要分享你的 refresh token 给他人
+- ✅ token 长期有效，无需频繁更新
 
 ---
 
@@ -426,49 +507,35 @@ npm run setup
 
 ## 📚 技术细节
 
-### OAuth 2.0 PKCE 流程
+### 登录实现方式
 
-PKCE（Proof Key for Code Exchange）是一种增强安全性的 OAuth 流程：
+PixivFlow 使用 **Python gppt 库**来实现 Pixiv 登录认证。gppt 库内部使用 OAuth 2.0 PKCE 流程和 Selenium 自动化浏览器来完成登录。
 
-#### 1. 生成安全参数
-
-```typescript
-codeVerifier = randomBytes(32).toString('base64url')
-codeChallenge = sha256(codeVerifier).toString('base64url')
-```
-
-#### 2. 构建授权 URL
+#### 实现架构
 
 ```
-https://app-api.pixiv.net/web/v1/login?
-  code_challenge={codeChallenge}&
-  code_challenge_method=S256&
-  client=pixiv-android
+PixivFlow (TypeScript/Node.js)
+    ↓
+Python gppt 库 (通过子进程调用)
+    ↓
+Selenium + Chrome/ChromeDriver
+    ↓
+Pixiv OAuth 2.0 PKCE 流程
 ```
 
-#### 3. 用户授权
+#### OAuth 2.0 PKCE 流程（由 gppt 库实现）
 
-- 用户登录 Pixiv
-- Pixiv 重定向到 `localhost:8899/callback?code=...`
-- 程序提取授权码
+PKCE（Proof Key for Code Exchange）是一种增强安全性的 OAuth 流程，由 Python gppt 库内部实现：
 
-#### 4. 交换令牌
+1. **生成安全参数**：gppt 库生成 `code_verifier` 和 `code_challenge`
+2. **构建授权 URL**：生成包含 PKCE 参数的 Pixiv 登录 URL
+3. **用户授权**：
+   - 交互模式：打开浏览器窗口，用户手动登录
+   - 无头模式：后台运行浏览器，自动输入用户名密码
+4. **交换令牌**：使用授权码和 `code_verifier` 交换 access_token 和 refresh_token
+5. **获取 refresh_token**：返回的 refresh_token 保存到配置文件
 
-```typescript
-POST https://oauth.secure.pixiv.net/auth/token
-{
-  client_id, client_secret,
-  grant_type: 'authorization_code',
-  code, redirect_uri,
-  code_verifier  // 验证身份
-}
-```
-
-#### 5. 获取 refresh_token
-
-响应包含：
-- `refresh_token` - 长期有效，保存到配置文件
-- `access_token` - 短期有效，用于 API 请求
+**参考**：[get-pixivpy-token (gppt)](https://github.com/eggplants/get-pixivpy-token)
 
 ### 令牌刷新流程
 
@@ -490,11 +557,15 @@ POST https://oauth.secure.pixiv.net/auth/token
 
 ### 代码实现位置
 
-| 功能 | 文件路径 |
-|------|----------|
-| 登录流程 | `src/setup-wizard.ts` |
-| 令牌管理 | `src/pixiv/AuthClient.ts` |
-| 配置管理 | `src/config.ts` |
+| 功能 | 文件路径 | 说明 |
+|------|----------|------|
+| 登录适配器 | `src/python-login-adapter.ts` | 调用 Python gppt 库的适配器 |
+| 终端登录 | `src/terminal-login.ts` | 终端登录封装，使用 gppt 适配器 |
+| 令牌管理 | `src/pixiv/AuthClient.ts` | 使用 refresh_token 刷新 access_token |
+| 配置管理 | `src/config.ts` | 配置文件管理 |
+| 配置向导 | `src/setup-wizard.ts` | 交互式配置向导 |
+
+**注意**：OAuth 2.0 PKCE 流程的具体实现由 Python gppt 库完成，项目通过 `python-login-adapter.ts` 调用 gppt 库。
 
 ---
 
@@ -539,6 +610,7 @@ npm run scheduler
 |------|------|
 | [START_HERE.md](START_HERE.md) | 新手完整指南 |
 | [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手 |
+| [CONFIG_GUIDE.md](CONFIG_GUIDE.md) | 配置文件使用指南 |
 | [TEST_GUIDE.md](TEST_GUIDE.md) | 测试和故障排除 |
 | [README.md](README.md) | 项目主文档 |
 

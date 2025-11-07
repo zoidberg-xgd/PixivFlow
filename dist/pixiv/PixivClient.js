@@ -53,6 +53,83 @@ class PixivClient {
         }
         return results;
     }
+    /**
+     * Get ranking illustrations
+     * @param mode Ranking mode (day, week, month, etc.)
+     * @param date Date in YYYY-MM-DD format (optional, defaults to today)
+     * @param limit Maximum number of results
+     */
+    async getRankingIllustrations(mode = 'day', date, limit) {
+        const results = [];
+        const params = {
+            mode,
+            filter: 'for_ios',
+        };
+        if (date) {
+            params.date = date;
+        }
+        let nextUrl = this.createRequestUrl('v1/illust/ranking', params);
+        while (nextUrl && (!limit || results.length < limit)) {
+            const requestUrl = nextUrl;
+            const response = await this.request(requestUrl, { method: 'GET' });
+            for (const illust of response.illusts) {
+                results.push(illust);
+                if (limit && results.length >= limit) {
+                    break;
+                }
+            }
+            nextUrl = response.next_url;
+        }
+        return results;
+    }
+    /**
+     * Get ranking novels
+     * @param mode Ranking mode (day, week, month, etc.)
+     * @param date Date in YYYY-MM-DD format (optional, defaults to today)
+     * @param limit Maximum number of results
+     */
+    async getRankingNovels(mode = 'day', date, limit) {
+        const results = [];
+        const params = {
+            mode,
+        };
+        if (date) {
+            params.date = date;
+        }
+        let nextUrl = this.createRequestUrl('v1/novel/ranking', params);
+        while (nextUrl && (!limit || results.length < limit)) {
+            const requestUrl = nextUrl;
+            const response = await this.request(requestUrl, { method: 'GET' });
+            for (const novel of response.novels) {
+                results.push(novel);
+                if (limit && results.length >= limit) {
+                    break;
+                }
+            }
+            nextUrl = response.next_url;
+        }
+        return results;
+    }
+    /**
+     * Get illustration detail with tags for filtering
+     */
+    async getIllustDetailWithTags(illustId) {
+        const url = this.createRequestUrl('v1/illust/detail', { illust_id: String(illustId) });
+        const response = await this.request(url, { method: 'GET' });
+        const tags = response.illust.tags || [];
+        const { tags: _, ...illust } = response.illust;
+        return { illust, tags };
+    }
+    /**
+     * Get novel detail with tags for filtering
+     */
+    async getNovelDetailWithTags(novelId) {
+        const url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
+        const response = await this.request(url, { method: 'GET' });
+        const tags = response.novel.tags || [];
+        const { tags: _, ...novel } = response.novel;
+        return { novel, tags };
+    }
     async getIllustDetail(illustId) {
         const url = this.createRequestUrl('v1/illust/detail', { illust_id: String(illustId) });
         const response = await this.request(url, { method: 'GET' });
@@ -72,10 +149,11 @@ class PixivClient {
     }
     async fetchBinary(url, headers) {
         let lastError;
-        for (let attempt = 0; attempt < this.config.network.retries; attempt++) {
+        const network = this.config.network;
+        for (let attempt = 0; attempt < (network.retries ?? 3); attempt++) {
             try {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), this.config.network.timeoutMs);
+                const timeout = setTimeout(() => controller.abort(), network.timeoutMs ?? 30000);
                 try {
                     const response = await fetch(url, {
                         method: 'GET',
@@ -107,11 +185,12 @@ class PixivClient {
     }
     async request(url, init) {
         let lastError;
-        for (let attempt = 0; attempt < this.config.network.retries; attempt++) {
+        const network = this.config.network;
+        for (let attempt = 0; attempt < (network.retries ?? 3); attempt++) {
             try {
                 const token = await this.auth.getAccessToken();
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), this.config.network.timeoutMs);
+                const timeout = setTimeout(() => controller.abort(), network.timeoutMs ?? 30000);
                 try {
                     const headers = {
                         Authorization: `Bearer ${token}`,

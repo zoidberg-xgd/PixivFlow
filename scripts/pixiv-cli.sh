@@ -68,7 +68,7 @@ cmd_download() {
     
     # 这里可以调用 Node.js 实现
     log_warn "功能开发中..."
-    log_info "请使用 'npm run standalone:run-once' 代替"
+    log_info "请使用 './scripts/pixiv.sh once' 或 'npm run download' 代替"
 }
 
 cmd_search() {

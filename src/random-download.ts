@@ -1,4 +1,4 @@
-import { loadConfig } from './config';
+import { loadConfig, getConfigPath } from './config';
 import { DownloadManager } from './download/DownloadManager';
 import { FileService } from './download/FileService';
 import { logger } from './logger';
@@ -16,7 +16,8 @@ const POPULAR_TAGS = [
 
 async function randomDownload() {
   try {
-    const config = loadConfig();
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
     
     // 随机选择一个标签
     const randomTag = POPULAR_TAGS[Math.floor(Math.random() * POPULAR_TAGS.length)];
@@ -35,12 +36,12 @@ async function randomDownload() {
       ],
     };
 
-    const database = new Database(config.storage.databasePath);
+    const database = new Database(config.storage!.databasePath!);
     database.migrate();
 
-    const auth = new PixivAuth(config.pixiv, config.network, database);
+    const auth = new PixivAuth(config.pixiv, config.network!, database, configPath);
     const pixivClient = new PixivClient(auth, config);
-    const fileService = new FileService(config.storage);
+    const fileService = new FileService(config.storage!);
     const downloadManager = new DownloadManager(tempConfig, pixivClient, database, fileService);
 
     await downloadManager.initialise();

@@ -702,6 +702,8 @@ rm config/standalone.config.json
 | [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手 |
 | [LOGIN_GUIDE.md](LOGIN_GUIDE.md) | 登录详解 |
 | [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | 脚本详解 |
+| [CONFIG_GUIDE.md](CONFIG_GUIDE.md) | 配置文件使用指南 |
+| [RANKING_DOWNLOAD_GUIDE.md](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
 | [TEST_GUIDE.md](TEST_GUIDE.md) | 测试指南 |
 
 ---

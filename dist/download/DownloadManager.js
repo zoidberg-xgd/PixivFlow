@@ -31,48 +31,185 @@ class DownloadManager {
         }
     }
     async handleIllustrationTarget(target) {
-        logger_1.logger.info(`Processing illustration tag ${target.tag}`);
+        const mode = target.mode || 'search';
+        const displayTag = target.filterTag || target.tag;
+        logger_1.logger.info(`Processing illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag}`);
         try {
-            const illusts = await this.client.searchIllustrations(target);
+            let illusts = [];
+            if (mode === 'ranking') {
+                // Get ranking illustrations
+                const rankingMode = target.rankingMode || 'day';
+                let rankingDate = target.rankingDate || this.getTodayDate();
+                // Process YESTERDAY placeholder
+                if (rankingDate === 'YESTERDAY') {
+                    rankingDate = this.getYesterdayDate();
+                }
+                const fetchLimit = target.filterTag ? (target.limit || 10) * 3 : target.limit; // Fetch more if filtering
+                logger_1.logger.info(`Fetching ranking illustrations (mode: ${rankingMode}, date: ${rankingDate})`);
+                illusts = await this.client.getRankingIllustrations(rankingMode, rankingDate, fetchLimit);
+                // Filter by tag if specified
+                if (target.filterTag) {
+                    logger_1.logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
+                    const filtered = [];
+                    for (const illust of illusts) {
+                        if (filtered.length >= (target.limit || 10)) {
+                            break;
+                        }
+                        // Get detail with tags
+                        try {
+                            const { illust: detail, tags } = await this.client.getIllustDetailWithTags(illust.id);
+                            const tagNames = tags.map(t => t.name.toLowerCase());
+                            const translatedNames = tags.map(t => t.translated_name?.toLowerCase()).filter(Boolean);
+                            const filterTagLower = target.filterTag.toLowerCase();
+                            if (tagNames.includes(filterTagLower) || translatedNames.includes(filterTagLower)) {
+                                filtered.push(detail);
+                            }
+                        }
+                        catch (error) {
+                            logger_1.logger.warn(`Failed to get tags for illust ${illust.id}`, { error });
+                        }
+                    }
+                    illusts = filtered;
+                }
+            }
+            else {
+                // Search by tag (default mode)
+                illusts = await this.client.searchIllustrations(target);
+            }
+            // Random selection mode
+            if (target.random && illusts.length > 0) {
+                // Filter out already downloaded items
+                const available = illusts.filter(illust => !this.database.hasDownloaded(String(illust.id), 'illustration'));
+                if (available.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * available.length);
+                    const randomIllust = available[randomIndex];
+                    logger_1.logger.info(`Randomly selected illustration ${randomIllust.id} from ${available.length} available results`);
+                    illusts = [randomIllust];
+                }
+                else {
+                    logger_1.logger.info('All search results have already been downloaded');
+                    illusts = [];
+                }
+            }
             let downloaded = 0;
+            const tagForLog = target.filterTag || target.tag;
             for (const illust of illusts) {
                 if (this.database.hasDownloaded(String(illust.id), 'illustration')) {
                     logger_1.logger.debug(`Illustration ${illust.id} already downloaded, skipping`);
                     continue;
                 }
-                await this.downloadIllustration(illust, target.tag);
+                await this.downloadIllustration(illust, tagForLog);
                 downloaded++;
             }
-            this.database.logExecution(target.tag, 'illustration', 'success', `${downloaded} items downloaded`);
-            logger_1.logger.info(`Illustration tag ${target.tag} completed`, { downloaded });
+            this.database.logExecution(tagForLog, 'illustration', 'success', `${downloaded} items downloaded`);
+            logger_1.logger.info(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            this.database.logExecution(target.tag, 'illustration', 'failed', message);
-            logger_1.logger.error(`Illustration tag ${target.tag} failed`, { error: message });
+            this.database.logExecution(displayTag, 'illustration', 'failed', message);
+            logger_1.logger.error(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag} failed`, { error: message });
         }
     }
     async handleNovelTarget(target) {
-        logger_1.logger.info(`Processing novel tag ${target.tag}`);
+        const mode = target.mode || 'search';
+        const displayTag = target.filterTag || target.tag;
+        logger_1.logger.info(`Processing novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag}`);
         try {
-            const novels = await this.client.searchNovels(target);
+            let novels = [];
+            if (mode === 'ranking') {
+                // Get ranking novels
+                const rankingMode = target.rankingMode || 'day';
+                let rankingDate = target.rankingDate || this.getTodayDate();
+                // Process YESTERDAY placeholder
+                if (rankingDate === 'YESTERDAY') {
+                    rankingDate = this.getYesterdayDate();
+                }
+                const fetchLimit = target.filterTag ? (target.limit || 10) * 3 : target.limit; // Fetch more if filtering
+                logger_1.logger.info(`Fetching ranking novels (mode: ${rankingMode}, date: ${rankingDate})`);
+                novels = await this.client.getRankingNovels(rankingMode, rankingDate, fetchLimit);
+                // Filter by tag if specified
+                if (target.filterTag) {
+                    logger_1.logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
+                    const filtered = [];
+                    for (const novel of novels) {
+                        if (filtered.length >= (target.limit || 10)) {
+                            break;
+                        }
+                        // Get detail with tags
+                        try {
+                            const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
+                            const tagNames = tags.map(t => t.name.toLowerCase());
+                            const translatedNames = tags.map(t => t.translated_name?.toLowerCase()).filter(Boolean);
+                            const filterTagLower = target.filterTag.toLowerCase();
+                            if (tagNames.includes(filterTagLower) || translatedNames.includes(filterTagLower)) {
+                                filtered.push(detail);
+                            }
+                        }
+                        catch (error) {
+                            logger_1.logger.warn(`Failed to get tags for novel ${novel.id}`, { error });
+                        }
+                    }
+                    novels = filtered;
+                }
+            }
+            else {
+                // Search by tag (default mode)
+                novels = await this.client.searchNovels(target);
+            }
+            // Random selection mode
+            if (target.random && novels.length > 0) {
+                // Filter out already downloaded items
+                const available = novels.filter(novel => !this.database.hasDownloaded(String(novel.id), 'novel'));
+                if (available.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * available.length);
+                    const randomNovel = available[randomIndex];
+                    logger_1.logger.info(`Randomly selected novel ${randomNovel.id} from ${available.length} available results`);
+                    novels = [randomNovel];
+                }
+                else {
+                    logger_1.logger.info('All search results have already been downloaded');
+                    novels = [];
+                }
+            }
             let downloaded = 0;
+            const tagForLog = target.filterTag || target.tag;
             for (const novel of novels) {
                 if (this.database.hasDownloaded(String(novel.id), 'novel')) {
                     logger_1.logger.debug(`Novel ${novel.id} already downloaded, skipping`);
                     continue;
                 }
-                await this.downloadNovel(novel, target.tag);
+                await this.downloadNovel(novel, tagForLog);
                 downloaded++;
             }
-            this.database.logExecution(target.tag, 'novel', 'success', `${downloaded} items downloaded`);
-            logger_1.logger.info(`Novel tag ${target.tag} completed`, { downloaded });
+            this.database.logExecution(tagForLog, 'novel', 'success', `${downloaded} items downloaded`);
+            logger_1.logger.info(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            this.database.logExecution(target.tag, 'novel', 'failed', message);
-            logger_1.logger.error(`Novel tag ${target.tag} failed`, { error: message });
+            this.database.logExecution(displayTag, 'novel', 'failed', message);
+            logger_1.logger.error(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag} failed`, { error: message });
         }
+    }
+    /**
+     * Get today's date in YYYY-MM-DD format
+     */
+    getTodayDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    /**
+     * Get yesterday's date in YYYY-MM-DD format
+     */
+    getYesterdayDate() {
+        const now = new Date();
+        now.setDate(now.getDate() - 1);
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
     async downloadIllustration(illust, tag) {
         const detail = await this.client.getIllustDetail(illust.id);

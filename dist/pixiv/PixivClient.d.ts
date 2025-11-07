@@ -47,6 +47,40 @@ export declare class PixivClient {
     constructor(auth: PixivAuth, config: StandaloneConfig);
     searchIllustrations(target: TargetConfig): Promise<PixivIllust[]>;
     searchNovels(target: TargetConfig): Promise<PixivNovel[]>;
+    /**
+     * Get ranking illustrations
+     * @param mode Ranking mode (day, week, month, etc.)
+     * @param date Date in YYYY-MM-DD format (optional, defaults to today)
+     * @param limit Maximum number of results
+     */
+    getRankingIllustrations(mode?: string, date?: string, limit?: number): Promise<PixivIllust[]>;
+    /**
+     * Get ranking novels
+     * @param mode Ranking mode (day, week, month, etc.)
+     * @param date Date in YYYY-MM-DD format (optional, defaults to today)
+     * @param limit Maximum number of results
+     */
+    getRankingNovels(mode?: string, date?: string, limit?: number): Promise<PixivNovel[]>;
+    /**
+     * Get illustration detail with tags for filtering
+     */
+    getIllustDetailWithTags(illustId: number): Promise<{
+        illust: PixivIllust;
+        tags: Array<{
+            name: string;
+            translated_name?: string;
+        }>;
+    }>;
+    /**
+     * Get novel detail with tags for filtering
+     */
+    getNovelDetailWithTags(novelId: number): Promise<{
+        novel: PixivNovel;
+        tags: Array<{
+            name: string;
+            translated_name?: string;
+        }>;
+    }>;
     getIllustDetail(illustId: number): Promise<PixivIllust>;
     getNovelText(novelId: number): Promise<string>;
     downloadImage(originalUrl: string): Promise<ArrayBuffer>;

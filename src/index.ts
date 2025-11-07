@@ -1,4 +1,4 @@
-import { loadConfig } from './config';
+import { loadConfig, getConfigPath } from './config';
 import { DownloadManager } from './download/DownloadManager';
 import { FileService } from './download/FileService';
 import { logger } from './logger';
@@ -8,6 +8,7 @@ import { Scheduler } from './scheduler/Scheduler';
 import { Database } from './storage/Database';
 import { TerminalLogin, LoginInfo } from './terminal-login';
 import { updateConfigWithToken, ensureValidToken } from './utils/login-helper';
+import { createTokenMaintenanceService } from './utils/token-maintenance';
 import * as path from 'path';
 import * as readline from 'readline';
 
@@ -236,25 +237,31 @@ async function handleLogin(args: {
   const configPath = (args.options.config as string) || undefined;
 
   try {
-    // If username and password are not provided, prompt in terminal
-    if (!username || !password) {
-      console.log('[i]: Interactive login - please enter your credentials');
-      const credentials = await promptForCredentials();
-      username = credentials.username;
-      password = credentials.password;
+    // Check if credentials were provided via command line arguments
+    const credentialsProvided = !!(username && password);
+    
+    // Use headless mode only if credentials were provided via command line
+    // Otherwise use interactive mode (opens browser window for manual login)
+    const useHeadless = credentialsProvided;
+    
+    if (!useHeadless) {
+      // Interactive mode: no need to input credentials, just open browser
+      console.log('[i]: Interactive login mode');
+      console.log('[i]: A Chrome browser window will open. Please login manually in the browser.');
+      console.log('[i]: You do NOT need to enter credentials here - just wait for the browser to open.');
+      console.log('[i]: After you complete login in the browser, the token will be automatically retrieved.');
     }
     
-    // Always use headless mode when credentials are provided (no browser window)
     const login = new TerminalLogin({
-      headless: true,
-      username,
-      password,
+      headless: useHeadless,
+      username: useHeadless ? username : undefined,
+      password: useHeadless ? password : undefined,
     });
 
     const loginInfo = await login.login({
-      headless: true,
-      username,
-      password,
+      headless: useHeadless,
+      username: useHeadless ? username : undefined,
+      password: useHeadless ? password : undefined,
     });
 
     // Try to update config file with refresh token
@@ -366,14 +373,21 @@ async function handleRefresh(args: {
  */
 async function handleDownload(): Promise<void> {
   try {
-    const config = loadConfig();
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
 
-    const database = new Database(config.storage.databasePath);
+    // Apply initial delay if configured
+    if (config.initialDelay && config.initialDelay > 0) {
+      logger.info(`Waiting ${config.initialDelay}ms before starting download...`);
+      await new Promise(resolve => setTimeout(resolve, config.initialDelay!));
+    }
+
+    const database = new Database(config.storage!.databasePath!);
     database.migrate();
 
-    const auth = new PixivAuth(config.pixiv, config.network, database);
+    const auth = new PixivAuth(config.pixiv, config.network!, database, configPath);
     const pixivClient = new PixivClient(auth, config);
-    const fileService = new FileService(config.storage);
+    const fileService = new FileService(config.storage!);
     const downloadManager = new DownloadManager(config, pixivClient, database, fileService);
 
     await downloadManager.initialise();
@@ -424,7 +438,8 @@ async function handleRandomDownload(args: {
     });
 
     // Load config after ensuring token
-    const config = loadConfig(configPath);
+    const resolvedConfigPath = getConfigPath(configPath);
+    const config = loadConfig(resolvedConfigPath);
 
     // Randomly select a tag
     const randomTag = POPULAR_TAGS[Math.floor(Math.random() * POPULAR_TAGS.length)];
@@ -442,13 +457,12 @@ async function handleRandomDownload(args: {
         },
       ],
     };
-
-    const database = new Database(config.storage.databasePath);
+    const database = new Database(config.storage!.databasePath!);
     database.migrate();
 
-    const auth = new PixivAuth(config.pixiv, config.network, database);
+    const auth = new PixivAuth(config.pixiv, config.network!, database, resolvedConfigPath);
     const pixivClient = new PixivClient(auth, config);
-    const fileService = new FileService(config.storage);
+    const fileService = new FileService(config.storage!);
     const downloadManager = new DownloadManager(tempConfig, pixivClient, database, fileService);
 
     await downloadManager.initialise();
@@ -471,30 +485,50 @@ async function handleRandomDownload(args: {
  */
 async function handleScheduler(): Promise<void> {
   try {
-    const config = loadConfig();
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
 
-    const database = new Database(config.storage.databasePath);
+    const database = new Database(config.storage!.databasePath!);
     database.migrate();
 
-    const auth = new PixivAuth(config.pixiv, config.network, database);
+    const auth = new PixivAuth(config.pixiv, config.network!, database, configPath);
     const pixivClient = new PixivClient(auth, config);
-    const fileService = new FileService(config.storage);
+    const fileService = new FileService(config.storage!);
     const downloadManager = new DownloadManager(config, pixivClient, database, fileService);
 
     await downloadManager.initialise();
 
+    // Start token maintenance service for automatic token refresh
+    const tokenMaintenance = createTokenMaintenanceService(
+      auth,
+      config.pixiv,
+      config.network!,
+      config
+    );
+    if (tokenMaintenance) {
+      tokenMaintenance.start();
+    }
+
     const runJob = async () => {
+      // Apply initial delay if configured
+      if (config.initialDelay && config.initialDelay > 0) {
+        logger.info(`Waiting ${config.initialDelay}ms before starting download...`);
+        await new Promise(resolve => setTimeout(resolve, config.initialDelay!));
+      }
       logger.info('Running Pixiv download job');
       await downloadManager.runAllTargets();
       logger.info('Pixiv download job finished');
     };
 
-    const scheduler = new Scheduler(config.scheduler);
+    const scheduler = new Scheduler(config.scheduler!);
     scheduler.start(runJob);
 
     const cleanup = () => {
       logger.info('Shutting down PixivFlow');
       scheduler.stop();
+      if (tokenMaintenance) {
+        tokenMaintenance.stop();
+      }
       database.close();
       process.exit(0);
     };
@@ -565,20 +599,37 @@ async function bootstrap() {
 
   // Default behavior: run downloader (backward compatibility)
   try {
-    const configPath = (args.options.config as string) || undefined;
+    const configPathArg = (args.options.config as string) || undefined;
+    const configPath = getConfigPath(configPathArg);
     const config = loadConfig(configPath);
 
-    const database = new Database(config.storage.databasePath);
+    const database = new Database(config.storage!.databasePath!);
     database.migrate();
 
-    const auth = new PixivAuth(config.pixiv, config.network, database);
+    const auth = new PixivAuth(config.pixiv, config.network!, database, configPath);
     const pixivClient = new PixivClient(auth, config);
-    const fileService = new FileService(config.storage);
+    const fileService = new FileService(config.storage!);
     const downloadManager = new DownloadManager(config, pixivClient, database, fileService);
 
     await downloadManager.initialise();
 
+    // Start token maintenance service for automatic token refresh
+    const tokenMaintenance = createTokenMaintenanceService(
+      auth,
+      config.pixiv,
+      config.network!,
+      config
+    );
+    if (tokenMaintenance) {
+      tokenMaintenance.start();
+    }
+
     const runJob = async () => {
+      // Apply initial delay if configured
+      if (config.initialDelay && config.initialDelay > 0) {
+        logger.info(`Waiting ${config.initialDelay}ms before starting download...`);
+        await new Promise(resolve => setTimeout(resolve, config.initialDelay!));
+      }
       logger.info('Running Pixiv download job');
       await downloadManager.runAllTargets();
       logger.info('Pixiv download job finished');
@@ -586,21 +637,27 @@ async function bootstrap() {
 
     const runOnce = !!(args.options.once || process.argv.includes('--once'));
 
-    if (runOnce || !config.scheduler.enabled) {
-      if (!config.scheduler.enabled && !runOnce) {
+    if (runOnce || !config.scheduler!.enabled) {
+      if (!config.scheduler!.enabled && !runOnce) {
         logger.info('Scheduler disabled, running once and exiting');
       }
       await runJob();
+      if (tokenMaintenance) {
+        tokenMaintenance.stop();
+      }
       database.close();
       process.exit(0);
     }
 
-    const scheduler = new Scheduler(config.scheduler);
+    const scheduler = new Scheduler(config.scheduler!);
     scheduler.start(runJob);
 
     const cleanup = () => {
       logger.info('Shutting down PixivFlow');
       scheduler.stop();
+      if (tokenMaintenance) {
+        tokenMaintenance.stop();
+      }
       database.close();
       process.exit(0);
     };

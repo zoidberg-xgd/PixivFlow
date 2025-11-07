@@ -40,7 +40,7 @@ ensure_config() {
 ensure_build() {
     if ! check_build; then
         log_info "首次运行，正在编译..."
-        npm run standalone:build
+        npm run build
     fi
 }
 
@@ -55,9 +55,11 @@ show_help() {
 ╚════════════════════════════════════════════════════════════════╝
 
 🚀 快速开始（首次使用）:
-    $0 setup        # 1. 配置（浏览器登录）
-    $0 test         # 2. 测试下载
-    $0 run          # 3. 启动定时下载
+    ./scripts/quick-start.sh    # 一键完成所有设置（推荐 ⭐）
+    或
+    $0 setup                    # 1. 配置向导
+    $0 test                     # 2. 测试下载
+    $0 once                     # 3. 手动下载一次
 
 📝 核心命令:
     setup       交互式配置向导（首次必须运行）
@@ -120,7 +122,7 @@ cmd_setup() {
         bash "$SCRIPT_DIR/easy-setup.sh"
     else
         log_info "启动配置向导..."
-        npm run standalone:setup
+        npm run setup
     fi
     
     if check_config; then
@@ -143,7 +145,7 @@ cmd_run() {
     log_info "日志: data/pixiv-downloader.log"
     echo
     
-    npm run standalone:run
+    npm run scheduler
 }
 
 cmd_once() {
@@ -153,7 +155,7 @@ cmd_once() {
     ensure_deps
     ensure_build
     
-    npm run standalone:run-once
+    npm run download
     
     echo
     log_success "任务完成！运行 '$0 status' 查看结果"
@@ -311,7 +313,7 @@ cmd_build() {
     ensure_node
     ensure_deps
     
-    npm run standalone:build
+    npm run build
     log_success "编译完成"
 }
 

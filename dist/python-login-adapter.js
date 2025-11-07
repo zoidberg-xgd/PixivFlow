@@ -107,28 +107,98 @@ async function installGppt() {
 async function loginWithGpptInteractive() {
     try {
         console.log('[!]: Using Python gppt for login (interactive mode)...');
-        console.log('[i]: Note: This will open a Chrome browser window for manual login.');
+        console.log('[i]: A Chrome browser window will open shortly.');
+        console.log('[i]: Please complete the login process in the browser window.');
+        console.log('[i]: This may take a few minutes - please be patient.');
         console.log('[i]: To avoid opening browser, use headless mode with --username and --password');
         // Use a simple Python script to call gppt and output full JSON
+        // Increase timeout for interactive mode since user needs to manually login
+        // CRITICAL FIX: Explicitly set headless=False to ensure browser stays open
         const script = `
 import json
 import sys
+import time
 from gppt import GetPixivToken
 
 try:
-    g = GetPixivToken()
-    print("[!]: Chrome browser will be launched. Please login.", file=sys.stderr)
+    print("[i]: Initializing browser (non-headless mode)...", file=sys.stderr)
+    # CRITICAL: Explicitly set headless=False to prevent browser from closing
+    # This ensures the browser window stays open during the login process
+    g = GetPixivToken(headless=False)
+    
+    # Verify browser is actually running
+    if hasattr(g, 'driver') and g.driver:
+        try:
+            # Check if browser window is accessible
+            current_url = g.driver.current_url
+            print(f"[DEBUG]: Browser initialized, current URL: {current_url}", file=sys.stderr)
+        except Exception as browser_check_error:
+            print(f"[WARNING]: Browser check failed: {browser_check_error}", file=sys.stderr)
+            print("[WARNING]: Browser may have closed unexpectedly. Retrying...", file=sys.stderr)
+            # Try to reinitialize if browser closed
+            try:
+                g = GetPixivToken(headless=False)
+            except Exception as retry_error:
+                print(f"ERROR: Failed to reinitialize browser: {retry_error}", file=sys.stderr)
+                sys.exit(1)
+    
+    print("[!]: Chrome browser window opened. Please login manually in the browser.", file=sys.stderr)
+    print("[i]: Waiting for you to complete login in the browser...", file=sys.stderr)
+    print("[i]: This may take a few minutes. Please do not close the browser window.", file=sys.stderr)
+    print("[i]: The browser will remain open until login is complete.", file=sys.stderr)
+    
+    # Call login - this will wait for user to complete login in browser
     res = g.login()
-    print("[+]: Success!", file=sys.stderr)
-    print(json.dumps(res, indent=2))
+    
+    # Verify browser is still running after login attempt
+    if hasattr(g, 'driver') and g.driver:
+        try:
+            # Keep browser open until we get the result
+            if res:
+                print("[+]: Login successful! Retrieving token...", file=sys.stderr)
+                # Don't close browser immediately - ensure we have the result first
+                time.sleep(0.5)  # Small delay to ensure all data is captured
+                print(json.dumps(res, indent=2))
+                # Browser will be closed by gppt's cleanup, but we ensure data is captured first
+            else:
+                print("ERROR: Login returned None. Please try again.", file=sys.stderr)
+                sys.exit(1)
+        except Exception as post_login_error:
+            print(f"[WARNING]: Post-login check failed: {post_login_error}", file=sys.stderr)
+            # If we have a result despite the error, still try to return it
+            if res:
+                print("[+]: Login successful (despite warning)! Retrieving token...", file=sys.stderr)
+                print(json.dumps(res, indent=2))
+            else:
+                raise
+    else:
+        # Browser closed unexpectedly, but check if we got a result before it closed
+        if res:
+            print("[+]: Login successful! Retrieving token...", file=sys.stderr)
+            print(json.dumps(res, indent=2))
+        else:
+            print("ERROR: Browser closed before login completed. Please try again.", file=sys.stderr)
+            sys.exit(1)
+            
 except KeyboardInterrupt:
     print("ERROR: Login interrupted by user", file=sys.stderr)
     sys.exit(1)
 except Exception as e:
     print(f"ERROR: {str(e)}", file=sys.stderr)
+    import traceback
+    traceback.print_exc(file=sys.stderr)
     sys.exit(1)
+finally:
+    # Ensure browser cleanup happens properly
+    try:
+        if 'g' in locals() and hasattr(g, 'driver') and g.driver:
+            # Let gppt handle cleanup, but ensure we don't close too early
+            pass
+    except:
+        pass
 `;
-        const result = await runPythonScript(script);
+        // Use longer timeout for interactive mode (5 minutes) since user needs to manually login
+        const result = await runPythonScript(script, 300000);
         // Print stderr messages (info/warnings)
         if (result.stderr) {
             const stderrLines = result.stderr.trim().split('\n');
@@ -433,20 +503,58 @@ async function runPythonScript(script, timeoutMs = 120000) {
         let stdout = '';
         let stderr = '';
         let resolved = false;
-        // Set timeout
+        // Set timeout with improved handling for interactive mode
         const timeout = setTimeout(() => {
             if (!resolved) {
                 resolved = true;
-                python.kill('SIGTERM');
+                const timeoutMinutes = timeoutMs / 60000;
+                const isInteractive = timeoutMs >= 300000; // 5 minutes or more
+                // For interactive mode, use gentler termination to avoid closing browser abruptly
+                if (isInteractive) {
+                    // First, try to gracefully terminate by sending SIGTERM
+                    // This gives Python script a chance to clean up browser properly
+                    python.kill('SIGTERM');
+                    // Wait a bit for graceful shutdown before force killing
+                    setTimeout(() => {
+                        try {
+                            // Only force kill if process is still running
+                            python.kill('SIGKILL');
+                        }
+                        catch (e) {
+                            // Process already terminated, ignore
+                        }
+                    }, 2000); // Give 2 seconds for graceful shutdown
+                }
+                else {
+                    // For non-interactive mode, terminate immediately
+                    python.kill('SIGTERM');
+                }
+                let errorMsg = `Python script timed out after ${timeoutMinutes} minutes.`;
+                if (isInteractive) {
+                    errorMsg += `\n\nThis is interactive mode - you may need more time to complete login in the browser.\n` +
+                        `Possible causes:\n` +
+                        `  1. You haven't completed login in the browser window yet\n` +
+                        `  2. Browser window was closed before login completed\n` +
+                        `  3. Network connectivity issues (try setting HTTPS_PROXY)\n` +
+                        `  4. Chrome/ChromeDriver not properly installed\n` +
+                        `\nPlease try again and make sure to:\n` +
+                        `  - Keep the browser window open until login is complete\n` +
+                        `  - Complete the login process in the browser\n` +
+                        `  - Wait for the "Login successful" message\n` +
+                        `  - If browser is still open, you may need to close it manually`;
+                }
+                else {
+                    errorMsg += ` This may indicate:\n` +
+                        `  1. Network connectivity issues (try setting HTTPS_PROXY)\n` +
+                        `  2. Chrome/ChromeDriver not properly installed\n` +
+                        `  3. Pixiv login page is slow to respond\n`;
+                }
+                errorMsg += `\nCheck the stderr output above for more details.`;
                 resolve({
                     success: false,
                     stdout: stdout.trim(),
                     stderr: stderr.trim() || undefined,
-                    error: `Python script timed out after ${timeoutMs / 1000} seconds. This may indicate:\n` +
-                        `  1. Network connectivity issues (try setting HTTPS_PROXY)\n` +
-                        `  2. Chrome/ChromeDriver not properly installed\n` +
-                        `  3. Pixiv login page is slow to respond\n` +
-                        `\nCheck the stderr output above for more details.`,
+                    error: errorMsg,
                 });
             }
         }, timeoutMs);

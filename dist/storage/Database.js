@@ -42,6 +42,17 @@ class Database {
           message TEXT,
           executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`,
+            `CREATE TABLE IF NOT EXISTS scheduler_executions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          execution_number INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          start_time DATETIME NOT NULL,
+          end_time DATETIME,
+          duration_ms INTEGER,
+          error_message TEXT,
+          items_downloaded INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
         ];
         const transaction = this.db.transaction((stmts) => {
             for (const sql of stmts) {
@@ -91,6 +102,100 @@ class Database {
             status,
             message: message ?? null,
         });
+    }
+    /**
+     * Get the next execution number for the scheduler
+     */
+    getNextExecutionNumber() {
+        const stmt = this.db.prepare(`SELECT COALESCE(MAX(execution_number), 0) + 1 as next FROM scheduler_executions`);
+        const row = stmt.get();
+        return row.next;
+    }
+    /**
+     * Log a scheduler execution
+     */
+    logSchedulerExecution(executionNumber, status, startTime, endTime, durationMs, errorMessage, itemsDownloaded = 0) {
+        const stmt = this.db.prepare(`INSERT INTO scheduler_executions 
+       (execution_number, status, start_time, end_time, duration_ms, error_message, items_downloaded)
+       VALUES (@execution_number, @status, @start_time, @end_time, @duration_ms, @error_message, @items_downloaded)`);
+        stmt.run({
+            execution_number: executionNumber,
+            status,
+            start_time: startTime.toISOString(),
+            end_time: endTime?.toISOString() ?? null,
+            duration_ms: durationMs ?? null,
+            error_message: errorMessage ?? null,
+            items_downloaded: itemsDownloaded,
+        });
+    }
+    /**
+     * Get scheduler execution statistics
+     */
+    getSchedulerStats() {
+        const statsStmt = this.db.prepare(`SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful,
+        SUM(CASE WHEN status = 'failed' OR status = 'timeout' THEN 1 ELSE 0 END) as failed,
+        MAX(start_time) as last_execution,
+        AVG(duration_ms) as avg_duration,
+        SUM(items_downloaded) as total_items
+       FROM scheduler_executions`);
+        const row = statsStmt.get();
+        return {
+            totalExecutions: row.total ?? 0,
+            successfulExecutions: row.successful ?? 0,
+            failedExecutions: row.failed ?? 0,
+            lastExecutionTime: row.last_execution,
+            averageDuration: row.avg_duration ? Math.round(row.avg_duration) : null,
+            totalItemsDownloaded: row.total_items ?? 0,
+        };
+    }
+    /**
+     * Get recent scheduler executions
+     */
+    getRecentSchedulerExecutions(limit = 10) {
+        const stmt = this.db.prepare(`SELECT 
+        id,
+        execution_number,
+        status,
+        start_time,
+        end_time,
+        duration_ms,
+        error_message,
+        items_downloaded
+       FROM scheduler_executions
+       ORDER BY execution_number DESC
+       LIMIT ?`);
+        const rows = stmt.all(limit);
+        return rows.map((row) => ({
+            id: row.id,
+            executionNumber: row.execution_number,
+            status: row.status,
+            startTime: row.start_time,
+            endTime: row.end_time,
+            duration: row.duration_ms,
+            errorMessage: row.error_message,
+            itemsDownloaded: row.items_downloaded,
+        }));
+    }
+    /**
+     * Get consecutive failure count
+     */
+    getConsecutiveFailures() {
+        const stmt = this.db.prepare(`SELECT status FROM scheduler_executions 
+       ORDER BY execution_number DESC 
+       LIMIT 100`);
+        const rows = stmt.all();
+        let count = 0;
+        for (const row of rows) {
+            if (row.status === 'failed' || row.status === 'timeout') {
+                count++;
+            }
+            else {
+                break;
+            }
+        }
+        return count;
     }
     close() {
         this.db.close();

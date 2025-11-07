@@ -181,12 +181,12 @@ class SetupWizard {
     }
 
     // 确保存储目录存在
-    if (!existsSync(config.storage.downloadDirectory)) {
-      mkdirSync(config.storage.downloadDirectory, { recursive: true });
+    if (config.storage && !existsSync(config.storage.downloadDirectory!)) {
+      mkdirSync(config.storage.downloadDirectory!, { recursive: true });
     }
 
     // 确保数据库目录存在
-    const dbDir = resolve(config.storage.databasePath, '..');
+    const dbDir = resolve(config.storage!.databasePath!, '..');
     if (!existsSync(dbDir)) {
       mkdirSync(dbDir, { recursive: true });
     }
@@ -221,7 +221,7 @@ class SetupWizard {
       console.log('✅ 配置完成！');
       console.log('════════════════════════════════════════════════════════════════\n');
       console.log('您现在可以使用以下命令启动下载器：\n');
-      console.log('  • 运行一次:  npm run standalone:run-once');
+      console.log('  • 运行一次:  npm run download');
       console.log('  • 定时运行:  npm run standalone:run\n');
       console.log('配置文件位于: config/standalone.config.json');
       console.log('您可以随时编辑此文件来修改配置。\n');

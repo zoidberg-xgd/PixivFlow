@@ -41,7 +41,7 @@ PixivFlow 是一个**完全独立运行**的 Pixiv 作品下载工具，无需�
 | **💾 智能去重** | SQLite 数据库记录历史，自动跳过已下载 |
 | **🔄 稳定可靠** | 自动重试、断点续传、错误恢复 |
 | **📊 完整日志** | 详细的运行日志和下载统计报告 |
-| **🔐 安全登录** | OAuth 2.0 PKCE 流程，浏览器自动登录 |
+| **🔐 安全登录** | 通过 Python gppt 库实现 OAuth 2.0 PKCE 流程，支持终端登录 |
 
 ### 🎁 额外优势
 
@@ -59,7 +59,29 @@ PixivFlow 是一个**完全独立运行**的 Pixiv 作品下载工具，无需�
 - Node.js 18+ 和 npm 9+
 - 一个 Pixiv 账号
 
-### 🎬 三步开始
+### 🎬 快速开始（推荐 ⭐）
+
+**最简单的方式 - 一键完成所有设置**：
+
+```bash
+# 1. 安装依赖
+npm install
+
+# 2. 运行快速启动脚本（自动完成登录、配置、测试）
+./scripts/quick-start.sh
+```
+
+就这么简单！快速启动脚本会自动引导您完成：
+- ✅ 环境检查和依赖安装
+- ✅ Pixiv 账号登录
+- ✅ 下载配置设置
+- ✅ 测试下载验证
+
+---
+
+### 🎯 手动配置方式
+
+如果您想手动控制每个步骤：
 
 #### 1️⃣ 安装依赖
 
@@ -199,6 +221,7 @@ npm run login -- --help
 
 | 文档 | 说明 | 推荐指数 |
 |------|------|---------|
+| [📚 TUTORIAL](TUTORIAL.md) | **完整教程**：从登录到下载到定时任务，详细教学 | ⭐⭐⭐⭐⭐ |
 | [📖 START_HERE](START_HERE.md) | 新手完整指南，从零开始 | ⭐⭐⭐⭐⭐ |
 | [⚡ QUICKSTART](QUICKSTART.md) | 3 分钟快速上手 | ⭐⭐⭐⭐⭐ |
 | [🔐 LOGIN_GUIDE](LOGIN_GUIDE.md) | 登录流程详解 | ⭐⭐⭐⭐ |
@@ -210,6 +233,8 @@ npm run login -- --help
 |------|------|---------|
 | [⚙️ STANDALONE-SETUP-GUIDE](STANDALONE-SETUP-GUIDE.md) | 完整配置选项说明 | ⭐⭐⭐⭐ |
 | [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | 所有脚本详细说明 | ⭐⭐⭐⭐⭐ |
+| [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | 配置文件使用指南 | ⭐⭐⭐⭐⭐ |
+| [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 | ⭐⭐⭐⭐ |
 
 ---
 
@@ -298,8 +323,8 @@ pm2 start "npm run scheduler" --name pixivflow
 # 使用 npm 命令（推荐）
 npm run random
 
-# 或使用主程序
-npm run build && node dist/index.js random
+# 或使用主程序（如果全局安装了 pixivflow）
+pixivflow random
 ```
 
 **功能说明**：
@@ -309,9 +334,9 @@ npm run build && node dist/index.js random
 
 ---
 
-### 场景 4：一次性批量备份收藏
+### 场景 4：一次性批量下载
 
-**需求**：备份所有收藏的作品
+**需求**：一次性下载指定标签的作品
 
 **配置示例**：
 
@@ -330,8 +355,17 @@ npm run build && node dist/index.js random
 **运行方式**：
 
 ```bash
+# 使用便捷脚本（推荐）
 ./scripts/pixiv.sh once
+
+# 或使用 npm 命令
+npm run download
+
+# 或使用主程序（如果全局安装了 pixivflow）
+pixivflow download
 ```
+
+> **💡 提示**：所有下载任务都通过配置文件实现，无需修改源代码。详细说明请查看 [配置文件使用指南](CONFIG_GUIDE.md)。
 
 ---
 
@@ -465,20 +499,20 @@ pixivflow/
 }
 ```
 
-**完整配置说明**：查看 [配置指南](STANDALONE-SETUP-GUIDE.md)
+**完整配置说明**：查看 [配置指南](STANDALONE-SETUP-GUIDE.md) 和 [配置文件使用指南](CONFIG_GUIDE.md)
 
 ---
 
 ## 🐛 常见问题
 
-### ❓ 配置向导浏览器没有打开？
+### ❓ 配置向导登录失败？
 
-**症状**：运行 `npm run setup` 后浏览器没有自动打开
+**症状**：运行 `npm run setup` 后登录失败
 
 **解决方法**：
-1. 手动复制终端显示的认证 URL
-2. 在浏览器中打开该 URL
-3. 完成登录后，配置会自动继续
+1. 确认在终端正确输入了 Pixiv 用户名和密码
+2. 检查网络连接和代理设置
+3. 重新运行配置向导：`npm run setup`
 
 ---
 

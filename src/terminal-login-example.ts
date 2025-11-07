@@ -175,7 +175,7 @@ async function exampleDownloaderIntegration(): Promise<void> {
     
     console.log('✓ Configuration updated successfully!');
     console.log('You can now run the downloader with:');
-    console.log('  npm run standalone:run-once');
+    console.log('  npm run download');
   } catch (error) {
     console.error('✗ Integration example failed:', error);
   }

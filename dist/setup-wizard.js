@@ -185,7 +185,7 @@ class SetupWizard {
             (0, node_fs_1.mkdirSync)(configDir, { recursive: true });
         }
         // 确保存储目录存在
-        if (!(0, node_fs_1.existsSync)(config.storage.downloadDirectory)) {
+        if (config.storage && !(0, node_fs_1.existsSync)(config.storage.downloadDirectory)) {
             (0, node_fs_1.mkdirSync)(config.storage.downloadDirectory, { recursive: true });
         }
         // 确保数据库目录存在

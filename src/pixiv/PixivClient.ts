@@ -114,6 +114,129 @@ export class PixivClient {
     return results;
   }
 
+  /**
+   * Get ranking illustrations
+   * @param mode Ranking mode (day, week, month, etc.)
+   * @param date Date in YYYY-MM-DD format (optional, defaults to today)
+   * @param limit Maximum number of results
+   */
+  public async getRankingIllustrations(
+    mode: string = 'day',
+    date?: string,
+    limit?: number
+  ): Promise<PixivIllust[]> {
+    const results: PixivIllust[] = [];
+    const params: Record<string, string> = {
+      mode,
+      filter: 'for_ios',
+    };
+
+    if (date) {
+      params.date = date;
+    }
+
+    let nextUrl: string | null = this.createRequestUrl('v1/illust/ranking', params);
+
+    while (nextUrl && (!limit || results.length < limit)) {
+      const requestUrl = nextUrl;
+      const response: { illusts: PixivIllust[]; next_url: string | null } =
+        await this.request<{ illusts: PixivIllust[]; next_url: string | null }>(
+          requestUrl,
+        { method: 'GET' }
+      );
+
+      for (const illust of response.illusts) {
+        results.push(illust);
+        if (limit && results.length >= limit) {
+          break;
+        }
+      }
+
+      nextUrl = response.next_url;
+    }
+
+    return results;
+  }
+
+  /**
+   * Get ranking novels
+   * @param mode Ranking mode (day, week, month, etc.)
+   * @param date Date in YYYY-MM-DD format (optional, defaults to today)
+   * @param limit Maximum number of results
+   */
+  public async getRankingNovels(
+    mode: string = 'day',
+    date?: string,
+    limit?: number
+  ): Promise<PixivNovel[]> {
+    const results: PixivNovel[] = [];
+    const params: Record<string, string> = {
+      mode,
+    };
+
+    if (date) {
+      params.date = date;
+    }
+
+    let nextUrl: string | null = this.createRequestUrl('v1/novel/ranking', params);
+
+    while (nextUrl && (!limit || results.length < limit)) {
+      const requestUrl = nextUrl;
+      const response: { novels: PixivNovel[]; next_url: string | null } =
+        await this.request<{ novels: PixivNovel[]; next_url: string | null }>(
+          requestUrl,
+        { method: 'GET' }
+      );
+
+      for (const novel of response.novels) {
+        results.push(novel);
+        if (limit && results.length >= limit) {
+          break;
+        }
+      }
+
+      nextUrl = response.next_url;
+    }
+
+    return results;
+  }
+
+  /**
+   * Get illustration detail with tags for filtering
+   */
+  public async getIllustDetailWithTags(illustId: number): Promise<{
+    illust: PixivIllust;
+    tags: Array<{ name: string; translated_name?: string }>;
+  }> {
+    const url = this.createRequestUrl('v1/illust/detail', { illust_id: String(illustId) });
+    const response = await this.request<{
+      illust: PixivIllust & { tags: Array<{ name: string; translated_name?: string }> };
+    }>(url, { method: 'GET' });
+    
+    const tags = response.illust.tags || [];
+    const { tags: _, ...illust } = response.illust;
+    
+    return { illust, tags };
+  }
+
+  /**
+   * Get novel detail with tags for filtering
+   */
+  public async getNovelDetailWithTags(novelId: number): Promise<{
+    novel: PixivNovel;
+    tags: Array<{ name: string; translated_name?: string }>;
+  }> {
+    const url = this.createRequestUrl('v1/novel/detail', { novel_id: String(novelId) });
+    const response = await this.request<{
+      novel: PixivNovel & { tags: Array<{ name: string; translated_name?: string }> };
+    }>(url, { method: 'GET' });
+    
+    const tags = response.novel.tags || [];
+    const { tags: _, ...novel } = response.novel;
+    
+    return { novel, tags };
+  }
+
   public async getIllustDetail(illustId: number): Promise<PixivIllust> {
     const url = this.createRequestUrl('v1/illust/detail', { illust_id: String(illustId) });
     const response = await this.request<{ illust: PixivIllust }>(url, { method: 'GET' });
@@ -137,10 +260,11 @@ export class PixivClient {
 
   private async fetchBinary(url: string, headers: Record<string, string>): Promise<ArrayBuffer> {
     let lastError: unknown;
-    for (let attempt = 0; attempt < this.config.network.retries; attempt++) {
+    const network = this.config.network!;
+    for (let attempt = 0; attempt < (network.retries ?? 3); attempt++) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.config.network.timeoutMs);
+        const timeout = setTimeout(() => controller.abort(), network.timeoutMs ?? 30000);
         try {
           const response = await fetch(url, {
             method: 'GET',
@@ -175,12 +299,13 @@ export class PixivClient {
 
   private async request<T>(url: string, init: RequestInit): Promise<T> {
     let lastError: unknown;
+    const network = this.config.network!;
 
-    for (let attempt = 0; attempt < this.config.network.retries; attempt++) {
+    for (let attempt = 0; attempt < (network.retries ?? 3); attempt++) {
       try {
         const token = await this.auth.getAccessToken();
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), this.config.network.timeoutMs);
+        const timeout = setTimeout(() => controller.abort(), network.timeoutMs ?? 30000);
         try {
           const headers: Record<string, string> = {
             Authorization: `Bearer ${token}`,

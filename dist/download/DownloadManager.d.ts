@@ -12,6 +12,14 @@ export declare class DownloadManager {
     runAllTargets(): Promise<void>;
     private handleIllustrationTarget;
     private handleNovelTarget;
+    /**
+     * Get today's date in YYYY-MM-DD format
+     */
+    private getTodayDate;
+    /**
+     * Get yesterday's date in YYYY-MM-DD format
+     */
+    private getYesterdayDate;
     private downloadIllustration;
     private downloadNovel;
     private getIllustrationPages;

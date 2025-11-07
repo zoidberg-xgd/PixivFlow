@@ -24,7 +24,29 @@ npm --version     # 应该显示 9.0.0 或更高
 
 ---
 
-## 🚀 三步开始使用
+## 🚀 快速开始（推荐 ⭐）
+
+**最简单的方式 - 一键完成所有设置**：
+
+```bash
+# 1. 安装依赖
+npm install
+
+# 2. 运行快速启动脚本（自动完成登录、配置、测试）
+./scripts/quick-start.sh
+```
+
+就这么简单！快速启动脚本会自动引导您完成：
+- ✅ 环境检查和依赖安装
+- ✅ Pixiv 账号登录
+- ✅ 下载配置设置
+- ✅ 测试下载验证
+
+---
+
+## 🎯 手动配置方式
+
+如果您想手动控制每个步骤：
 
 ### 步骤 1️⃣ - 安装依赖
 
@@ -50,10 +72,10 @@ npm run setup
 
 #### 配置向导会自动完成：
 
-1. 🌐 **打开浏览器** - 自动打开 Pixiv 登录页面
-2. 🔐 **登录账号** - 在浏览器中登录你的 Pixiv 账号
-3. ✅ **自动认证** - 自动获取并保存认证信息
-4. ⚙️ **配置选项** - 引导你完成基本配置
+1. 🔐 **终端登录** - 在终端中输入 Pixiv 用户名和密码（无头模式，不打开浏览器）
+2. ✅ **自动认证** - 使用 Python gppt 进行登录，自动获取并保存认证信息
+3. ⚙️ **配置选项** - 引导你完成基本配置（标签、数量、定时任务等）
+4. 💾 **保存配置** - 自动保存配置到 `config/standalone.config.json`
 
 #### 配置建议（首次测试）：
 
@@ -451,6 +473,8 @@ pm2 startup
 |------|------|-------|
 | [STANDALONE-SETUP-GUIDE.md](./STANDALONE-SETUP-GUIDE.md) | 完整配置选项说明 | ⭐⭐⭐⭐ |
 | [SCRIPTS_GUIDE.md](./SCRIPTS_GUIDE.md) | 所有脚本详细说明 | ⭐⭐⭐⭐⭐ |
+| [CONFIG_GUIDE.md](./CONFIG_GUIDE.md) | 配置文件使用指南 | ⭐⭐⭐⭐⭐ |
+| [RANKING_DOWNLOAD_GUIDE.md](./RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 | ⭐⭐⭐⭐ |
 
 ---
 
@@ -517,8 +541,7 @@ pm2 startup
 
 ```bash
 npm install
-./scripts/easy-setup.sh
-./scripts/pixiv.sh test
+./scripts/quick-start.sh
 ```
 
 ---

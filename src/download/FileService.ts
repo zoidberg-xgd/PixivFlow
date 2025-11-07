@@ -7,7 +7,7 @@ export class FileService {
   constructor(private readonly storage: StorageConfig) {}
 
   public async initialise() {
-    await ensureDir(this.storage.downloadDirectory);
+    await ensureDir(this.storage.downloadDirectory!);
     if (this.storage.illustrationDirectory) {
       await ensureDir(this.storage.illustrationDirectory);
     }
@@ -17,14 +17,14 @@ export class FileService {
   }
 
   public async saveImage(buffer: ArrayBuffer, fileName: string): Promise<string> {
-    const targetDirectory = this.storage.illustrationDirectory ?? this.storage.downloadDirectory;
+    const targetDirectory = this.storage.illustrationDirectory ?? this.storage.downloadDirectory!;
     const uniquePath = await this.findUniquePath(targetDirectory, fileName);
     await fs.writeFile(uniquePath, Buffer.from(buffer));
     return uniquePath;
   }
 
   public async saveText(content: string, fileName: string): Promise<string> {
-    const targetDirectory = this.storage.novelDirectory ?? this.storage.downloadDirectory;
+    const targetDirectory = this.storage.novelDirectory ?? this.storage.downloadDirectory!;
     const uniquePath = await this.findUniquePath(targetDirectory, fileName);
     await fs.writeFile(uniquePath, content, 'utf-8');
     return uniquePath;

@@ -66,7 +66,7 @@ build_project() {
     
     log_info "正在编译 TypeScript..."
     
-    if npm run standalone:build; then
+    if npm run build; then
         log_success "编译完成"
         return 0
     else

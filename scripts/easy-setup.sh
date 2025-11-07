@@ -353,13 +353,15 @@ show_completion() {
     echo ""
     echo "  ${GREEN}2. 手动运行一次${NC}"
     echo "     手动执行一次下载："
-    echo "     ${YELLOW}npm run standalone:run-once${NC}"
+    echo "     ${YELLOW}./scripts/pixiv.sh once${NC}"
+    echo "     或: ${YELLOW}npm run download${NC}"
     echo ""
     
     if [ "$ENABLE_CRON" = true ]; then
         echo "  ${GREEN}3. 启动定时下载${NC}"
         echo "     启动后台定时任务："
-        echo "     ${YELLOW}npm run standalone:run${NC}"
+        echo "     ${YELLOW}./scripts/pixiv.sh run${NC}"
+        echo "     或: ${YELLOW}npm run scheduler${NC}"
         echo ""
     fi
     

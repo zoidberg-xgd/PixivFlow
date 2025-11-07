@@ -1,47 +1,110 @@
 {
+  "_comment": "PixivBatchDownloader 配置文件示例",
+  "_note": "所有带下划线的字段（如 _comment）都是注释，不会影响程序运行",
+  
+  "logLevel": "info",
+  "_logLevel_comment": "日志级别: debug | info | warn | error",
+  
   "pixiv": {
-    "username": "your_pixiv_email_or_id",
-    "password": "your_pixiv_password",
-    "refresh_token": "",
-    "_comment": "登录后 refresh_token 会自动保存到此处。首次使用时只需填写 username 和 password"
+    "_comment": "Pixiv API 凭证配置（必需）",
+    "clientId": "MOBrBDS8blbauoSck0ZfDbtuzpyT",
+    "clientSecret": "lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj",
+    "deviceToken": "pixiv",
+    "refreshToken": "YOUR_REFRESH_TOKEN",
+    "_refreshToken_note": "请将 YOUR_REFRESH_TOKEN 替换为您的实际 refresh token。可以使用 npm run setup 来获取",
+    "userAgent": "PixivAndroidApp/5.0.234 (Android 11; Pixel 6)"
   },
-  "download": {
-    "output_dir": "./downloads",
-    "max_concurrent": 5,
-    "retry_count": 3,
-    "retry_delay": 1000,
-    "timeout": 30000,
-    "_comment": "下载配置：output_dir-输出目录，max_concurrent-最大并发数，retry_count-重试次数"
+  
+  "network": {
+    "_comment": "网络配置（可选，有默认值）",
+    "timeoutMs": 30000,
+    "_timeoutMs_note": "请求超时时间（毫秒），默认 30000（30秒）",
+    "retries": 3,
+    "_retries_note": "失败重试次数，默认 3",
+    "retryDelay": 1000,
+    "_retryDelay_note": "重试延迟（毫秒），默认 1000（1秒）",
+    "proxy": {
+      "_comment": "代理配置（可选）",
+      "enabled": false,
+      "host": "127.0.0.1",
+      "port": 7890,
+      "protocol": "http",
+      "_protocol_note": "支持: http | https | socks4 | socks5",
+      "username": "",
+      "password": ""
+    }
   },
-  "filter": {
-    "min_bookmarks": 0,
-    "min_width": 0,
-    "min_height": 0,
-    "allowed_file_types": ["jpg", "png", "gif", "webp"],
-    "exclude_r18": false,
-    "exclude_r18g": false,
-    "date_range": {
-      "start": "",
-      "end": ""
-    },
-    "_comment": "过滤配置：min_bookmarks-最小收藏数，exclude_r18-排除R18作品"
+  
+  "storage": {
+    "_comment": "存储配置（可选，有默认值）",
+    "databasePath": "./data/pixiv-downloader.db",
+    "_databasePath_note": "SQLite 数据库文件路径，默认 ./data/pixiv-downloader.db",
+    "downloadDirectory": "./downloads",
+    "_downloadDirectory_note": "下载根目录，默认 ./downloads",
+    "illustrationDirectory": "./downloads/illustrations",
+    "_illustrationDirectory_note": "插画保存目录（相对于 downloadDirectory 或绝对路径），默认 {downloadDirectory}/illustrations",
+    "novelDirectory": "./downloads/novels",
+    "_novelDirectory_note": "小说保存目录（相对于 downloadDirectory 或绝对路径），默认 {downloadDirectory}/novels"
   },
-  "log": {
-    "level": "info",
-    "file": "./logs/standalone.log",
-    "max_files": 10,
-    "max_size": 10485760,
-    "_comment": "日志配置：level可选值为 debug/info/warn/error"
-  },
-  "ui": {
-    "show_progress": true,
-    "color": true,
-    "_comment": "界面配置：show_progress-显示进度条，color-彩色输出"
-  },
-  "proxy": {
+  
+  "scheduler": {
+    "_comment": "调度器配置（可选，有默认值）",
     "enabled": false,
-    "url": "",
-    "bypass": [],
-    "_comment": "代理配置：如需使用代理，设置 enabled 为 true 并配置 url"
-  }
+    "_enabled_note": "是否启用定时任务，默认 false",
+    "cron": "0 3 * * *",
+    "_cron_note": "Cron 表达式，默认每天凌晨3点执行。示例：'0 */6 * * *' 表示每6小时执行一次",
+    "timezone": "Asia/Shanghai",
+    "_timezone_note": "时区，默认 Asia/Shanghai",
+    "maxExecutions": null,
+    "_maxExecutions_note": "最大执行次数，null 表示无限制",
+    "minInterval": null,
+    "_minInterval_note": "最小执行间隔（毫秒），null 表示无限制",
+    "timeout": null,
+    "_timeout_note": "单次任务超时时间（毫秒），null 表示无超时",
+    "maxConsecutiveFailures": null,
+    "_maxConsecutiveFailures_note": "最大连续失败次数，超过后停止调度器，null 表示无限制",
+    "failureRetryDelay": null,
+    "_failureRetryDelay_note": "失败后重试延迟（毫秒），null 表示无延迟"
+  },
+  
+  "download": {
+    "_comment": "下载配置（可选，有默认值）",
+    "concurrency": 3,
+    "_concurrency_note": "最大并发下载数，默认 3，建议范围 1-10",
+    "maxRetries": 3,
+    "_maxRetries_note": "每个下载的最大重试次数，默认 3",
+    "retryDelay": 2000,
+    "_retryDelay_note": "重试延迟（毫秒），默认 2000（2秒）",
+    "timeout": 60000,
+    "_timeout_note": "下载超时时间（毫秒），默认 60000（60秒）"
+  },
+  
+  "targets": [
+    {
+      "_comment": "下载目标配置（必需，至少一个）",
+      "type": "illustration",
+      "_type_note": "类型: illustration（插画）| novel（小说）",
+      "tag": "イラスト",
+      "_tag_note": "搜索标签，必填",
+      "limit": 10,
+      "_limit_note": "每次运行下载数量限制，建议范围 1-1000",
+      "searchTarget": "partial_match_for_tags",
+      "_searchTarget_note": "搜索模式: partial_match_for_tags（部分匹配）| exact_match_for_tags（精确匹配）| title_and_caption（标题和说明）",
+      "restrict": "public",
+      "_restrict_note": "限制: public（公开）| private（私有）",
+      "mode": "search",
+      "_mode_note": "下载模式: search（搜索）| ranking（排行榜）",
+      "rankingMode": "day",
+      "_rankingMode_note": "排行榜模式（仅当 mode=ranking 时有效）: day | week | month | day_male | day_female | day_ai | week_original | week_rookie | day_r18 | day_male_r18 | day_female_r18",
+      "rankingDate": "YESTERDAY",
+      "_rankingDate_note": "排行榜日期（YYYY-MM-DD 格式），或使用 'YESTERDAY' 占位符",
+      "filterTag": null,
+      "_filterTag_note": "过滤标签（仅当 mode=ranking 时有效），null 表示不过滤",
+      "random": false,
+      "_random_note": "是否随机选择，true 表示从搜索结果中随机选择"
+    }
+  ],
+  
+  "initialDelay": 0,
+  "_initialDelay_note": "启动延迟（毫秒），用于测试或延迟启动，默认 0"
 }

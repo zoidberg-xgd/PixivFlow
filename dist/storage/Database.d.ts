@@ -14,6 +14,16 @@ export interface DownloadRecordInput {
     author?: string;
 }
 export type ExecutionStatus = 'success' | 'partial' | 'failed';
+export interface SchedulerExecutionRecord {
+    id: number;
+    executionNumber: number;
+    status: 'success' | 'failed' | 'timeout' | 'skipped';
+    startTime: string;
+    endTime: string | null;
+    duration: number | null;
+    errorMessage: string | null;
+    itemsDownloaded: number;
+}
 export declare class Database {
     private readonly databasePath;
     private db;
@@ -24,6 +34,33 @@ export declare class Database {
     hasDownloaded(pixivId: string, type: 'illustration' | 'novel'): boolean;
     insertDownload(record: DownloadRecordInput): void;
     logExecution(tag: string, type: 'illustration' | 'novel', status: ExecutionStatus, message?: string): void;
+    /**
+     * Get the next execution number for the scheduler
+     */
+    getNextExecutionNumber(): number;
+    /**
+     * Log a scheduler execution
+     */
+    logSchedulerExecution(executionNumber: number, status: 'success' | 'failed' | 'timeout' | 'skipped', startTime: Date, endTime: Date | null, durationMs: number | null, errorMessage: string | null, itemsDownloaded?: number): void;
+    /**
+     * Get scheduler execution statistics
+     */
+    getSchedulerStats(): {
+        totalExecutions: number;
+        successfulExecutions: number;
+        failedExecutions: number;
+        lastExecutionTime: string | null;
+        averageDuration: number | null;
+        totalItemsDownloaded: number;
+    };
+    /**
+     * Get recent scheduler executions
+     */
+    getRecentSchedulerExecutions(limit?: number): SchedulerExecutionRecord[];
+    /**
+     * Get consecutive failure count
+     */
+    getConsecutiveFailures(): number;
     close(): void;
 }
 //# sourceMappingURL=Database.d.ts.map

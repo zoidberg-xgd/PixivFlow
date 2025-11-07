@@ -14,10 +14,10 @@ async function testDownload() {
   console.log('║                                                                ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
-  const configPath = path.join(process.cwd(), 'config', 'standalone.config.json');
+  const defaultConfigPath = path.join(process.cwd(), 'config', 'standalone.config.json');
   
   // 检查是否已有配置文件
-  if (!fs.existsSync(configPath)) {
+  if (!fs.existsSync(defaultConfigPath)) {
     console.log('❌ 未找到配置文件！');
     console.log('\n请先运行配置向导创建配置：');
     console.log('  npm run standalone:setup\n');
@@ -31,7 +31,7 @@ async function testDownload() {
   console.log('📋 加载配置');
   console.log('════════════════════════════════════════════════════════════════\n');
   
-  const configContent = fs.readFileSync(configPath, 'utf-8');
+  const configContent = fs.readFileSync(defaultConfigPath, 'utf-8');
   const config = JSON.parse(configContent);
   
   console.log(`✓ 下载目录: ${config.storage.illustrationDirectory}`);
@@ -53,7 +53,7 @@ async function testDownload() {
   console.log('正在启动下载器...\n');
   
   // 动态导入并运行主程序
-  const { loadConfig } = await import('./config');
+  const { loadConfig, getConfigPath } = await import('./config');
   const { DownloadManager } = await import('./download/DownloadManager');
   const { FileService } = await import('./download/FileService');
   const { logger } = await import('./logger');
@@ -61,14 +61,15 @@ async function testDownload() {
   const { PixivClient } = await import('./pixiv/PixivClient');
   const { Database } = await import('./storage/Database');
 
-  const loadedConfig = loadConfig();
+  const resolvedConfigPath = getConfigPath();
+  const loadedConfig = loadConfig(resolvedConfigPath);
   
-  const database = new Database(loadedConfig.storage.databasePath);
+  const database = new Database(loadedConfig.storage!.databasePath!);
   database.migrate();
 
-  const auth = new PixivAuth(loadedConfig.pixiv, loadedConfig.network, database);
+  const auth = new PixivAuth(loadedConfig.pixiv, loadedConfig.network!, database, resolvedConfigPath);
   const pixivClient = new PixivClient(auth, loadedConfig);
-  const fileService = new FileService(loadedConfig.storage);
+  const fileService = new FileService(loadedConfig.storage!);
   const downloadManager = new DownloadManager(loadedConfig, pixivClient, database, fileService);
 
   await downloadManager.initialise();
@@ -84,7 +85,7 @@ async function testDownload() {
   console.log('✅ 验证下载结果');
   console.log('════════════════════════════════════════════════════════════════\n');
 
-  const downloadDir = loadedConfig.storage.illustrationDirectory || './downloads/illustrations';
+  const downloadDir = loadedConfig.storage!.illustrationDirectory || './downloads/illustrations';
   if (fs.existsSync(downloadDir)) {
     const files = fs.readdirSync(downloadDir);
     const imageFiles = files.filter(f => 

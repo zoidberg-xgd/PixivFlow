@@ -27,6 +27,7 @@
     "download": "npm run build && node dist/index.js download",
     "scheduler": "npm run build && node dist/index.js scheduler",
     "test": "npm run build && node dist/test-download.js",
+    "test:scheduled": "npm run build && node dist/test-scheduled-download.js",
     "setup": "npm run build && node dist/setup-wizard.js",
     "random": "npm run build && node dist/index.js random",
     "clean": "rm -rf dist",
@@ -41,7 +42,13 @@
     "health": "./scripts/health-check.sh",
     "monitor": "./scripts/auto-monitor.sh",
     "maintain": "./scripts/auto-maintain.sh",
-    "backup": "./scripts/auto-backup.sh"
+    "backup": "./scripts/auto-backup.sh",
+    "standalone:build": "npm run build",
+    "standalone:setup": "npm run setup",
+    "standalone:run": "npm run scheduler",
+    "standalone:run-once": "npm run download",
+    "test:download": "npm run test",
+    "download:specific": "npm run build && node dist/download-specific.js"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
