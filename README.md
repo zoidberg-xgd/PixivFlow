@@ -59,7 +59,7 @@ PixivFlow 是一个**完全独立运行**的 Pixiv 作品下载工具，无需�
 - Node.js 18+ 和 npm 9+
 - 一个 Pixiv 账号
 
-### 🎬 快速开始（推荐 ⭐）
+### 🎬 快速开始（推荐）
 
 **最简单的方式 - 一键完成所有设置**：
 
@@ -92,7 +92,7 @@ npm install
 #### 2️⃣ 登录 Pixiv 账号
 
 ```bash
-# 最简单的方式：在终端输入用户名和密码（推荐 ⭐）
+# 最简单的方式：在终端输入用户名和密码（推荐）
 npm run login
 
 # 或使用配置向导（纯终端登录，交互式配置）
@@ -166,7 +166,7 @@ PixivFlow 提供了丰富的脚本工具，让你无需记忆复杂的 npm 命�
 ### 🔐 登录管理
 
 ```bash
-# 登录 Pixiv 账号（推荐 ⭐，默认使用 Python gppt）
+# 登录 Pixiv 账号（推荐，默认使用 Python gppt）
 npm run login
 
 # 查看登录帮助
@@ -219,22 +219,22 @@ npm run login -- --help
 
 ### 🌟 新手必读
 
-| 文档 | 说明 | 推荐指数 |
-|------|------|---------|
-| [📚 TUTORIAL](TUTORIAL.md) | **完整教程**：从登录到下载到定时任务，详细教学 | ⭐⭐⭐⭐⭐ |
-| [📖 START_HERE](START_HERE.md) | 新手完整指南，从零开始 | ⭐⭐⭐⭐⭐ |
-| [⚡ QUICKSTART](QUICKSTART.md) | 3 分钟快速上手 | ⭐⭐⭐⭐⭐ |
-| [🔐 LOGIN_GUIDE](LOGIN_GUIDE.md) | 登录流程详解 | ⭐⭐⭐⭐ |
-| [🧪 TEST_GUIDE](TEST_GUIDE.md) | 测试和故障排除 | ⭐⭐⭐⭐ |
+| 文档 | 说明 |
+|------|------|
+| [📚 TUTORIAL](TUTORIAL.md) | **完整教程**：从登录到下载到定时任务，详细教学 |
+| [📖 START_HERE](START_HERE.md) | 新手完整指南，从零开始 |
+| [⚡ QUICKSTART](QUICKSTART.md) | 3 分钟快速上手 |
+| [🔐 LOGIN_GUIDE](LOGIN_GUIDE.md) | 登录流程详解 |
+| [🧪 TEST_GUIDE](TEST_GUIDE.md) | 测试和故障排除 |
 
 ### 📘 进阶文档
 
-| 文档 | 说明 | 推荐指数 |
-|------|------|---------|
-| [⚙️ STANDALONE-SETUP-GUIDE](STANDALONE-SETUP-GUIDE.md) | 完整配置选项说明 | ⭐⭐⭐⭐ |
-| [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | 所有脚本详细说明 | ⭐⭐⭐⭐⭐ |
-| [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | 配置文件使用指南 | ⭐⭐⭐⭐⭐ |
-| [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 | ⭐⭐⭐⭐ |
+| 文档 | 说明 |
+|------|------|
+| [⚙️ STANDALONE-SETUP-GUIDE](STANDALONE-SETUP-GUIDE.md) | 完整配置选项说明 |
+| [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | 所有脚本详细说明 |
+| [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | 配置文件使用指南 |
+| [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
 
 ---
 
@@ -397,8 +397,8 @@ pixivflow/
 │
 ├── 🛠️ 脚本工具
 │   ├── scripts/
-│   │   ├── pixiv.sh                 # 主控制脚本 ⭐
-│   │   ├── easy-setup.sh            # 配置向导 ⭐
+│   │   ├── pixiv.sh                 # 主控制脚本（推荐）
+│   │   ├── easy-setup.sh            # 配置向导（推荐）
 │   │   ├── config-manager.sh        # 配置管理
 │   │   ├── health-check.sh          # 健康检查
 │   │   ├── auto-monitor.sh          # 自动监控
@@ -820,22 +820,22 @@ sudo systemctl status pixivflow
 
 ---
 
-## 🌟 支持项目
+## 支持项目
 
 如果这个项目对你有帮助，请考虑：
 
-- ⭐ 给项目一个 Star
-- 🍴 Fork 并贡献代码
-- 📢 分享给更多人
-- 💖 提供反馈和建议
+- 给项目一个 Star
+- Fork 并贡献代码
+- 分享给更多人
+- 提供反馈和建议
 
 ---
 
 <div align="center">
 
-### ⭐ Star 这个项目
+### Star 这个项目
 
-**[⭐ Star on GitHub](https://github.com/zoidberg-xgd/pixivflow)**
+**[Star on GitHub](https://github.com/zoidberg-xgd/pixivflow)**
 
 ---
 
