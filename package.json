@@ -1,0 +1,74 @@
+{
+  "name": "pixivflow",
+  "version": "2.0.0",
+  "description": "🎨 智能的 Pixiv 自动化下载工具 | Intelligent Pixiv Automation Downloader",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zoidberg-xgd/pixivflow.git"
+  },
+  "homepage": "https://github.com/zoidberg-xgd/pixivflow#readme",
+  "bugs": {
+    "url": "https://github.com/zoidberg-xgd/pixivflow/issues"
+  },
+  "author": "zoidberg-xgd <zoidberg.xgd@example.com>",
+  "license": "GPL-3.0-or-later",
+  "main": "dist/index.js",
+  "bin": {
+    "pixivflow": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "start": "npm run build && node dist/index.js",
+    "login": "./scripts/login.sh",
+    "login:headless": "npm run build && node dist/index.js login-headless",
+    "login:example": "npm run build && node dist/terminal-login-example.js",
+    "refresh": "npm run build && node dist/index.js refresh",
+    "download": "npm run build && node dist/index.js download",
+    "scheduler": "npm run build && node dist/index.js scheduler",
+    "test": "npm run build && node dist/test-download.js",
+    "setup": "npm run build && node dist/setup-wizard.js",
+    "random": "npm run build && node dist/index.js random",
+    "clean": "rm -rf dist",
+    "pixiv": "./scripts/pixiv.sh",
+    "pixiv:setup": "./scripts/pixiv.sh setup",
+    "pixiv:run": "./scripts/pixiv.sh run",
+    "pixiv:once": "./scripts/pixiv.sh once",
+    "pixiv:test": "./scripts/pixiv.sh test",
+    "pixiv:status": "./scripts/pixiv.sh status",
+    "pixiv:health": "./scripts/pixiv.sh health",
+    "config": "./scripts/config-manager.sh",
+    "health": "./scripts/health-check.sh",
+    "monitor": "./scripts/auto-monitor.sh",
+    "maintain": "./scripts/auto-maintain.sh",
+    "backup": "./scripts/auto-backup.sh"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.7.4",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "better-sqlite3": "^11.10.0",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "pixiv",
+    "downloader",
+    "automation",
+    "batch-download",
+    "cli",
+    "scheduler",
+    "pixiv-api",
+    "artwork",
+    "illustration",
+    "nodejs",
+    "typescript"
+  ]
+}

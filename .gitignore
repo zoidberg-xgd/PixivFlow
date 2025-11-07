@@ -1,0 +1,45 @@
+# base
+.DS_Store
+node_modules
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# lock
+yarn.lock
+package-lock.json
+
+# build file
+*.zip
+/dist-offline
+/dist-special-DelMemory
+/dist-special-Hongye
+/dist-special-wolun
+/dist-special-cao
+*special*
+
+# 当把 dist 目录离线安装为浏览器扩展时，浏览器会自动创建 _metadata 目录。这个目录不需要上传和打包
+_metadata
+
+.eslintcache
+
+# Standalone mode
+config/standalone.config.json
+data/
+downloads/
+
+# Temporary token files
+.refresh_token
+*.token
+.tmp/

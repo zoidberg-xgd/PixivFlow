@@ -1,0 +1,47 @@
+{
+  "pixiv": {
+    "username": "your_pixiv_email_or_id",
+    "password": "your_pixiv_password",
+    "refresh_token": "",
+    "_comment": "登录后 refresh_token 会自动保存到此处。首次使用时只需填写 username 和 password"
+  },
+  "download": {
+    "output_dir": "./downloads",
+    "max_concurrent": 5,
+    "retry_count": 3,
+    "retry_delay": 1000,
+    "timeout": 30000,
+    "_comment": "下载配置：output_dir-输出目录，max_concurrent-最大并发数，retry_count-重试次数"
+  },
+  "filter": {
+    "min_bookmarks": 0,
+    "min_width": 0,
+    "min_height": 0,
+    "allowed_file_types": ["jpg", "png", "gif", "webp"],
+    "exclude_r18": false,
+    "exclude_r18g": false,
+    "date_range": {
+      "start": "",
+      "end": ""
+    },
+    "_comment": "过滤配置：min_bookmarks-最小收藏数，exclude_r18-排除R18作品"
+  },
+  "log": {
+    "level": "info",
+    "file": "./logs/standalone.log",
+    "max_files": 10,
+    "max_size": 10485760,
+    "_comment": "日志配置：level可选值为 debug/info/warn/error"
+  },
+  "ui": {
+    "show_progress": true,
+    "color": true,
+    "_comment": "界面配置：show_progress-显示进度条，color-彩色输出"
+  },
+  "proxy": {
+    "enabled": false,
+    "url": "",
+    "bypass": [],
+    "_comment": "代理配置：如需使用代理，设置 enabled 为 true 并配置 url"
+  }
+}
