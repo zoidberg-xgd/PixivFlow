@@ -43,3 +43,6 @@ downloads/
 .refresh_token
 *.token
 .tmp/
+
+# Analysis reports (local only, not for repository)
+PIXIV_API_CLIENT_ANALYSIS.md
