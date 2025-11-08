@@ -1,0 +1,30 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Layout } from 'antd';
+import AppLayout from './components/Layout/AppLayout';
+import Dashboard from './pages/Dashboard';
+import Config from './pages/Config';
+import Download from './pages/Download';
+import History from './pages/History';
+import Logs from './pages/Logs';
+import Files from './pages/Files';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="config" element={<Config />} />
+          <Route path="download" element={<Download />} />
+          <Route path="history" element={<History />} />
+          <Route path="logs" element={<Logs />} />
+          <Route path="files" element={<Files />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+

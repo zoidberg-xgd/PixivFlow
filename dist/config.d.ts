@@ -60,6 +60,21 @@ export interface TargetConfig {
      * Example: novel ID 26132156 from URL https://www.pixiv.net/novel/show.php?id=26132156
      */
     novelId?: number;
+    /**
+     * Minimum number of bookmarks required for a work to be downloaded
+     * If specified, only works with bookmarks >= minBookmarks will be downloaded
+     */
+    minBookmarks?: number;
+    /**
+     * Start date for filtering works (YYYY-MM-DD format, e.g., '2024-01-01')
+     * If specified, only works created on or after this date will be downloaded
+     */
+    startDate?: string;
+    /**
+     * End date for filtering works (YYYY-MM-DD format, e.g., '2024-12-31')
+     * If specified, only works created on or before this date will be downloaded
+     */
+    endDate?: string;
 }
 export interface PixivCredentialConfig {
     clientId: string;

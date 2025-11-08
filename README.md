@@ -99,10 +99,12 @@
 | **🔄 稳定可靠** | 自动重试、断点续传、错误恢复、智能跳过已删除/私有作品 |
 | **📊 完整日志** | 详细的运行日志和下载统计报告 |
 | **🔐 安全登录** | 通过 Python gppt 库实现 OAuth 2.0 PKCE 流程，支持终端登录 |
+| **🌐 WebUI 界面** | 现代化的 Web 管理界面，支持文件预览、实时日志、任务管理 |
 
 ### 🎁 额外优势
 
 - ✅ **完全独立**：无需浏览器，纯命令行工具
+- ✅ **WebUI 支持**：提供现代化的 Web 管理界面，支持图形化操作
 - ✅ **跨平台支持**：Windows / macOS / Linux 全平台支持
 - ✅ **轻量级**：资源占用低，适合服务器长期运行
 - ✅ **开源免费**：GPL-3.0 许可证，可自由定制和分发
@@ -201,6 +203,32 @@ npm run setup
 > **💡 提示**：首次使用建议先运行 `test` 测试下载 1-2 个作品，确认配置正确后再正式使用。
 > 
 > ✅ **已验证**：测试脚本已通过验证，可以正常下载作品。详细测试结果请查看 [TEST_GUIDE.md](TEST_GUIDE.md)。
+
+---
+
+### 🌐 使用 WebUI（可选）
+
+PixivFlow 还提供了现代化的 Web 管理界面，支持图形化操作：
+
+```bash
+# 1. 启动 WebUI 后端
+npm run webui
+
+# 2. 在另一个终端启动前端（开发模式）
+npm run webui:frontend
+```
+
+然后访问 http://localhost:5173 即可使用 WebUI。
+
+**WebUI 功能**：
+- 📊 下载统计和概览
+- 📁 文件浏览和预览（支持日文、中文等特殊字符文件名）
+- 📝 实时日志查看
+- ⚙️ 配置管理
+- 🎯 任务管理（启动/停止下载）
+- 📈 下载历史查看
+
+详细说明请查看 [WebUI 使用指南](WEBUI_README.md) 和 [WebUI 设置指南](WEBUI_SETUP.md)。
 
 ---
 
@@ -326,6 +354,8 @@ npm run login
 | [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | 所有脚本详细说明 |
 | [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | 配置文件使用指南 |
 | [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
+| [🌐 WEBUI_README](WEBUI_README.md) | WebUI 使用指南 |
+| [🚀 WEBUI_SETUP](WEBUI_SETUP.md) | WebUI 设置指南 |
 
 ### 📄 项目文档
 

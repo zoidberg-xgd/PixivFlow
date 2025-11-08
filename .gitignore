@@ -47,3 +47,9 @@ downloads/
 # Analysis reports (local only, not for repository)
 PIXIV_API_CLIENT_ANALYSIS.md
 TEST_REPORT.md
+
+# WebUI
+webui-frontend/node_modules
+webui-frontend/dist
+webui-frontend/.vite
+webui-frontend/package-lock.json
