@@ -501,9 +501,9 @@ npm run login
 ```
 
 **获取更多帮助**：
-- 📖 查看 [完整文档](README.md)
-- 📖 查看 [登录指南](LOGIN_GUIDE.md)
-- 📖 查看 [测试指南](TEST_GUIDE.md)
+- 📖 查看 [完整文档](../../README.md)
+- 📖 查看 [登录指南](../guides/LOGIN_GUIDE.md)
+- 📖 查看 [测试指南](../guides/TEST_GUIDE.md)
 
 ---
 
@@ -557,12 +557,12 @@ npm run login
 | 文档 | 说明 |
 |------|------|
 | [START_HERE.md](START_HERE.md) | 新手完整指南 |
-| [README.md](README.md) | 项目主文档 |
-| [LOGIN_GUIDE.md](LOGIN_GUIDE.md) | 登录详解 |
-| [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | 脚本详解 |
-| [CONFIG_GUIDE.md](CONFIG_GUIDE.md) | 配置文件使用指南 |
-| [RANKING_DOWNLOAD_GUIDE.md](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
-| [TEST_GUIDE.md](TEST_GUIDE.md) | 测试指南 |
+| [README.md](../../README.md) | 项目主文档 |
+| [LOGIN_GUIDE.md](../guides/LOGIN_GUIDE.md) | 登录详解 |
+| [SCRIPTS_GUIDE.md](../scripts/SCRIPTS_GUIDE.md) | 脚本详解 |
+| [CONFIG_GUIDE.md](../guides/CONFIG_GUIDE.md) | 配置文件使用指南 |
+| [RANKING_DOWNLOAD_GUIDE.md](../guides/RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
+| [TEST_GUIDE.md](../guides/TEST_GUIDE.md) | 测试指南 |
 
 ---
 

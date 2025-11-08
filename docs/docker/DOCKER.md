@@ -599,10 +599,10 @@ docker-compose build
 
 ## 📚 更多信息
 
-- [项目 README](README.md)
-- [配置指南](CONFIG_GUIDE.md)
-- [快速开始](QUICKSTART.md)
-- [WebUI 使用指南](WEBUI_README.md)
+- [项目 README](../../README.md)
+- [配置指南](../guides/CONFIG_GUIDE.md)
+- [快速开始](../getting-started/QUICKSTART.md)
+- [WebUI 使用指南](../webui/WEBUI_README.md)
 - [Docker 网络问题解决方案](DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
 - [Docker 随机下载问题解决方案](DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
 

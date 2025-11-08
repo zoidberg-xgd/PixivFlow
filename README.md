@@ -248,7 +248,7 @@ npm run setup
 
 > **💡 提示**：首次使用建议先运行 `test` 测试下载 1-2 个作品，确认配置正确后再正式使用。
 > 
-> ✅ **已验证**：测试脚本已通过验证，可以正常下载作品。详细测试结果请查看 [TEST_GUIDE.md](TEST_GUIDE.md)。
+> ✅ **已验证**：测试脚本已通过验证，可以正常下载作品。详细测试结果请查看 [TEST_GUIDE.md](docs/guides/TEST_GUIDE.md)。
 
 ---
 
@@ -288,7 +288,7 @@ STATIC_PATH=webui-frontend/dist npm run webui
 - 🎯 任务管理（启动/停止下载）
 - 📈 下载历史查看
 
-详细说明请查看 [WebUI 使用指南](WEBUI_README.md) 和 [WebUI 设置指南](WEBUI_SETUP.md)。
+详细说明请查看 [WebUI 使用指南](docs/webui/WEBUI_README.md) 和 [WebUI 设置指南](docs/webui/WEBUI_SETUP.md)。
 
 ---
 
@@ -323,12 +323,12 @@ PixivFlow 支持 Docker 部署，无需安装 Node.js 环境：
 - `docker logs` - 查看日志
 - `docker login` - 在容器中登录账号
 
-详细说明请查看 [Docker 使用指南](DOCKER.md)。
+详细说明请查看 [Docker 使用指南](docs/docker/DOCKER.md)。
 
 **相关文档**：
-- [Docker 使用指南](DOCKER.md) - 完整的 Docker 部署和使用说明
-- [Docker 网络问题解决方案](DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
-- [Docker 随机下载问题解决方案](DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
+- [Docker 使用指南](docs/docker/DOCKER.md) - 完整的 Docker 部署和使用说明
+- [Docker 网络问题解决方案](docs/docker/DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
+- [Docker 随机下载问题解决方案](docs/docker/DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
 
 ---
 
@@ -433,12 +433,12 @@ npm run login
 - `docker login` - 登录账号
 - `docker test` - 测试下载
 
-详细说明请查看 [Docker 使用指南](DOCKER.md)。
+详细说明请查看 [Docker 使用指南](docs/docker/DOCKER.md)。
 
 **相关文档**：
-- [Docker 使用指南](DOCKER.md) - 完整的 Docker 部署和使用说明
-- [Docker 网络问题解决方案](DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
-- [Docker 随机下载问题解决方案](DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
+- [Docker 使用指南](docs/docker/DOCKER.md) - 完整的 Docker 部署和使用说明
+- [Docker 网络问题解决方案](docs/docker/DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
+- [Docker 随机下载问题解决方案](docs/docker/DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
 
 ### 🎨 高级 CLI 工具
 
@@ -461,7 +461,7 @@ npm run login
 - 脚本直接调用内置 CLI（`dist/index.js`），无需通过 npm，性能更好
 - 推荐使用 `./scripts/pixiv.sh` 作为主要入口
 
-详细说明：[脚本使用指南](SCRIPTS_GUIDE.md)
+详细说明：[脚本使用指南](docs/scripts/SCRIPTS_GUIDE.md)
 
 ---
 
@@ -471,31 +471,39 @@ npm run login
 
 | 文档 | 说明 |
 |------|------|
-| [📚 TUTORIAL](TUTORIAL.md) | **完整教程**：从登录到下载到定时任务，详细教学 |
-| [📖 START_HERE](START_HERE.md) | 新手完整指南，从零开始 |
-| [⚡ QUICKSTART](QUICKSTART.md) | 3 分钟快速上手 |
-| [🔐 LOGIN_GUIDE](LOGIN_GUIDE.md) | 登录流程详解 |
-| [🧪 TEST_GUIDE](TEST_GUIDE.md) | 测试和故障排除 |
+| [📚 TUTORIAL](docs/getting-started/TUTORIAL.md) | **完整教程**：从登录到下载到定时任务，详细教学 |
+| [📖 START_HERE](docs/getting-started/START_HERE.md) | 新手完整指南，从零开始 |
+| [⚡ QUICKSTART](docs/getting-started/QUICKSTART.md) | 3 分钟快速上手 |
+| [🔐 LOGIN_GUIDE](docs/guides/LOGIN_GUIDE.md) | 登录流程详解 |
+| [🧪 TEST_GUIDE](docs/guides/TEST_GUIDE.md) | 测试和故障排除 |
 
 ### 📘 进阶文档
 
 | 文档 | 说明 |
 |------|------|
-| [⚙️ STANDALONE-SETUP-GUIDE](STANDALONE-SETUP-GUIDE.md) | 完整配置选项说明 |
-| [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | 所有脚本详细说明 |
-| [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | 配置文件使用指南 |
-| [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
-| [🌐 WEBUI_README](WEBUI_README.md) | WebUI 使用指南 |
-| [🚀 WEBUI_SETUP](WEBUI_SETUP.md) | WebUI 设置指南 |
+| [⚙️ STANDALONE-SETUP-GUIDE](docs/guides/STANDALONE-SETUP-GUIDE.md) | 完整配置选项说明 |
+| [🛠️ SCRIPTS_GUIDE](docs/scripts/SCRIPTS_GUIDE.md) | 所有脚本详细说明 |
+| [📋 CONFIG_GUIDE](docs/guides/CONFIG_GUIDE.md) | 配置文件使用指南 |
+| [📊 RANKING_DOWNLOAD_GUIDE](docs/guides/RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
+| [🌐 WEBUI_README](docs/webui/WEBUI_README.md) | WebUI 使用指南 |
+| [🚀 WEBUI_SETUP](docs/webui/WEBUI_SETUP.md) | WebUI 设置指南 |
+
+### 🐳 Docker 文档
+
+| 文档 | 说明 |
+|------|------|
+| [🐳 DOCKER](docs/docker/DOCKER.md) | Docker 使用指南 |
+| [🔧 DOCKER_NETWORK_SOLUTION](docs/docker/DOCKER_NETWORK_SOLUTION.md) | Docker 网络问题解决方案 |
+| [🔧 DOCKER_RANDOM_DOWNLOAD_FIX](docs/docker/DOCKER_RANDOM_DOWNLOAD_FIX.md) | Docker 随机下载问题解决方案 |
 
 ### 📄 项目文档
 
 | 文档 | 说明 |
 |------|------|
-| [📝 CHANGELOG](CHANGELOG.md) | 版本更新日志 |
-| [📝 CHANGELOG (EN)](CHANGELOG_EN.md) | Version Changelog |
-| [🤝 CONTRIBUTING](CONTRIBUTING.md) | 贡献指南 |
-| [🤝 CONTRIBUTING (EN)](CONTRIBUTING_EN.md) | Contributing Guide |
+| [📝 CHANGELOG](docs/project/CHANGELOG.md) | 版本更新日志 |
+| [📝 CHANGELOG (EN)](docs/project/CHANGELOG_EN.md) | Version Changelog |
+| [🤝 CONTRIBUTING](docs/project/CONTRIBUTING.md) | 贡献指南 |
+| [🤝 CONTRIBUTING (EN)](docs/project/CONTRIBUTING_EN.md) | Contributing Guide |
 
 ---
 
@@ -639,7 +647,7 @@ npm run download
 pixivflow download
 ```
 
-> **💡 提示**：所有下载任务都通过配置文件实现，无需修改源代码。详细说明请查看 [配置文件使用指南](CONFIG_GUIDE.md)。
+> **💡 提示**：所有下载任务都通过配置文件实现，无需修改源代码。详细说明请查看 [配置文件使用指南](docs/guides/CONFIG_GUIDE.md)。
 
 ---
 
@@ -691,12 +699,24 @@ pixivflow/
 │
 └── 📚 文档
     ├── README.md                    # 项目主文档
-    ├── START_HERE.md                # 新手指南
-    ├── QUICKSTART.md                # 快速开始
-    ├── LOGIN_GUIDE.md               # 登录指南
-    ├── STANDALONE-SETUP-GUIDE.md    # 配置指南
-    ├── SCRIPTS_GUIDE.md             # 脚本指南
-    └── TEST_GUIDE.md                # 测试指南
+    └── docs/                        # 文档目录
+        ├── getting-started/         # 入门指南
+        │   ├── START_HERE.md        # 新手指南
+        │   ├── QUICKSTART.md        # 快速开始
+        │   └── TUTORIAL.md          # 完整教程
+        ├── guides/                  # 使用指南
+        │   ├── LOGIN_GUIDE.md       # 登录指南
+        │   ├── CONFIG_GUIDE.md      # 配置指南
+        │   ├── STANDALONE-SETUP-GUIDE.md  # 独立设置指南
+        │   ├── RANKING_DOWNLOAD_GUIDE.md  # 排行榜下载指南
+        │   └── TEST_GUIDE.md        # 测试指南
+        ├── webui/                   # WebUI 文档
+        ├── docker/                  # Docker 文档
+        ├── scripts/                 # 脚本文档
+        │   └── SCRIPTS_GUIDE.md     # 脚本指南
+        └── project/               # 项目文档
+            ├── CHANGELOG.md         # 更新日志
+            └── CONTRIBUTING.md      # 贡献指南
 ```
 
 ---
@@ -788,7 +808,7 @@ pixivflow/
 
 > 💡 **提示**：使用组织模式可以让下载的文件更有条理，便于管理和查找。
 
-**完整配置说明**：查看 [配置指南](STANDALONE-SETUP-GUIDE.md) 和 [配置文件使用指南](CONFIG_GUIDE.md)
+**完整配置说明**：查看 [配置指南](docs/guides/STANDALONE-SETUP-GUIDE.md) 和 [配置文件使用指南](docs/guides/CONFIG_GUIDE.md)
 
 ---
 
@@ -1214,7 +1234,7 @@ npm run download
 
 ### 贡献指南
 
-详细的贡献指南请查看 [CONTRIBUTING.md](CONTRIBUTING.md)，包含：
+详细的贡献指南请查看 [CONTRIBUTING.md](docs/project/CONTRIBUTING.md)，包含：
 - 行为准则
 - 开发环境设置
 - 代码规范
@@ -1225,7 +1245,7 @@ npm run download
 
 ## 📝 更新日志
 
-查看 [CHANGELOG.md](CHANGELOG.md) 了解详细的版本更新记录。
+查看 [CHANGELOG.md](docs/project/CHANGELOG.md) 了解详细的版本更新记录。
 
 ---
 

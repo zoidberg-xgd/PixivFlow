@@ -1040,13 +1040,13 @@ pixiv.sh <command>
 
 | 文档 | 说明 |
 |------|------|
-| [README.md](README.md) | 项目主文档 |
-| [START_HERE.md](START_HERE.md) | 新手完整指南 |
-| [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手 |
-| [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md) | 配置详解 |
-| [CONFIG_GUIDE.md](CONFIG_GUIDE.md) | 配置文件使用指南 |
-| [RANKING_DOWNLOAD_GUIDE.md](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
-| [TEST_GUIDE.md](TEST_GUIDE.md) | 测试指南 |
+| [README.md](../README.md) | 项目主文档 |
+| [START_HERE.md](../getting-started/START_HERE.md) | 新手完整指南 |
+| [QUICKSTART.md](../getting-started/QUICKSTART.md) | 3 分钟快速上手 |
+| [STANDALONE-SETUP-GUIDE.md](../guides/STANDALONE-SETUP-GUIDE.md) | 配置详解 |
+| [CONFIG_GUIDE.md](../guides/CONFIG_GUIDE.md) | 配置文件使用指南 |
+| [RANKING_DOWNLOAD_GUIDE.md](../guides/RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
+| [TEST_GUIDE.md](../guides/TEST_GUIDE.md) | 测试指南 |
 
 ---
 

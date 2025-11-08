@@ -247,7 +247,7 @@ That's it! 🎉
 
 > **💡 Tip**: For first use, it's recommended to run `test` to download 1-2 artworks first, confirm the configuration is correct before formal use.
 > 
-> ✅ **Verified**: Test scripts have been verified and can download artworks normally. See [TEST_GUIDE.md](TEST_GUIDE.md) for detailed test results.
+> ✅ **Verified**: Test scripts have been verified and can download artworks normally. See [TEST_GUIDE.md](docs/guides/TEST_GUIDE.md) for detailed test results.
 
 ---
 
@@ -273,7 +273,7 @@ Then visit http://localhost:5173 to use the WebUI.
 - 🎯 Task management (start/stop downloads)
 - 📈 Download history viewing
 
-For detailed instructions, see [WebUI Usage Guide](WEBUI_README.md) and [WebUI Setup Guide](WEBUI_SETUP.md).
+For detailed instructions, see [WebUI Usage Guide](docs/webui/WEBUI_README.md) and [WebUI Setup Guide](docs/webui/WEBUI_SETUP.md).
 
 ---
 
@@ -375,7 +375,7 @@ npm run login
 - Scripts directly call built-in CLI (`dist/index.js`), no need to go through npm, better performance
 - Recommend using `./scripts/pixiv.sh` as main entry point
 
-Detailed guide: [Script Usage Guide](SCRIPTS_GUIDE.md)
+Detailed guide: [Script Usage Guide](docs/scripts/SCRIPTS_GUIDE.md)
 
 ---
 
@@ -385,31 +385,31 @@ Detailed guide: [Script Usage Guide](SCRIPTS_GUIDE.md)
 
 | Document | Description |
 |----------|-------------|
-| [📚 TUTORIAL](TUTORIAL.md) | **Complete Tutorial**: From login to download to scheduled tasks, detailed teaching |
-| [📖 START_HERE](START_HERE.md) | Complete beginner guide, from scratch |
-| [⚡ QUICKSTART](QUICKSTART.md) | 3-minute quick start |
-| [🔐 LOGIN_GUIDE](LOGIN_GUIDE.md) | Login process details |
-| [🧪 TEST_GUIDE](TEST_GUIDE.md) | Testing and troubleshooting |
+| [📚 TUTORIAL](docs/getting-started/TUTORIAL.md) | **Complete Tutorial**: From login to download to scheduled tasks, detailed teaching |
+| [📖 START_HERE](docs/getting-started/START_HERE.md) | Complete beginner guide, from scratch |
+| [⚡ QUICKSTART](docs/getting-started/QUICKSTART.md) | 3-minute quick start |
+| [🔐 LOGIN_GUIDE](docs/guides/LOGIN_GUIDE.md) | Login process details |
+| [🧪 TEST_GUIDE](docs/guides/TEST_GUIDE.md) | Testing and troubleshooting |
 
 ### 📘 Advanced Documentation
 
 | Document | Description |
 |----------|-------------|
-| [⚙️ STANDALONE-SETUP-GUIDE](STANDALONE-SETUP-GUIDE.md) | Complete configuration options |
-| [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | All scripts detailed guide |
-| [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | Configuration file usage guide |
-| [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | Ranking download guide |
-| [🌐 WEBUI_README](WEBUI_README.md) | WebUI usage guide |
-| [🚀 WEBUI_SETUP](WEBUI_SETUP.md) | WebUI setup guide |
+| [⚙️ STANDALONE-SETUP-GUIDE](docs/guides/STANDALONE-SETUP-GUIDE.md) | Complete configuration options |
+| [🛠️ SCRIPTS_GUIDE](docs/scripts/SCRIPTS_GUIDE.md) | All scripts detailed guide |
+| [📋 CONFIG_GUIDE](docs/guides/CONFIG_GUIDE.md) | Configuration file usage guide |
+| [📊 RANKING_DOWNLOAD_GUIDE](docs/guides/RANKING_DOWNLOAD_GUIDE.md) | Ranking download guide |
+| [🌐 WEBUI_README](docs/webui/WEBUI_README.md) | WebUI usage guide |
+| [🚀 WEBUI_SETUP](docs/webui/WEBUI_SETUP.md) | WebUI setup guide |
 
 ### 📄 Project Documentation
 
 | Document | Description |
 |----------|-------------|
-| [📝 CHANGELOG](CHANGELOG_EN.md) | Version changelog |
-| [📝 CHANGELOG (中文)](CHANGELOG.md) | 版本更新日志 |
-| [🤝 CONTRIBUTING](CONTRIBUTING_EN.md) | Contributing guide |
-| [🤝 CONTRIBUTING (中文)](CONTRIBUTING.md) | 贡献指南 |
+| [📝 CHANGELOG](docs/project/CHANGELOG_EN.md) | Version changelog |
+| [📝 CHANGELOG (中文)](docs/project/CHANGELOG.md) | 版本更新日志 |
+| [🤝 CONTRIBUTING](docs/project/CONTRIBUTING_EN.md) | Contributing guide |
+| [🤝 CONTRIBUTING (中文)](docs/project/CONTRIBUTING.md) | 贡献指南 |
 
 ---
 
@@ -553,7 +553,7 @@ npm run download
 pixivflow download
 ```
 
-> **💡 Tip**: All download tasks are implemented through configuration files, no need to modify source code. See [Configuration File Usage Guide](CONFIG_GUIDE.md) for details.
+> **💡 Tip**: All download tasks are implemented through configuration files, no need to modify source code. See [Configuration File Usage Guide](docs/guides/CONFIG_GUIDE.md) for details.
 
 ---
 
@@ -605,12 +605,24 @@ pixivflow/
 │
 └── 📚 Documentation
     ├── README.md                    # Main project doc
-    ├── START_HERE.md                # Beginner guide
-    ├── QUICKSTART.md                # Quick start
-    ├── LOGIN_GUIDE.md               # Login guide
-    ├── STANDALONE-SETUP-GUIDE.md    # Config guide
-    ├── SCRIPTS_GUIDE.md             # Script guide
-    └── TEST_GUIDE.md                # Test guide
+    └── docs/                        # Documentation directory
+        ├── getting-started/         # Getting started guides
+        │   ├── START_HERE.md        # Beginner guide
+        │   ├── QUICKSTART.md        # Quick start
+        │   └── TUTORIAL.md          # Complete tutorial
+        ├── guides/                  # Usage guides
+        │   ├── LOGIN_GUIDE.md       # Login guide
+        │   ├── CONFIG_GUIDE.md      # Config guide
+        │   ├── STANDALONE-SETUP-GUIDE.md  # Standalone setup guide
+        │   ├── RANKING_DOWNLOAD_GUIDE.md  # Ranking download guide
+        │   └── TEST_GUIDE.md        # Test guide
+        ├── webui/                   # WebUI documentation
+        ├── docker/                  # Docker documentation
+        ├── scripts/                 # Script documentation
+        │   └── SCRIPTS_GUIDE.md     # Script guide
+        └── project/                 # Project documentation
+            ├── CHANGELOG.md         # Changelog
+            └── CONTRIBUTING.md      # Contributing guide
 ```
 
 ---
@@ -702,7 +714,7 @@ Configuration file is located at `config/standalone.config.json`. Below are key 
 
 > 💡 **Tip**: Using organization modes can make downloaded files more organized, easier to manage and find.
 
-**Complete Configuration Guide**: See [Configuration Guide](STANDALONE-SETUP-GUIDE.md) and [Configuration File Usage Guide](CONFIG_GUIDE.md)
+**Complete Configuration Guide**: See [Configuration Guide](docs/guides/STANDALONE-SETUP-GUIDE.md) and [Configuration File Usage Guide](docs/guides/CONFIG_GUIDE.md)
 
 ---
 
@@ -1053,10 +1065,10 @@ Having issues? Here are multiple ways to get help:
 |------|---------|-------------|
 | 🐛 **Bug Report** | [GitHub Issues](https://github.com/zoidberg-xgd/pixivflow/issues) | Report issues and bugs |
 | 💡 **Feature Suggestion** | [GitHub Discussions](https://github.com/zoidberg-xgd/pixivflow/discussions) | Propose new feature ideas |
-| 📖 **Usage Questions** | [View Documentation](./START_HERE.md) | Read complete documentation |
+| 📖 **Usage Questions** | [View Documentation](docs/getting-started/START_HERE.md) | Read complete documentation |
 | ✅ **Environment Check** | `./scripts/pixiv.sh health` | Run health check |
 | 💬 **Community Discussion** | [Discussions](https://github.com/zoidberg-xgd/pixivflow/discussions) | Discuss with other users |
-| 📚 **Complete Tutorial** | [TUTORIAL.md](./TUTORIAL.md) | Detailed usage tutorial |
+| 📚 **Complete Tutorial** | [TUTORIAL.md](docs/getting-started/TUTORIAL.md) | Detailed usage tutorial |
 | 🔍 **FAQ** | [FAQ](#-faq) | View FAQ |
 
 ### Search Keywords
@@ -1118,7 +1130,7 @@ We welcome all forms of contributions! Whether it's reporting bugs, proposing fe
 
 ### Contributing Guide
 
-See [CONTRIBUTING_EN.md](CONTRIBUTING_EN.md) for detailed contributing guide, including:
+See [CONTRIBUTING_EN.md](docs/project/CONTRIBUTING_EN.md) for detailed contributing guide, including:
 - Code of Conduct
 - Development environment setup
 - Code standards
@@ -1129,7 +1141,7 @@ See [CONTRIBUTING_EN.md](CONTRIBUTING_EN.md) for detailed contributing guide, in
 
 ## 📝 Changelog
 
-See [CHANGELOG_EN.md](CHANGELOG_EN.md) for detailed version update records.
+See [CHANGELOG_EN.md](docs/project/CHANGELOG_EN.md) for detailed version update records.
 
 ---
 

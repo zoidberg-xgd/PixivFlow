@@ -681,11 +681,11 @@ nettop -p $(pgrep -f "node.*pixiv")
 
 | 文档 | 说明 |
 |------|------|
-| [START_HERE.md](START_HERE.md) | 新手完整指南 |
-| [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手 |
+| [START_HERE.md](../getting-started/START_HERE.md) | 新手完整指南 |
+| [QUICKSTART.md](../getting-started/QUICKSTART.md) | 3 分钟快速上手 |
 | [LOGIN_GUIDE.md](LOGIN_GUIDE.md) | 登录详解 |
 | [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md) | 配置详解 |
-| [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | 脚本详解 |
+| [SCRIPTS_GUIDE.md](../scripts/SCRIPTS_GUIDE.md) | 脚本详解 |
 
 ---
 

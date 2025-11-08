@@ -276,7 +276,7 @@ added 234 packages, and audited 235 packages in 45s
 
 - 检查错误信息，根据提示解决问题
 - 查看 [第八章：问题解决](#第八章问题解决) 章节
-- 查看 [测试指南](TEST_GUIDE.md) 获取详细帮助
+- 查看 [测试指南](../guides/TEST_GUIDE.md) 获取详细帮助
 
 ---
 
@@ -1928,9 +1928,9 @@ pm2 startup
 ```
 
 3. **查看文档**：
-   - [README.md](README.md) - 项目主文档
-   - [LOGIN_GUIDE.md](LOGIN_GUIDE.md) - 登录详解
-   - [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md) - 配置详解
+   - [README.md](../../README.md) - 项目主文档
+   - [LOGIN_GUIDE.md](../guides/LOGIN_GUIDE.md) - 登录详解
+   - [STANDALONE-SETUP-GUIDE.md](../guides/STANDALONE-SETUP-GUIDE.md) - 配置详解
 
 4. **提交 Issue**：
    - 访问 [GitHub Issues](https://github.com/zoidberg-xgd/pixivflow/issues)
@@ -2216,14 +2216,14 @@ sqlite3 data/pixiv-downloader.db "SELECT * FROM downloaded_artworks ORDER BY cre
 
 | 文档 | 说明 |
 |------|------|
-| [README.md](README.md) | 项目主文档，包含项目介绍和快速开始 |
+| [README.md](../../README.md) | 项目主文档，包含项目介绍和快速开始 |
 | [START_HERE.md](START_HERE.md) | 新手完整指南，从安装到使用 |
 | [QUICKSTART.md](QUICKSTART.md) | 3 分钟快速上手指南 |
-| [LOGIN_GUIDE.md](LOGIN_GUIDE.md) | 登录详解，包含各种登录方式 |
-| [STANDALONE-SETUP-GUIDE.md](STANDALONE-SETUP-GUIDE.md) | 配置详解，包含所有配置选项 |
-| [SCRIPTS_GUIDE.md](SCRIPTS_GUIDE.md) | 脚本详解，包含所有可用脚本 |
-| [TEST_GUIDE.md](TEST_GUIDE.md) | 测试指南，帮助验证安装和配置 |
-| [RANKING_DOWNLOAD_GUIDE.md](RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
+| [LOGIN_GUIDE.md](../guides/LOGIN_GUIDE.md) | 登录详解，包含各种登录方式 |
+| [STANDALONE-SETUP-GUIDE.md](../guides/STANDALONE-SETUP-GUIDE.md) | 配置详解，包含所有配置选项 |
+| [SCRIPTS_GUIDE.md](../scripts/SCRIPTS_GUIDE.md) | 脚本详解，包含所有可用脚本 |
+| [TEST_GUIDE.md](../guides/TEST_GUIDE.md) | 测试指南，帮助验证安装和配置 |
+| [RANKING_DOWNLOAD_GUIDE.md](../guides/RANKING_DOWNLOAD_GUIDE.md) | 排行榜下载指南 |
 
 ---
 
