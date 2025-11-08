@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Table, Tag, Input, Select, Space, Typography } from 'antd';
+import { Card, Table, Tag, Input, Select, Space, Typography, Alert } from 'antd';
 import { PictureOutlined, FileTextOutlined } from '@ant-design/icons';
 import { api } from '../services/api';
 
@@ -13,7 +13,7 @@ export default function History() {
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [tagFilter, setTagFilter] = useState<string | undefined>();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['download', 'history', page, pageSize, typeFilter, tagFilter],
     queryFn: () =>
       api.getDownloadHistory({
@@ -23,6 +23,16 @@ export default function History() {
         tag: tagFilter,
       }),
   });
+
+  // Debug: Log data to console
+  if (data) {
+    console.log('History data:', data);
+    console.log('History items:', data?.data?.items);
+    console.log('History total:', data?.data?.total);
+  }
+  if (error) {
+    console.error('History error:', error);
+  }
 
   const columns = [
     {
@@ -102,6 +112,14 @@ export default function History() {
       </Card>
 
       <Card>
+        {error && (
+          <Alert
+            message="加载失败"
+            description={error instanceof Error ? error.message : '无法加载下载历史'}
+            type="error"
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Table
           columns={columns}
           dataSource={data?.data?.items || []}
