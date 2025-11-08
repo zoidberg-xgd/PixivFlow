@@ -11,6 +11,7 @@ exports.validateConfigFile = validateConfigFile;
 const node_fs_1 = require("node:fs");
 const node_path_1 = require("node:path");
 const node_cron_1 = __importDefault(require("node-cron"));
+const errors_1 = require("./utils/errors");
 const logger_1 = require("./logger");
 /**
  * Default configuration values
@@ -148,7 +149,7 @@ function getConfigPath(configPath) {
 function loadConfig(configPath) {
     const resolvedPath = getConfigPath(configPath);
     if (!(0, node_fs_1.existsSync)(resolvedPath)) {
-        throw new Error(`Configuration file not found at ${resolvedPath}\n` +
+        throw new errors_1.ConfigError(`Configuration file not found at ${resolvedPath}\n` +
             `Please create a configuration file or set PIXIV_DOWNLOADER_CONFIG environment variable.\n` +
             `You can use the setup wizard: npm run setup`);
     }
@@ -157,15 +158,15 @@ function loadConfig(configPath) {
         raw = (0, node_fs_1.readFileSync)(resolvedPath, 'utf-8');
     }
     catch (error) {
-        throw new Error(`Failed to read configuration file: ${error instanceof Error ? error.message : String(error)}`);
+        throw new errors_1.ConfigError(`Failed to read configuration file: ${error instanceof Error ? error.message : String(error)}`, error instanceof Error ? error : undefined);
     }
     let parsed;
     try {
         parsed = JSON.parse(raw);
     }
     catch (error) {
-        throw new Error(`Invalid JSON in configuration file: ${error instanceof Error ? error.message : String(error)}\n` +
-            `Please check the JSON syntax in ${resolvedPath}`);
+        throw new errors_1.ConfigError(`Invalid JSON in configuration file: ${error instanceof Error ? error.message : String(error)}\n` +
+            `Please check the JSON syntax in ${resolvedPath}`, error instanceof Error ? error : undefined);
     }
     // Apply environment variable overrides
     parsed = applyEnvironmentOverrides(parsed);
@@ -492,7 +493,8 @@ function validateConfig(config, location) {
     // Throw error if there are critical issues
     if (errors.length > 0) {
         const errorMessage = `Configuration validation failed in ${location}:\n${errors.map(e => `  - ${e}`).join('\n')}`;
-        throw new ConfigValidationError(errorMessage, errors, warnings);
+        const configError = new ConfigValidationError(errorMessage, errors, warnings);
+        throw new errors_1.ConfigError(errorMessage, configError);
     }
 }
 //# sourceMappingURL=config.js.map

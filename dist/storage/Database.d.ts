@@ -35,6 +35,7 @@ export declare class Database {
     /**
      * Batch check if multiple items are already downloaded
      * Returns a Set of pixivIds that are already downloaded
+     * Optimized for large batches by chunking queries
      */
     getDownloadedIds(pixivIds: string[], type: 'illustration' | 'novel'): Set<string>;
     insertDownload(record: DownloadRecordInput): void;

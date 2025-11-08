@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DownloadManager = void 0;
 const logger_1 = require("../logger");
+const errors_1 = require("../utils/errors");
 class DownloadManager {
     config;
     client;
@@ -103,19 +104,29 @@ class DownloadManager {
      * Handle download error and determine if should skip
      */
     handleDownloadError(error, itemId, itemType, itemTitle) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const is404 = errorMessage.includes('404');
+        const errorMessage = (0, errors_1.getErrorMessage)(error);
+        const is404 = (0, errors_1.is404Error)(error);
+        const shouldSkip = (0, errors_1.isSkipableError)(error);
         if (is404) {
             logger_1.logger.debug(`${itemType === 'illustration' ? 'Illustration' : 'Novel'} ${itemId} not found (deleted or private), skipping`);
             return { shouldSkip: true, is404: true, message: errorMessage };
         }
-        else {
-            logger_1.logger.warn(`Failed to download ${itemType} ${itemId}`, {
+        else if (shouldSkip) {
+            logger_1.logger.warn(`Failed to download ${itemType} ${itemId} (will skip)`, {
                 error: errorMessage,
                 ...(itemTitle && { [`${itemType}Title`]: itemTitle }),
                 [`${itemType}Id`]: itemId,
             });
             return { shouldSkip: true, is404: false, message: errorMessage };
+        }
+        else {
+            // Non-skipable error - log as error
+            logger_1.logger.error(`Failed to download ${itemType} ${itemId}`, {
+                error: errorMessage,
+                ...(itemTitle && { [`${itemType}Title`]: itemTitle }),
+                [`${itemType}Id`]: itemId,
+            });
+            return { shouldSkip: false, is404: false, message: errorMessage };
         }
     }
     /**

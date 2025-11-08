@@ -1,7 +1,11 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+interface LogMeta {
+  [key: string]: unknown;
+}
+
 class Logger {
-  private static levelOrder: Record<LogLevel, number> = {
+  private static readonly levelOrder: Record<LogLevel, number> = {
     debug: 10,
     info: 20,
     warn: 30,
@@ -10,27 +14,27 @@ class Logger {
 
   private threshold: LogLevel = 'info';
 
-  public setLevel(level: LogLevel) {
+  public setLevel(level: LogLevel): void {
     this.threshold = level;
   }
 
-  public debug(message: string, meta?: any) {
+  public debug(message: string, meta?: LogMeta): void {
     this.write('debug', message, meta);
   }
 
-  public info(message: string, meta?: any) {
+  public info(message: string, meta?: LogMeta): void {
     this.write('info', message, meta);
   }
 
-  public warn(message: string, meta?: any) {
+  public warn(message: string, meta?: LogMeta): void {
     this.write('warn', message, meta);
   }
 
-  public error(message: string, meta?: any) {
+  public error(message: string, meta?: LogMeta): void {
     this.write('error', message, meta);
   }
 
-  private write(level: LogLevel, message: string, meta?: any) {
+  private write(level: LogLevel, message: string, meta?: LogMeta): void {
     if (Logger.levelOrder[level] < Logger.levelOrder[this.threshold]) {
       return;
     }

@@ -1,12 +1,15 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+interface LogMeta {
+    [key: string]: unknown;
+}
 declare class Logger {
-    private static levelOrder;
+    private static readonly levelOrder;
     private threshold;
     setLevel(level: LogLevel): void;
-    debug(message: string, meta?: any): void;
-    info(message: string, meta?: any): void;
-    warn(message: string, meta?: any): void;
-    error(message: string, meta?: any): void;
+    debug(message: string, meta?: LogMeta): void;
+    info(message: string, meta?: LogMeta): void;
+    warn(message: string, meta?: LogMeta): void;
+    error(message: string, meta?: LogMeta): void;
     private write;
 }
 export declare const logger: Logger;

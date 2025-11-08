@@ -1,5 +1,6 @@
 import { StandaloneConfig, TargetConfig } from '../config';
 import { logger } from '../logger';
+import { DownloadError, getErrorMessage, is404Error, isSkipableError } from '../utils/errors';
 import { PixivClient, PixivIllust, PixivIllustPage, PixivNovel } from '../pixiv/PixivClient';
 import { Database } from '../storage/Database';
 import { FileService, FileMetadata } from './FileService';
@@ -131,19 +132,28 @@ export class DownloadManager {
     itemType: 'illustration' | 'novel',
     itemTitle?: string
   ): { shouldSkip: boolean; is404: boolean; message: string } {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const is404 = errorMessage.includes('404');
+    const errorMessage = getErrorMessage(error);
+    const is404 = is404Error(error);
+    const shouldSkip = isSkipableError(error);
     
     if (is404) {
       logger.debug(`${itemType === 'illustration' ? 'Illustration' : 'Novel'} ${itemId} not found (deleted or private), skipping`);
       return { shouldSkip: true, is404: true, message: errorMessage };
-    } else {
-      logger.warn(`Failed to download ${itemType} ${itemId}`, {
+    } else if (shouldSkip) {
+      logger.warn(`Failed to download ${itemType} ${itemId} (will skip)`, {
         error: errorMessage,
         ...(itemTitle && { [`${itemType}Title`]: itemTitle }),
         [`${itemType}Id`]: itemId,
       });
       return { shouldSkip: true, is404: false, message: errorMessage };
+    } else {
+      // Non-skipable error - log as error
+      logger.error(`Failed to download ${itemType} ${itemId}`, {
+        error: errorMessage,
+        ...(itemTitle && { [`${itemType}Title`]: itemTitle }),
+        [`${itemType}Id`]: itemId,
+      });
+      return { shouldSkip: false, is404: false, message: errorMessage };
     }
   }
 

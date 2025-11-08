@@ -4,6 +4,7 @@ exports.PixivClient = void 0;
 const promises_1 = require("node:timers/promises");
 const undici_1 = require("undici");
 const logger_1 = require("../logger");
+const errors_1 = require("../utils/errors");
 class PixivClient {
     auth;
     config;
@@ -418,7 +419,7 @@ class PixivClient {
                         catch (e) {
                             // Ignore errors reading body
                         }
-                        throw new Error(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+                        throw new errors_1.NetworkError(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`, url, undefined);
                     }
                     if (!response.ok) {
                         // Try to get response body for debugging
@@ -431,7 +432,7 @@ class PixivClient {
                         catch (e) {
                             // Ignore errors reading body
                         }
-                        throw new Error(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
+                        throw new errors_1.NetworkError(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`, url, undefined);
                     }
                     return (await response.json());
                 }
@@ -441,20 +442,22 @@ class PixivClient {
             }
             catch (error) {
                 lastError = error;
-                const errorMessage = error instanceof Error ? error.message : String(error);
                 // Don't retry on 404 errors - resource doesn't exist
-                if (errorMessage.includes('404')) {
+                if ((0, errors_1.is404Error)(error)) {
                     throw error;
                 }
                 logger_1.logger.warn('Pixiv API request failed', {
                     url,
                     attempt: attempt + 1,
-                    error: `${error}`,
+                    error: error instanceof Error ? error.message : String(error),
                 });
                 await (0, promises_1.setTimeout)(Math.min(1000 * (attempt + 1), 5000));
             }
         }
-        throw new Error(`Pixiv API request to ${url} failed: ${lastError}`);
+        const errorMessage = lastError instanceof Error
+            ? lastError.message
+            : String(lastError);
+        throw new errors_1.NetworkError(`Pixiv API request to ${url} failed after ${network.retries ?? 3} attempts: ${errorMessage}`, url, lastError instanceof Error ? lastError : undefined);
     }
 }
 exports.PixivClient = PixivClient;

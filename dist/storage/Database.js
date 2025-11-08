@@ -7,59 +7,85 @@ exports.Database = void 0;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const node_fs_1 = require("node:fs");
 const node_path_1 = require("node:path");
+const errors_1 = require("../utils/errors");
+const logger_1 = require("../logger");
 class Database {
     databasePath;
     db;
     constructor(databasePath) {
         this.databasePath = databasePath;
-        (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(this.databasePath), { recursive: true });
-        this.db = new better_sqlite3_1.default(this.databasePath);
+        try {
+            (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(this.databasePath), { recursive: true });
+            this.db = new better_sqlite3_1.default(this.databasePath);
+            // Enable WAL mode for better concurrency
+            this.db.pragma('journal_mode = WAL');
+            // Optimize for read-heavy workloads
+            this.db.pragma('synchronous = NORMAL');
+            this.db.pragma('cache_size = -64000'); // 64MB cache
+        }
+        catch (error) {
+            throw new errors_1.DatabaseError(`Failed to initialize database at ${this.databasePath}`, error instanceof Error ? error : undefined);
+        }
     }
     migrate() {
-        const migrations = [
-            `CREATE TABLE IF NOT EXISTS tokens (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`,
-            `CREATE TABLE IF NOT EXISTS downloads (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          pixiv_id TEXT NOT NULL,
-          type TEXT NOT NULL,
-          tag TEXT NOT NULL,
-          title TEXT NOT NULL,
-          file_path TEXT NOT NULL,
-          author TEXT,
-          user_id TEXT,
-          downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(pixiv_id, type, file_path)
-        )`,
-            `CREATE TABLE IF NOT EXISTS execution_log (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          tag TEXT NOT NULL,
-          type TEXT NOT NULL,
-          status TEXT NOT NULL,
-          message TEXT,
-          executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`,
-            `CREATE TABLE IF NOT EXISTS scheduler_executions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          execution_number INTEGER NOT NULL,
-          status TEXT NOT NULL,
-          start_time DATETIME NOT NULL,
-          end_time DATETIME,
-          duration_ms INTEGER,
-          error_message TEXT,
-          items_downloaded INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`,
-        ];
-        const transaction = this.db.transaction((stmts) => {
-            for (const sql of stmts) {
-                this.db.prepare(sql).run();
-            }
-        });
-        transaction(migrations);
+        try {
+            const migrations = [
+                `CREATE TABLE IF NOT EXISTS tokens (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`,
+                `CREATE TABLE IF NOT EXISTS downloads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pixiv_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            title TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            author TEXT,
+            user_id TEXT,
+            downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(pixiv_id, type, file_path)
+          )`,
+                `CREATE TABLE IF NOT EXISTS execution_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tag TEXT NOT NULL,
+            type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            message TEXT,
+            executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`,
+                `CREATE TABLE IF NOT EXISTS scheduler_executions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            execution_number INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            start_time DATETIME NOT NULL,
+            end_time DATETIME,
+            duration_ms INTEGER,
+            error_message TEXT,
+            items_downloaded INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`,
+            ];
+            // Create indexes for better query performance
+            const indexes = [
+                `CREATE INDEX IF NOT EXISTS idx_downloads_pixiv_id_type ON downloads(pixiv_id, type)`,
+                `CREATE INDEX IF NOT EXISTS idx_downloads_tag ON downloads(tag)`,
+                `CREATE INDEX IF NOT EXISTS idx_downloads_downloaded_at ON downloads(downloaded_at)`,
+                `CREATE INDEX IF NOT EXISTS idx_execution_log_tag_type ON execution_log(tag, type)`,
+                `CREATE INDEX IF NOT EXISTS idx_scheduler_executions_number ON scheduler_executions(execution_number)`,
+                `CREATE INDEX IF NOT EXISTS idx_scheduler_executions_status ON scheduler_executions(status)`,
+            ];
+            const transaction = this.db.transaction((stmts) => {
+                for (const sql of stmts) {
+                    this.db.prepare(sql).run();
+                }
+            });
+            transaction([...migrations, ...indexes]);
+        }
+        catch (error) {
+            throw new errors_1.DatabaseError('Failed to run database migrations', error instanceof Error ? error : undefined);
+        }
     }
     getToken(key) {
         const stmt = this.db.prepare(`SELECT value FROM tokens WHERE key = ?`);
@@ -83,16 +109,34 @@ class Database {
     /**
      * Batch check if multiple items are already downloaded
      * Returns a Set of pixivIds that are already downloaded
+     * Optimized for large batches by chunking queries
      */
     getDownloadedIds(pixivIds, type) {
         if (pixivIds.length === 0) {
             return new Set();
         }
-        // Use parameterized query with IN clause for better performance
-        const placeholders = pixivIds.map(() => '?').join(',');
-        const stmt = this.db.prepare(`SELECT pixiv_id FROM downloads WHERE pixiv_id IN (${placeholders}) AND type = ?`);
-        const rows = stmt.all(...pixivIds, type);
-        return new Set(rows.map(row => row.pixiv_id));
+        // SQLite has a limit on the number of parameters (default 999)
+        // Chunk large arrays to avoid hitting this limit
+        const CHUNK_SIZE = 500;
+        const downloadedSet = new Set();
+        try {
+            for (let i = 0; i < pixivIds.length; i += CHUNK_SIZE) {
+                const chunk = pixivIds.slice(i, i + CHUNK_SIZE);
+                const placeholders = chunk.map(() => '?').join(',');
+                const stmt = this.db.prepare(`SELECT pixiv_id FROM downloads WHERE pixiv_id IN (${placeholders}) AND type = ?`);
+                const rows = stmt.all(...chunk, type);
+                rows.forEach(row => downloadedSet.add(row.pixiv_id));
+            }
+        }
+        catch (error) {
+            logger_1.logger.warn('Error checking downloaded IDs', {
+                error: error instanceof Error ? error.message : String(error),
+                type,
+                count: pixivIds.length,
+            });
+            // Return empty set on error to allow downloads to proceed
+        }
+        return downloadedSet;
     }
     insertDownload(record) {
         const stmt = this.db.prepare(`INSERT OR IGNORE INTO downloads (pixiv_id, type, tag, title, file_path, author, user_id)

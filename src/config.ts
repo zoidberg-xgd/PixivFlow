@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, isAbsolute } from 'node:path';
 import cron from 'node-cron';
 
+import { ConfigError } from './utils/errors';
 import { logger } from './logger';
 
 export type TargetType = 'illustration' | 'novel';
@@ -409,7 +410,7 @@ export function loadConfig(configPath?: string): StandaloneConfig {
   const resolvedPath = getConfigPath(configPath);
 
   if (!existsSync(resolvedPath)) {
-    throw new Error(
+    throw new ConfigError(
       `Configuration file not found at ${resolvedPath}\n` +
       `Please create a configuration file or set PIXIV_DOWNLOADER_CONFIG environment variable.\n` +
       `You can use the setup wizard: npm run setup`
@@ -420,16 +421,20 @@ export function loadConfig(configPath?: string): StandaloneConfig {
   try {
     raw = readFileSync(resolvedPath, 'utf-8');
   } catch (error) {
-    throw new Error(`Failed to read configuration file: ${error instanceof Error ? error.message : String(error)}`);
+    throw new ConfigError(
+      `Failed to read configuration file: ${error instanceof Error ? error.message : String(error)}`,
+      error instanceof Error ? error : undefined
+    );
   }
 
   let parsed: Partial<StandaloneConfig>;
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new Error(
+    throw new ConfigError(
       `Invalid JSON in configuration file: ${error instanceof Error ? error.message : String(error)}\n` +
-      `Please check the JSON syntax in ${resolvedPath}`
+      `Please check the JSON syntax in ${resolvedPath}`,
+      error instanceof Error ? error : undefined
     );
   }
 
@@ -772,7 +777,8 @@ function validateConfig(config: Partial<StandaloneConfig>, location: string): vo
   // Throw error if there are critical issues
   if (errors.length > 0) {
     const errorMessage = `Configuration validation failed in ${location}:\n${errors.map(e => `  - ${e}`).join('\n')}`;
-    throw new ConfigValidationError(errorMessage, errors, warnings);
+    const configError = new ConfigValidationError(errorMessage, errors, warnings);
+    throw new ConfigError(errorMessage, configError);
   }
 }
 
