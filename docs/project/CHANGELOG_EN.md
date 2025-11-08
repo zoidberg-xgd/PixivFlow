@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- 🐛 Fixed dynamic concurrency control rate limit detection logic (2025-01-XX)
+  - Fixed incorrect rate limit detection in `processInParallel`
+  - Now correctly identifies `NetworkError.isRateLimit` property instead of relying on error message string matching
+  - Improved log output when rate limited, including detailed concurrency change information
+  - When encountering 429 errors, the system automatically halves the concurrency (not below minimum concurrency limit)
+  - After consecutive successful requests, the system gradually restores concurrency
+
 ### Planned
 - Add more download modes
 - Performance optimizations

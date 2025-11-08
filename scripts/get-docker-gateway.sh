@@ -1,6 +1,10 @@
 #!/bin/bash
 # 获取 Docker 网络的网关 IP 地址
 # 用于配置代理转发服务
+#
+# ⚠️ 重要说明：后端独立性
+# 本脚本用于后端 Docker 网络配置，完全独立于前端 WebUI。
+# 网络配置是后端部署功能的一部分，无需前端支持。
 
 # 获取默认网络名称（通常是项目名_default）
 NETWORK_NAME=$(docker network ls --format '{{.Name}}' | grep -E '^[a-zA-Z0-9_-]+_default$' | head -1)

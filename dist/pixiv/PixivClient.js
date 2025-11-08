@@ -30,53 +30,196 @@ class PixivClient {
             });
         }
     }
+    /**
+     * Safely parse date string to timestamp
+     * Returns 0 for invalid dates to ensure consistent sorting
+     */
+    parseDate(dateString) {
+        if (!dateString || typeof dateString !== 'string') {
+            return 0;
+        }
+        const date = new Date(dateString);
+        const timestamp = date.getTime();
+        // Check if date is valid (not NaN)
+        if (isNaN(timestamp)) {
+            logger_1.logger.warn('Invalid date string encountered', { dateString });
+            return 0;
+        }
+        return timestamp;
+    }
+    /**
+     * Get popularity score for sorting
+     * Uses bookmarks as primary metric, views as secondary
+     * Handles missing or invalid values gracefully
+     */
+    getPopularityScore(item) {
+        // Safely extract numeric values, defaulting to 0
+        const bookmarks = Number(item.total_bookmarks ?? item.bookmark_count ?? 0);
+        const views = Number(item.total_view ?? item.view_count ?? 0);
+        // Ensure values are valid numbers (not NaN or negative)
+        const safeBookmarks = isNaN(bookmarks) || bookmarks < 0 ? 0 : bookmarks;
+        const safeViews = isNaN(views) || views < 0 ? 0 : views;
+        // Combined score: bookmarks are primary, views are secondary (divide by 1000 to normalize)
+        return safeBookmarks + (safeViews / 1000);
+    }
+    /**
+     * Sort items based on sort parameter
+     * Uses stable sorting with ID as secondary key to ensure consistent ordering
+     */
+    sortItems(items, sort) {
+        if (!items || items.length === 0) {
+            return items;
+        }
+        // Create a copy to avoid mutating the original array
+        const sortedItems = [...items];
+        if (!sort || sort === 'date_desc') {
+            // Default: sort by date descending (newest first)
+            // Use ID as secondary key for stable sorting
+            sortedItems.sort((a, b) => {
+                const dateA = this.parseDate(a.create_date);
+                const dateB = this.parseDate(b.create_date);
+                // Primary sort: by date
+                if (dateA !== dateB) {
+                    return dateB - dateA; // Descending order
+                }
+                // Secondary sort: by ID (for stable sorting when dates are equal)
+                return b.id - a.id;
+            });
+        }
+        else if (sort === 'date_asc') {
+            // Sort by date ascending (oldest first)
+            sortedItems.sort((a, b) => {
+                const dateA = this.parseDate(a.create_date);
+                const dateB = this.parseDate(b.create_date);
+                // Primary sort: by date
+                if (dateA !== dateB) {
+                    return dateA - dateB; // Ascending order
+                }
+                // Secondary sort: by ID (for stable sorting when dates are equal)
+                return a.id - b.id;
+            });
+        }
+        else if (sort === 'popular_desc') {
+            // Sort by popularity descending (most popular first)
+            sortedItems.sort((a, b) => {
+                const scoreA = this.getPopularityScore(a);
+                const scoreB = this.getPopularityScore(b);
+                // Primary sort: by popularity score
+                if (scoreA !== scoreB) {
+                    return scoreB - scoreA; // Descending order
+                }
+                // Secondary sort: by date (newest first when popularity is equal)
+                const dateA = this.parseDate(a.create_date);
+                const dateB = this.parseDate(b.create_date);
+                if (dateA !== dateB) {
+                    return dateB - dateA;
+                }
+                // Tertiary sort: by ID (for stable sorting)
+                return b.id - a.id;
+            });
+        }
+        // Log sorting statistics for debugging
+        const invalidDates = sortedItems.filter(item => !item.create_date || this.parseDate(item.create_date) === 0).length;
+        if (invalidDates > 0) {
+            logger_1.logger.debug('Sorting completed with some invalid dates', {
+                totalItems: sortedItems.length,
+                invalidDates,
+                sortType: sort || 'date_desc'
+            });
+        }
+        return sortedItems;
+    }
     async searchIllustrations(target) {
         if (!target.tag) {
             throw new Error('tag is required for illustration search');
         }
         const results = [];
-        let nextUrl = this.createRequestUrl('v1/search/illust', {
+        logger_1.logger.debug('Searching illustrations', {
+            tag: target.tag,
+            sort: target.sort,
+            searchTarget: target.searchTarget
+        });
+        // Try to use API sort parameter if available, fallback to local sorting
+        const params = {
             word: target.tag,
             search_target: target.searchTarget ?? 'partial_match_for_tags',
-            sort: target.sort ?? 'date_desc',
             filter: 'for_ios',
             include_translated_tag_results: 'true',
-        });
-        while (nextUrl && (!target.limit || results.length < target.limit)) {
+        };
+        // Add sort parameter if specified (API may support: date_desc, date_asc, popular_desc)
+        if (target.sort) {
+            params.sort = target.sort;
+        }
+        let nextUrl = this.createRequestUrl('v1/search/illust', params);
+        // Fetch all results first (or up to a reasonable limit for sorting)
+        // If limit is specified, fetch more to ensure we have enough to sort properly
+        // For small limits, fetch more data to ensure accurate sorting
+        const fetchLimit = target.limit
+            ? (target.limit < 50 ? Math.max(target.limit * 5, 100) : Math.max(target.limit * 2, 200))
+            : undefined;
+        while (nextUrl && (!fetchLimit || results.length < fetchLimit)) {
             const requestUrl = nextUrl;
             const response = await this.request(requestUrl, { method: 'GET' });
             for (const illust of response.illusts) {
                 results.push(illust);
-                if (target.limit && results.length >= target.limit) {
+                if (fetchLimit && results.length >= fetchLimit) {
                     break;
                 }
             }
             nextUrl = response.next_url;
         }
-        return results;
+        // Sort results according to sort parameter
+        const sortedResults = this.sortItems(results, target.sort);
+        // Apply limit after sorting
+        if (target.limit && sortedResults.length > target.limit) {
+            return sortedResults.slice(0, target.limit);
+        }
+        return sortedResults;
     }
     async searchNovels(target) {
         if (!target.tag) {
             throw new Error('tag is required for novel search');
         }
         const results = [];
-        let nextUrl = this.createRequestUrl('v1/search/novel', {
+        logger_1.logger.debug('Searching novels', {
+            tag: target.tag,
+            sort: target.sort,
+            searchTarget: target.searchTarget
+        });
+        // Try to use API sort parameter if available, fallback to local sorting
+        const params = {
             word: target.tag,
             search_target: target.searchTarget ?? 'partial_match_for_tags',
-            sort: target.sort ?? 'date_desc',
-        });
-        while (nextUrl && (!target.limit || results.length < target.limit)) {
+        };
+        // Add sort parameter if specified (API may support: date_desc, date_asc, popular_desc)
+        if (target.sort) {
+            params.sort = target.sort;
+        }
+        let nextUrl = this.createRequestUrl('v1/search/novel', params);
+        // Fetch all results first (or up to a reasonable limit for sorting)
+        // If limit is specified, fetch more to ensure we have enough to sort properly
+        // For small limits, fetch more data to ensure accurate sorting
+        const fetchLimit = target.limit
+            ? (target.limit < 50 ? Math.max(target.limit * 5, 100) : Math.max(target.limit * 2, 200))
+            : undefined;
+        while (nextUrl && (!fetchLimit || results.length < fetchLimit)) {
             const requestUrl = nextUrl;
             const response = await this.request(requestUrl, { method: 'GET' });
             for (const novel of response.novels) {
                 results.push(novel);
-                if (target.limit && results.length >= target.limit) {
+                if (fetchLimit && results.length >= fetchLimit) {
                     break;
                 }
             }
             nextUrl = response.next_url;
         }
-        return results;
+        // Sort results according to sort parameter
+        const sortedResults = this.sortItems(results, target.sort);
+        // Apply limit after sorting
+        if (target.limit && sortedResults.length > target.limit) {
+            return sortedResults.slice(0, target.limit);
+        }
+        return sortedResults;
     }
     /**
      * Get ranking illustrations

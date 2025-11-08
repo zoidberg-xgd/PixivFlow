@@ -33,7 +33,11 @@ export declare class DownloadManager {
      */
     private sortByDate;
     /**
-     * Process items in parallel with concurrency control
+     * Process items in parallel with intelligent concurrency control
+     * Features:
+     * - Queue-based processing (maintains stable concurrency)
+     * - Request delay between API calls (rate limiting protection)
+     * - Dynamic concurrency adjustment (reduces on rate limit errors)
      */
     private processInParallel;
     /**
@@ -65,6 +69,11 @@ export declare class DownloadManager {
      * Pixiv rankings are based on Japan time (JST, UTC+9)
      */
     private getYesterdayDate;
+    /**
+     * Check if illustration files already exist in the file system
+     * Returns array of existing file paths, or empty array if none found
+     */
+    private findExistingIllustrationFiles;
     private downloadIllustration;
     private downloadNovel;
     private getIllustrationPages;

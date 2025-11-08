@@ -1,12 +1,33 @@
 import { ensureDir } from '../utils/fs';
 import { StorageConfig, OrganizationMode } from '../config';
 import { promises as fs } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 
 export interface FileMetadata {
   author?: string;
   tag?: string;
   date?: Date | string;
+}
+
+export interface PixivMetadata {
+  pixiv_id: string | number;
+  title: string;
+  author: {
+    id: string;
+    name: string;
+  };
+  tags: Array<{ name: string; translated_name?: string }>;
+  original_url: string;
+  create_date: string;
+  download_tag?: string;
+  type: 'illustration' | 'novel';
+  page_number?: number; // For multi-page illustrations
+  total_pages?: number; // For multi-page illustrations
+  // Popularity metrics
+  total_bookmarks?: number;
+  total_view?: number;
+  bookmark_count?: number;
+  view_count?: number;
 }
 
 export class FileService {
@@ -127,6 +148,19 @@ export class FileService {
       baseName: fileName.slice(0, index),
       ext: fileName.slice(index),
     };
+  }
+
+  /**
+   * Save metadata JSON file alongside the downloaded file
+   * @param filePath Path to the downloaded file
+   * @param metadata Metadata to save
+   */
+  public async saveMetadata(filePath: string, metadata: PixivMetadata): Promise<string> {
+    const { baseName } = this.splitExtension(filePath);
+    const metadataPath = join(dirname(filePath), `${baseName}.json`);
+    const jsonContent = JSON.stringify(metadata, null, 2);
+    await fs.writeFile(metadataPath, jsonContent, 'utf-8');
+    return metadataPath;
   }
 }
 

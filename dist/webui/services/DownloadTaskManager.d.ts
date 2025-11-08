@@ -1,4 +1,9 @@
 import { StandaloneConfig } from '../../config';
+export interface TaskLogEntry {
+    timestamp: Date;
+    level: 'info' | 'warn' | 'error' | 'debug';
+    message: string;
+}
 export interface TaskStatus {
     taskId: string;
     status: 'running' | 'completed' | 'failed' | 'stopped';
@@ -11,9 +16,11 @@ export interface TaskStatus {
     endTime?: Date;
     error?: string;
     targetId?: string;
+    logs?: TaskLogEntry[];
 }
 export declare class DownloadTaskManager {
     private tasks;
+    private taskLogs;
     private activeTask;
     /**
      * Start a download task
@@ -51,6 +58,18 @@ export declare class DownloadTaskManager {
      * Get progress callback for a task
      */
     getProgressCallback(taskId: string): (current: number, total: number, message?: string) => void;
+    /**
+     * Add a log entry for a task
+     */
+    addLog(taskId: string, level: 'info' | 'warn' | 'error' | 'debug', message: string): void;
+    /**
+     * Get logs for a task
+     */
+    getTaskLogs(taskId: string, limit?: number): TaskLogEntry[];
+    /**
+     * Clear logs for a task
+     */
+    clearTaskLogs(taskId: string): void;
 }
 export declare const downloadTaskManager: DownloadTaskManager;
 //# sourceMappingURL=DownloadTaskManager.d.ts.map

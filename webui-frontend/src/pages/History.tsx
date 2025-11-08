@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, Table, Tag, Input, Select, Space, Typography, Alert, Button, DatePicker, Tooltip } from 'antd';
 import { PictureOutlined, FileTextOutlined, FolderOpenOutlined, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import { api } from '../services/api';
-import dayjs, { Dayjs } from 'dayjs';
+import { Dayjs } from 'dayjs';
 
 const { Title } = Typography;
 const { Search } = Input;

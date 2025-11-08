@@ -102,6 +102,18 @@ class FileService {
             ext: fileName.slice(index),
         };
     }
+    /**
+     * Save metadata JSON file alongside the downloaded file
+     * @param filePath Path to the downloaded file
+     * @param metadata Metadata to save
+     */
+    async saveMetadata(filePath, metadata) {
+        const { baseName } = this.splitExtension(filePath);
+        const metadataPath = (0, node_path_1.join)((0, node_path_1.dirname)(filePath), `${baseName}.json`);
+        const jsonContent = JSON.stringify(metadata, null, 2);
+        await node_fs_1.promises.writeFile(metadataPath, jsonContent, 'utf-8');
+        return metadataPath;
+    }
 }
 exports.FileService = FileService;
 //# sourceMappingURL=FileService.js.map

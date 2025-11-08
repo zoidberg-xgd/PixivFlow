@@ -60,6 +60,15 @@ export declare class Database {
         message?: string;
     };
     /**
+     * Delete all incomplete tasks (failed or partial)
+     * Returns an object with success status, deleted count, and message
+     */
+    deleteAllIncompleteTasks(): {
+        success: boolean;
+        deletedCount: number;
+        message?: string;
+    };
+    /**
      * Get the next execution number for the scheduler
      */
     getNextExecutionNumber(): number;

@@ -54,6 +54,22 @@ export declare class PixivClient {
     private readonly baseUrl;
     private readonly proxyAgent?;
     constructor(auth: PixivAuth, config: StandaloneConfig);
+    /**
+     * Safely parse date string to timestamp
+     * Returns 0 for invalid dates to ensure consistent sorting
+     */
+    private parseDate;
+    /**
+     * Get popularity score for sorting
+     * Uses bookmarks as primary metric, views as secondary
+     * Handles missing or invalid values gracefully
+     */
+    private getPopularityScore;
+    /**
+     * Sort items based on sort parameter
+     * Uses stable sorting with ID as secondary key to ensure consistent ordering
+     */
+    private sortItems;
     searchIllustrations(target: TargetConfig): Promise<PixivIllust[]>;
     searchNovels(target: TargetConfig): Promise<PixivNovel[]>;
     /**

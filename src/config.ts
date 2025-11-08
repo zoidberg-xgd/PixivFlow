@@ -244,6 +244,23 @@ export interface StandaloneConfig {
      */
     concurrency?: number;
     /**
+     * Minimum delay between API requests (in milliseconds)
+     * Helps avoid rate limiting by spacing out requests
+     * Default: 500
+     */
+    requestDelay?: number;
+    /**
+     * Enable dynamic concurrency adjustment
+     * Automatically reduces concurrency when rate limited
+     * Default: true
+     */
+    dynamicConcurrency?: boolean;
+    /**
+     * Minimum concurrency when dynamically adjusted
+     * Default: 1
+     */
+    minConcurrency?: number;
+    /**
      * Maximum retries per download
      * Default: 3
      */
@@ -282,6 +299,9 @@ const DEFAULT_CONFIG = {
   },
   download: {
     concurrency: 3,
+    requestDelay: 500,
+    dynamicConcurrency: true,
+    minConcurrency: 1,
     maxRetries: 3,
     retryDelay: 2000,
     timeout: 60000,
@@ -845,6 +865,13 @@ function validateConfig(config: Partial<StandaloneConfig>, location: string): vo
   if (config.download) {
     if (config.download.concurrency !== undefined && (config.download.concurrency < 1 || config.download.concurrency > 10)) {
       warnings.push('download.concurrency: Should be between 1 and 10');
+    }
+    if (config.download.requestDelay !== undefined && config.download.requestDelay < 0) {
+      warnings.push('download.requestDelay: Should be greater than or equal to 0');
+    }
+    if (config.download.minConcurrency !== undefined && config.download.concurrency !== undefined && 
+        (config.download.minConcurrency < 1 || config.download.minConcurrency > config.download.concurrency)) {
+      warnings.push('download.minConcurrency: Should be between 1 and concurrency value');
     }
     if (config.download.maxRetries !== undefined && (config.download.maxRetries < 0 || config.download.maxRetries > 10)) {
       warnings.push('download.maxRetries: Should be between 0 and 10');

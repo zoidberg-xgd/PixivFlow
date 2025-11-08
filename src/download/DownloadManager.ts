@@ -3,7 +3,9 @@ import { logger } from '../logger';
 import { DownloadError, NetworkError, getErrorMessage, is404Error, isSkipableError } from '../utils/errors';
 import { PixivClient, PixivIllust, PixivIllustPage, PixivNovel } from '../pixiv/PixivClient';
 import { Database } from '../storage/Database';
-import { FileService, FileMetadata } from './FileService';
+import { FileService, FileMetadata, PixivMetadata } from './FileService';
+import { promises as fs } from 'node:fs';
+import { join } from 'node:path';
 
 export class DownloadManager {
   private progressCallback?: (current: number, total: number, message?: string) => void;
@@ -29,26 +31,47 @@ export class DownloadManager {
   public async runAllTargets() {
     const totalTargets = this.config.targets.length;
     let currentTarget = 0;
+    const errors: Array<{ target: string; error: string }> = [];
 
     for (const target of this.config.targets) {
       currentTarget++;
       const targetName = target.filterTag || target.tag || 'unknown';
       this.updateProgress(currentTarget, totalTargets, `处理目标: ${targetName} (${target.type})`);
 
-      switch (target.type) {
-        case 'illustration':
-          await this.handleIllustrationTarget(target);
-          break;
-        case 'novel':
-          await this.handleNovelTarget(target);
-          break;
-        default:
-          logger.warn(`Unsupported target type ${target.type}`);
+      try {
+        switch (target.type) {
+          case 'illustration':
+            await this.handleIllustrationTarget(target);
+            break;
+          case 'novel':
+            await this.handleNovelTarget(target);
+            break;
+          default:
+            logger.warn(`Unsupported target type ${target.type}`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errors.push({ target: `${targetName} (${target.type})`, error: errorMessage });
+        logger.error(`Target ${targetName} (${target.type}) failed, continuing with next target`, { error: errorMessage });
+        // Continue to next target instead of stopping
       }
     }
 
     if (this.progressCallback) {
       this.progressCallback(totalTargets, totalTargets, '所有目标处理完成');
+    }
+
+    // Log summary if there were any errors
+    if (errors.length > 0) {
+      logger.warn(`Completed with ${errors.length} target(s) failed`, { 
+        failedTargets: errors.length,
+        totalTargets,
+        errors: errors.map(e => `${e.target}: ${e.error}`).join('; ')
+      });
+      if (errors.length === totalTargets) {
+        // All targets failed, throw an error
+        throw new Error(`All ${totalTargets} target(s) failed. See logs for details.`);
+      }
     }
   }
 
@@ -124,7 +147,11 @@ export class DownloadManager {
   }
 
   /**
-   * Process items in parallel with concurrency control
+   * Process items in parallel with intelligent concurrency control
+   * Features:
+   * - Queue-based processing (maintains stable concurrency)
+   * - Request delay between API calls (rate limiting protection)
+   * - Dynamic concurrency adjustment (reduces on rate limit errors)
    */
   private async processInParallel<T, R>(
     items: T[],
@@ -133,19 +160,119 @@ export class DownloadManager {
   ): Promise<Array<{ success: true; result: R } | { success: false; error: Error }>> {
     const results: Array<{ success: true; result: R } | { success: false; error: Error }> = [];
     
-    // Process in batches to control concurrency
-    for (let i = 0; i < items.length; i += concurrency) {
-      const batch = items.slice(i, i + concurrency);
-      const batchResults = await Promise.allSettled(
-        batch.map(item => processor(item))
-      );
-      
-      for (const result of batchResults) {
-        if (result.status === 'fulfilled') {
-          results.push({ success: true, result: result.value });
-        } else {
-          results.push({ success: false, error: result.reason });
+    if (items.length === 0) {
+      return results;
+    }
+    
+    // Get configuration
+    const requestDelay = this.config.download?.requestDelay ?? 500;
+    const dynamicConcurrency = this.config.download?.dynamicConcurrency ?? true;
+    const minConcurrency = this.config.download?.minConcurrency ?? 1;
+    
+    // If concurrency is 1, process sequentially with delay
+    if (concurrency === 1) {
+      for (const item of items) {
+        try {
+          const result = await processor(item);
+          results.push({ success: true, result });
+          // Add delay between requests to avoid rate limiting
+          if (requestDelay > 0 && items.indexOf(item) < items.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, requestDelay));
+          }
+        } catch (error) {
+          results.push({ success: false, error: error instanceof Error ? error : new Error(String(error)) });
         }
+      }
+      return results;
+    }
+    
+    // Queue-based processing with dynamic concurrency
+    let currentConcurrency = concurrency;
+    let rateLimitCount = 0;
+    const queue = [...items];
+    const inProgress = new Set<Promise<void>>();
+    let lastRequestTime = 0;
+    
+    // Initialize results array
+    results.length = items.length;
+    
+    const processItem = async (item: T, index: number): Promise<void> => {
+      try {
+        // Rate limiting: ensure minimum delay between requests
+        if (requestDelay > 0) {
+          const now = Date.now();
+          const timeSinceLastRequest = now - lastRequestTime;
+          if (timeSinceLastRequest < requestDelay) {
+            await new Promise(resolve => setTimeout(resolve, requestDelay - timeSinceLastRequest));
+          }
+          lastRequestTime = Date.now();
+        }
+        
+        const result = await processor(item);
+        results[index] = { success: true, result };
+        
+        // On success, gradually increase concurrency if it was reduced
+        if (dynamicConcurrency && currentConcurrency < concurrency && rateLimitCount > 0) {
+          rateLimitCount = Math.max(0, rateLimitCount - 1);
+          if (rateLimitCount === 0) {
+            currentConcurrency = Math.min(concurrency, currentConcurrency + 1);
+            logger.debug(`Concurrency increased to ${currentConcurrency} after successful requests`);
+          }
+        }
+      } catch (error) {
+        results[index] = { 
+          success: false, 
+          error: error instanceof Error ? error : new Error(String(error)) 
+        };
+        
+        // Check if this is a rate limit error
+        const isRateLimit = error instanceof NetworkError && error.isRateLimit === true;
+        
+        if (isRateLimit && dynamicConcurrency) {
+          rateLimitCount++;
+          const previousConcurrency = currentConcurrency;
+          // Reduce concurrency on rate limit errors (halve it, but not below minimum)
+          const newConcurrency = Math.max(minConcurrency, Math.floor(currentConcurrency * 0.5));
+          if (newConcurrency < currentConcurrency) {
+            currentConcurrency = newConcurrency;
+            logger.warn(`Rate limit detected (429). Reducing concurrency from ${previousConcurrency} to ${currentConcurrency}`, {
+              previousConcurrency,
+              newConcurrency: currentConcurrency,
+              minConcurrency,
+              rateLimitCount,
+              originalConcurrency: concurrency
+            });
+          } else {
+            logger.warn(`Rate limit detected (429), but concurrency already at minimum (${minConcurrency})`, {
+              currentConcurrency,
+              minConcurrency,
+              rateLimitCount,
+              originalConcurrency: concurrency
+            });
+          }
+        }
+      }
+    };
+    
+    // Process queue with dynamic concurrency
+    let itemIndex = 0;
+    while (itemIndex < queue.length || inProgress.size > 0) {
+      // Start new tasks up to current concurrency limit
+      while (inProgress.size < currentConcurrency && itemIndex < queue.length) {
+        const item = queue[itemIndex];
+        const index = itemIndex;
+        itemIndex++;
+        
+        const task = processItem(item, index).finally(() => {
+          inProgress.delete(task);
+        });
+        
+        inProgress.add(task);
+      }
+      
+      // Wait for at least one task to complete
+      if (inProgress.size > 0) {
+        await Promise.race(Array.from(inProgress));
       }
     }
     
@@ -333,6 +460,7 @@ export class DownloadManager {
         
         if (downloadedIds.has(String(item.id))) {
           logger.debug(`${itemType === 'illustration' ? 'Illustration' : 'Novel'} ${item.id} already downloaded, skipping`);
+          skippedCount++;
           continue;
         }
 
@@ -371,90 +499,50 @@ export class DownloadManager {
       let illusts: PixivIllust[] = [];
       
       if (mode === 'ranking') {
-        // Get ranking illustrations
-        const rankingMode = target.rankingMode || 'day';
-        let rankingDate = target.rankingDate || this.getTodayDate();
-        // Process YESTERDAY placeholder
-        if (rankingDate === 'YESTERDAY') {
-          rankingDate = this.getYesterdayDate();
-        }
-        // Fetch more illustrations if filtering, to account for deleted/private works
-        // Increase fetch limit significantly to get enough matches for sorting
-        const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 10, 100) : target.limit;
-        
-        logger.info(`Fetching ranking illustrations (mode: ${rankingMode}, date: ${rankingDate})`);
-        illusts = await this.client.getRankingIllustrations(rankingMode, rankingDate, fetchLimit);
-        
-        // If ranking API returns no results, fallback to search mode with popularity sort
-        if (illusts.length === 0) {
-          logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
-          logger.info(`Searching for illustrations with tag: ${target.filterTag || target.tag || 'unknown'}, sorted by popularity`);
+        // If filterTag is specified, use search API with popularity sort instead of ranking API
+        // This avoids making many detail API calls which can trigger rate limits
+        if (target.filterTag) {
+          logger.info(`Using search API with popularity sort for tag: ${target.filterTag} (more efficient than ranking + filter)`);
           const searchTarget = {
             ...target,
-            tag: target.filterTag || target.tag,
+            tag: target.filterTag,
             sort: 'popular_desc' as const,
-            limit: target.filterTag ? Math.max((target.limit || 10) * 2, 50) : target.limit,
+            // Fetch more results to ensure we get enough valid ones after filtering
+            limit: Math.max((target.limit || 10) * 2, 50),
           };
           illusts = await this.client.searchIllustrations(searchTarget);
-          logger.info(`Found ${illusts.length} illustration(s) from search mode (sorted by popularity)`);
-        }
-        
-        // Filter by tag if specified
-        if (target.filterTag) {
-          logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
-          logger.info(`Will collect all matching illustrations, then sort by popularity and select top ${target.limit || 10}`);
+          logger.info(`Found ${illusts.length} illustration(s) from search API (sorted by popularity)`);
           
-          // Use parallel processing to fetch details with tags
-          const concurrency = this.config.download?.concurrency || 3;
-          logger.info(`Processing ${illusts.length} illustrations in parallel (concurrency: ${concurrency})`);
-          
-          const results = await this.processInParallel(
-            illusts,
-            async (illust) => {
-              const { illust: detail, tags } = await this.client.getIllustDetailWithTags(illust.id);
-              return { detail, tags, illustId: illust.id };
-            },
-            concurrency
-          );
-          
-          const filtered: PixivIllust[] = [];
-          let skippedCount = 0;
-          const filterTagLower = target.filterTag.toLowerCase();
-          
-          for (const result of results) {
-            if (result.success) {
-              const { detail, tags } = result.result;
-              const tagNames = tags.map(t => t.name.toLowerCase());
-              const translatedNames = tags.map(t => t.translated_name?.toLowerCase()).filter(Boolean) as string[];
-              
-              if (tagNames.includes(filterTagLower) || translatedNames.includes(filterTagLower)) {
-                filtered.push(detail);
-              }
-            } else {
-              skippedCount++;
-              const errorMessage = result.error.message;
-              if (!errorMessage.includes('404')) {
-                // Try to get illust ID from error if available
-                const illustId = result.error instanceof Error && 'illustId' in result.error 
-                  ? (result.error as any).illustId 
-                  : 'unknown';
-                logger.warn(`Failed to get tags for illust ${illustId}`, { error: errorMessage });
-              }
-            }
+          // Apply limit after getting results
+          if (target.limit && illusts.length > target.limit) {
+            illusts = illusts.slice(0, target.limit);
+            logger.info(`Selected top ${illusts.length} illustration(s) by popularity`);
+          }
+        } else {
+          // No filterTag, use ranking API directly
+          const rankingMode = target.rankingMode || 'day';
+          let rankingDate = target.rankingDate || this.getTodayDate();
+          // Process YESTERDAY placeholder
+          if (rankingDate === 'YESTERDAY') {
+            rankingDate = this.getYesterdayDate();
           }
           
-          if (skippedCount > 0) {
-            logger.info(`Skipped ${skippedCount} illustration(s) (deleted, private, or inaccessible)`);
+          logger.info(`Fetching ranking illustrations (mode: ${rankingMode}, date: ${rankingDate})`);
+          illusts = await this.client.getRankingIllustrations(rankingMode, rankingDate, target.limit);
+          
+          // If ranking API returns no results, fallback to search mode with popularity sort
+          if (illusts.length === 0) {
+            logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
+            logger.info(`Searching for illustrations with tag: ${target.tag || 'unknown'}, sorted by popularity`);
+            const searchTarget = {
+              ...target,
+              tag: target.tag,
+              sort: 'popular_desc' as const,
+              limit: Math.max((target.limit || 10) * 2, 50),
+            };
+            illusts = await this.client.searchIllustrations(searchTarget);
+            logger.info(`Found ${illusts.length} illustration(s) from search mode (sorted by popularity)`);
           }
-          
-          logger.info(`Found ${filtered.length} illustration(s) matching tag ${target.filterTag}`);
-          
-          // Sort by popularity and log top results
-          this.sortByPopularityAndLog(filtered, target.limit || 10, 'illustration');
-          
-          // Select top N
-          illusts = filtered.slice(0, target.limit || 10);
-          logger.info(`Selected top ${illusts.length} illustration(s) by popularity`);
         }
       } else {
         // Search by tag (default mode)
@@ -491,7 +579,12 @@ export class DownloadManager {
 
       // Check if download actually succeeded
       if (downloaded === 0 && targetLimit > 0) {
-        const errorMessage = `Failed to download any illustrations. Requested ${targetLimit}, but all ${skippedCount} attempt(s) failed or were skipped.`;
+        let errorMessage: string;
+        if (skippedCount > 0) {
+          errorMessage = `Failed to download any illustrations. Requested ${targetLimit}, but all ${skippedCount} attempt(s) failed or were skipped (likely already downloaded or inaccessible).`;
+        } else {
+          errorMessage = `Failed to download any illustrations. Requested ${targetLimit}, but no matching illustrations were found or all were already downloaded.`;
+        }
         this.database.logExecution(tagForLog, 'illustration', 'failed', errorMessage);
         logger.error(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} failed: ${errorMessage}`);
         throw new Error(errorMessage);
@@ -633,97 +726,50 @@ export class DownloadManager {
       let novels: PixivNovel[] = [];
       
       if (mode === 'ranking') {
-        // Get ranking novels
-        const rankingMode = target.rankingMode || 'day';
-        let rankingDate = target.rankingDate || this.getTodayDate();
-        // Process YESTERDAY placeholder
-        if (rankingDate === 'YESTERDAY') {
-          rankingDate = this.getYesterdayDate();
-        }
-        // Fetch more novels if filtering, to account for deleted/private novels
-        // Increase fetch limit significantly when filtering to handle high 404 rates
-        const fetchLimit = target.filterTag ? Math.max((target.limit || 10) * 10, 100) : target.limit;
-        
-        logger.info(`Fetching ranking novels (mode: ${rankingMode}, date: ${rankingDate})`);
-        novels = await this.client.getRankingNovels(rankingMode, rankingDate, fetchLimit);
-        logger.info(`Fetched ${novels.length} novels from ranking API (ordered by Pixiv ranking algorithm)`);
-        
-        // If ranking API returns no results, fallback to search mode with popularity sort
-        if (novels.length === 0) {
-          logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
-          logger.info(`Searching for novels with tag: ${target.filterTag || target.tag || 'unknown'}, sorted by popularity`);
+        // If filterTag is specified, use search API with popularity sort instead of ranking API
+        // This avoids making many detail API calls which can trigger rate limits
+        if (target.filterTag) {
+          logger.info(`Using search API with popularity sort for tag: ${target.filterTag} (more efficient than ranking + filter)`);
           const searchTarget = {
             ...target,
-            tag: target.filterTag || target.tag,
+            tag: target.filterTag,
             sort: 'popular_desc' as const,
-            limit: target.filterTag ? Math.max((target.limit || 10) * 2, 50) : target.limit,
+            // Fetch more results to ensure we get enough valid ones after filtering
+            limit: Math.max((target.limit || 10) * 2, 50),
           };
           novels = await this.client.searchNovels(searchTarget);
-          logger.info(`Found ${novels.length} novel(s) from search mode (sorted by popularity)`);
-        }
-        
-        // Filter by tag if specified
-        if (target.filterTag) {
-          logger.info(`Filtering ranking results by tag: ${target.filterTag}`);
-          logger.info(`Will collect all matching novels, then sort by popularity and select top ${target.limit || 10}`);
+          logger.info(`Found ${novels.length} novel(s) from search API (sorted by popularity)`);
           
-          // Use parallel processing to fetch details with tags
-          const concurrency = this.config.download?.concurrency || 3;
-          logger.info(`Processing ${novels.length} novels in parallel (concurrency: ${concurrency})`);
-          
-          const results = await this.processInParallel(
-            novels,
-            async (novel) => {
-              const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
-              return { detail, tags, novelId: novel.id };
-            },
-            concurrency
-          );
-          
-          const filtered: PixivNovel[] = [];
-          let skippedCount = 0;
-          const filterTagLower = target.filterTag.toLowerCase();
-          
-          for (const result of results) {
-            if (result.success) {
-              const { detail, tags } = result.result;
-              const tagNames = tags.map(t => t.name.toLowerCase());
-              const translatedNames = tags.map(t => t.translated_name?.toLowerCase()).filter(Boolean) as string[];
-              
-              if (tagNames.includes(filterTagLower) || translatedNames.includes(filterTagLower)) {
-                filtered.push(detail);
-              }
-            } else {
-              skippedCount++;
-              const errorMessage = result.error.message;
-              if (!errorMessage.includes('404')) {
-                // Try to get novel ID from error if available
-                const novelId = result.error instanceof Error && 'novelId' in result.error 
-                  ? (result.error as any).novelId 
-                  : 'unknown';
-                logger.warn(`Failed to get tags for novel ${novelId}`, { error: errorMessage });
-              }
-            }
+          // Apply limit after getting results
+          if (target.limit && novels.length > target.limit) {
+            novels = novels.slice(0, target.limit);
+            logger.info(`Selected top ${novels.length} novel(s) by popularity`);
+          }
+        } else {
+          // No filterTag, use ranking API directly
+          const rankingMode = target.rankingMode || 'day';
+          let rankingDate = target.rankingDate || this.getTodayDate();
+          // Process YESTERDAY placeholder
+          if (rankingDate === 'YESTERDAY') {
+            rankingDate = this.getYesterdayDate();
           }
           
-          if (skippedCount > 0) {
-            logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);
-          }
+          logger.info(`Fetching ranking novels (mode: ${rankingMode}, date: ${rankingDate})`);
+          novels = await this.client.getRankingNovels(rankingMode, rankingDate, target.limit);
+          logger.info(`Fetched ${novels.length} novels from ranking API (ordered by Pixiv ranking algorithm)`);
           
-          logger.info(`Found ${filtered.length} novel(s) matching tag ${target.filterTag}`);
-          
-          // Sort by popularity and log top results
-          this.sortByPopularityAndLog(filtered, target.limit || 10, 'novel');
-          
-          // Select top N
-          novels = filtered.slice(0, target.limit || 10);
-          logger.info(`Selected top ${novels.length} novel(s) by popularity`);
-          
-          if (novels.length === 0 && filtered.length === 0) {
-            logger.warn(`No novels found matching tag "${target.filterTag}" after checking ranking results. This could mean:`);
-            logger.warn(`  1. The tag "${target.filterTag}" is not present in the ranking results`);
-            logger.warn(`  2. All matching novels were deleted or made private`);
-            logger.warn(`  3. Try using search mode instead of ranking mode for better results`);
+          // If ranking API returns no results, fallback to search mode with popularity sort
+          if (novels.length === 0) {
+            logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
+            logger.info(`Searching for novels with tag: ${target.tag || 'unknown'}, sorted by popularity`);
+            const searchTarget = {
+              ...target,
+              tag: target.tag,
+              sort: 'popular_desc' as const,
+              limit: Math.max((target.limit || 10) * 2, 50),
+            };
+            novels = await this.client.searchNovels(searchTarget);
+            logger.info(`Found ${novels.length} novel(s) from search mode (sorted by popularity)`);
           }
         }
       } else {
@@ -860,8 +906,83 @@ export class DownloadManager {
     return this.formatDateInJST(jstNoon);
   }
 
+  /**
+   * Check if illustration files already exist in the file system
+   * Returns array of existing file paths, or empty array if none found
+   */
+  private async findExistingIllustrationFiles(illustId: number): Promise<string[]> {
+    const baseDirectory = this.config.storage!.illustrationDirectory ?? this.config.storage!.downloadDirectory!;
+    const existingFiles: string[] = [];
+    
+    try {
+      // Search for files matching the pattern: {illustId}_*.{ext}
+      // We need to search recursively in case files are organized by date/author/tag
+      const searchPattern = new RegExp(`^${illustId}_.+\\.[^.]+$`);
+      
+      const searchDirectory = async (dir: string): Promise<void> => {
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const fullPath = join(dir, entry.name);
+            if (entry.isDirectory()) {
+              await searchDirectory(fullPath);
+            } else if (entry.isFile() && searchPattern.test(entry.name)) {
+              existingFiles.push(fullPath);
+            }
+          }
+        } catch (error) {
+          // Ignore errors when reading directories (permissions, etc.)
+          logger.debug(`Error searching directory ${dir}: ${getErrorMessage(error)}`);
+        }
+      };
+      
+      await searchDirectory(baseDirectory);
+    } catch (error) {
+      logger.debug(`Error finding existing files for illustration ${illustId}: ${getErrorMessage(error)}`);
+    }
+    
+    return existingFiles;
+  }
+
   private async downloadIllustration(illust: PixivIllust, tag: string) {
-    const detail = await this.client.getIllustDetail(illust.id);
+    // Check if files already exist in file system but not in database
+    const existingFiles = await this.findExistingIllustrationFiles(illust.id);
+    if (existingFiles.length > 0 && !this.database.hasDownloaded(String(illust.id), 'illustration')) {
+      // Files exist but not in database - update database and skip download
+      logger.info(`Found existing files for illustration ${illust.id} but missing database record. Updating database...`);
+      
+      // Get illustration detail with tags to get full information
+      const { illust: detail, tags } = await Promise.race([
+        this.client.getIllustDetailWithTags(illust.id),
+        new Promise<{ illust: PixivIllust; tags: Array<{ name: string; translated_name?: string }> }>((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout: Failed to get illustration detail for ${illust.id} within 60 seconds`)), 60000)
+        )
+      ]);
+      
+      // Insert database records for existing files
+      for (const filePath of existingFiles) {
+        this.database.insertDownload({
+          pixivId: String(detail.id),
+          type: 'illustration',
+          tag,
+          title: detail.title,
+          filePath,
+          author: detail.user?.name,
+          userId: detail.user?.id,
+        });
+      }
+      
+      logger.info(`Updated database with ${existingFiles.length} existing file(s) for illustration ${detail.id}`);
+      return; // Skip download
+    }
+    
+    // Add timeout protection for getIllustDetailWithTags to prevent hanging
+    const { illust: detail, tags } = await Promise.race([
+      this.client.getIllustDetailWithTags(illust.id),
+      new Promise<{ illust: PixivIllust; tags: Array<{ name: string; translated_name?: string }> }>((_, reject) => 
+        setTimeout(() => reject(new Error(`Timeout: Failed to get illustration detail for ${illust.id} within 60 seconds`)), 60000)
+      )
+    ]);
     const pages = this.getIllustrationPages(detail);
 
     // Use parallel download for multiple pages to improve performance
@@ -891,8 +1012,36 @@ export class DownloadManager {
           date: detail.create_date ? new Date(detail.create_date) : new Date(),
         };
 
-        const buffer = await this.client.downloadImage(originalUrl);
+        // Add timeout protection for image download (2 minutes per image)
+        const buffer = await Promise.race([
+          this.client.downloadImage(originalUrl),
+          new Promise<ArrayBuffer>((_, reject) => 
+            setTimeout(() => reject(new Error(`Timeout: Failed to download image for illustration ${detail.id} page ${index + 1} within 120 seconds`)), 120000)
+          )
+        ]);
         const filePath = await this.fileService.saveImage(buffer, fileName, metadata);
+
+        // Save metadata JSON file
+        const pixivMetadata: PixivMetadata = {
+          pixiv_id: detail.id,
+          title: detail.title,
+          author: {
+            id: detail.user?.id || '',
+            name: detail.user?.name || 'Unknown',
+          },
+          tags: tags,
+          original_url: `https://www.pixiv.net/artworks/${detail.id}`,
+          create_date: detail.create_date,
+          download_tag: tag,
+          type: 'illustration',
+          page_number: index + 1,
+          total_pages: pages.length,
+          total_bookmarks: detail.total_bookmarks,
+          total_view: detail.total_view,
+          bookmark_count: detail.bookmark_count,
+          view_count: detail.view_count,
+        };
+        await this.fileService.saveMetadata(filePath, pixivMetadata);
 
         return { filePath, index: index + 1 };
       },
@@ -930,17 +1079,27 @@ export class DownloadManager {
   }
 
   private async downloadNovel(novel: PixivNovel, tag: string) {
-    // First verify the novel exists and get updated details
-    const detail = await this.client.getNovelDetail(novel.id);
+    // First verify the novel exists and get updated details with tags
+    const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
     
     // Then get the novel text
     const text = await this.client.getNovelText(novel.id);
+
+    // Format tags for display
+    const tagsDisplay = tags.map(t => {
+      if (t.translated_name) {
+        return `${t.name} (${t.translated_name})`;
+      }
+      return t.name;
+    }).join(', ');
 
     const header = [
       `Title: ${detail.title}`,
       `Author: ${detail.user?.name ?? 'Unknown'}`,
       `Author ID: ${detail.user?.id ?? 'Unknown'}`,
-      `Tag: ${tag}`,
+      `Tags: ${tagsDisplay || 'None'}`,
+      `Download Tag: ${tag}`,
+      `Original URL: https://www.pixiv.net/novel/show.php?id=${detail.id}`,
       `Created: ${new Date(detail.create_date).toISOString()}`,
       '',
       '---',
@@ -957,6 +1116,26 @@ export class DownloadManager {
     };
     
     const filePath = await this.fileService.saveText(content, fileName, metadata);
+
+    // Save metadata JSON file
+    const pixivMetadata: PixivMetadata = {
+      pixiv_id: detail.id,
+      title: detail.title,
+      author: {
+        id: detail.user?.id || '',
+        name: detail.user?.name || 'Unknown',
+      },
+      tags: tags,
+      original_url: `https://www.pixiv.net/novel/show.php?id=${detail.id}`,
+      create_date: detail.create_date,
+      download_tag: tag,
+      type: 'novel',
+      total_bookmarks: detail.total_bookmarks,
+      total_view: detail.total_view,
+      bookmark_count: detail.bookmark_count,
+      view_count: detail.view_count,
+    };
+    await this.fileService.saveMetadata(filePath, pixivMetadata);
 
     this.database.insertDownload({
       pixivId: String(detail.id),

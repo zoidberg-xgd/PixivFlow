@@ -4,6 +4,28 @@ export interface FileMetadata {
     tag?: string;
     date?: Date | string;
 }
+export interface PixivMetadata {
+    pixiv_id: string | number;
+    title: string;
+    author: {
+        id: string;
+        name: string;
+    };
+    tags: Array<{
+        name: string;
+        translated_name?: string;
+    }>;
+    original_url: string;
+    create_date: string;
+    download_tag?: string;
+    type: 'illustration' | 'novel';
+    page_number?: number;
+    total_pages?: number;
+    total_bookmarks?: number;
+    total_view?: number;
+    bookmark_count?: number;
+    view_count?: number;
+}
 export declare class FileService {
     private readonly storage;
     constructor(storage: StorageConfig);
@@ -15,5 +37,11 @@ export declare class FileService {
     private getOrganizedDirectory;
     private findUniquePath;
     private splitExtension;
+    /**
+     * Save metadata JSON file alongside the downloaded file
+     * @param filePath Path to the downloaded file
+     * @param metadata Metadata to save
+     */
+    saveMetadata(filePath: string, metadata: PixivMetadata): Promise<string>;
 }
 //# sourceMappingURL=FileService.d.ts.map

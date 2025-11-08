@@ -99,6 +99,7 @@ Options:
   -j, --json                  Output response as JSON
   --once                      Run download job once and exit
   --config <path>             Path to config file (default: config/standalone.config.json)
+  --targets <json>            Custom targets JSON (overrides config file targets)
 
 Examples:
   pixivflow login                    # Interactive login (prompts for username/password in terminal)
@@ -106,6 +107,7 @@ Examples:
   pixivflow lh -u user@example.com -p password  # Headless login (no browser window)
   pixivflow refresh <refresh_token>  # Refresh token
   pixivflow download                 # Run download once
+  pixivflow download --targets '[{"type":"novel","tag":"アークナイツ","limit":5,"mode":"ranking","rankingMode":"day","rankingDate":"YESTERDAY","filterTag":"アークナイツ"}]'  # Download with custom targets
   pixivflow random                   # Login (if needed) and download a random image
   pixivflow scheduler                # Start scheduler
 
@@ -378,7 +380,37 @@ async function handleDownload(args?: {
   try {
     const configPathArg = args ? (args.options.config as string) || undefined : undefined;
     const configPath = getConfigPath(configPathArg);
-    const config = loadConfig(configPath);
+    let config = loadConfig(configPath);
+
+    // Support custom targets via --targets parameter
+    const targetsArg = args ? (args.options.targets as string) || undefined : undefined;
+    if (targetsArg) {
+      try {
+        const customTargets = JSON.parse(targetsArg);
+        // If it's an array, use it directly; if it's an object, wrap it in an array
+        if (Array.isArray(customTargets)) {
+          config = { ...config, targets: customTargets };
+        } else if (customTargets && typeof customTargets === 'object') {
+          // Check if it has a 'targets' property (full config) or is a single target
+          if (customTargets.targets && Array.isArray(customTargets.targets)) {
+            config = { ...config, targets: customTargets.targets };
+          } else {
+            // Single target object, wrap in array
+            config = { ...config, targets: [customTargets] };
+          }
+        }
+        const targetCount = Array.isArray(customTargets) 
+          ? customTargets.length 
+          : (customTargets.targets && Array.isArray(customTargets.targets) 
+              ? customTargets.targets.length 
+              : 1);
+        logger.info(`Using custom targets from command line: ${targetCount} target(s)`);
+      } catch (error) {
+        logger.error('Failed to parse --targets parameter', { error });
+        console.error('[!]: Invalid JSON in --targets parameter:', error instanceof Error ? error.message : String(error));
+        process.exit(1);
+      }
+    }
 
     // Apply initial delay if configured
     if (config.initialDelay && config.initialDelay > 0) {

@@ -28,6 +28,7 @@
     "scheduler": "npm run build && node dist/index.js scheduler",
     "test": "npm run build && node dist/test-download.js",
     "test:scheduled": "npm run build && node dist/test-scheduled-download.js",
+    "test:concurrency": "npm run build && node dist/test-concurrency.js",
     "setup": "npm run build && node dist/setup-wizard.js",
     "random": "npm run build && node dist/index.js random",
     "clean": "rm -rf dist",

@@ -25,7 +25,6 @@ import {
 import {
   SaveOutlined,
   ReloadOutlined,
-  PlusOutlined,
   DeleteOutlined,
   EditOutlined,
   CheckCircleOutlined,

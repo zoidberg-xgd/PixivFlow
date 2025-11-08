@@ -224,6 +224,23 @@ export interface StandaloneConfig {
          */
         concurrency?: number;
         /**
+         * Minimum delay between API requests (in milliseconds)
+         * Helps avoid rate limiting by spacing out requests
+         * Default: 500
+         */
+        requestDelay?: number;
+        /**
+         * Enable dynamic concurrency adjustment
+         * Automatically reduces concurrency when rate limited
+         * Default: true
+         */
+        dynamicConcurrency?: boolean;
+        /**
+         * Minimum concurrency when dynamically adjusted
+         * Default: 1
+         */
+        minConcurrency?: number;
+        /**
          * Maximum retries per download
          * Default: 3
          */
