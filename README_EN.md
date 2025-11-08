@@ -66,16 +66,18 @@ Make Pixiv artwork collection elegant and efficient | 让 Pixiv 作品收集变�
 
 ### 🌟 Why Choose PixivFlow?
 
-| Feature | PixivFlow | Other Tools |
-|---------|-----------|------------|
-| 🚀 **No Browser Required** | ✅ Fully standalone | ❌ Requires browser extension |
-| 🤖 **Automation** | ✅ Scheduled tasks, Cron support | ⚠️ Manual trigger |
-| 💾 **Smart Deduplication** | ✅ SQLite database records | ⚠️ May download duplicates |
-| 🔄 **Resume Download** | ✅ Auto resume | ❌ Need to restart |
-| 🎯 **Precise Filtering** | ✅ Tags, bookmarks, dates | ⚠️ Limited features |
-| 📊 **Complete Logging** | ✅ Detailed statistics | ⚠️ Incomplete logs |
-| 🖥️ **Server Deployment** | ✅ Supports background running | ❌ Requires GUI |
-| 🔐 **Secure Auth** | ✅ OAuth 2.0 PKCE | ⚠️ Lower security |
+PixivFlow is designed for automation scenarios, offering the following core advantages:
+
+| Feature | Description |
+|---------|-------------|
+| 🚀 **Fully Standalone** | No browser extension required, pure CLI tool that can run in any environment |
+| 🤖 **Powerful Automation** | Supports Cron scheduled tasks, set once and run automatically |
+| 💾 **Smart Deduplication** | Based on SQLite database, automatically records downloaded artworks to avoid duplicates |
+| 🔄 **Resume Download Support** | Automatically resumes after interruption, no need to restart |
+| 🎯 **Flexible Filtering** | Supports multi-dimensional filtering by tags, bookmarks, date range, etc. |
+| 📊 **Detailed Logging System** | Complete run logs and statistics for easy tracking and debugging |
+| 🖥️ **Server Friendly** | Supports background running, suitable for long-term deployment on servers |
+| 🔐 **Secure Authentication** | Uses OAuth 2.0 PKCE standard flow to ensure account security |
 
 ### 🎯 Core Philosophy
 
@@ -99,10 +101,12 @@ Make Pixiv artwork collection elegant and efficient | 让 Pixiv 作品收集变�
 | **🔄 Stable & Reliable** | Auto retry, resume download, error recovery, smart skip deleted/private artworks |
 | **📊 Complete Logging** | Detailed run logs and download statistics |
 | **🔐 Secure Login** | OAuth 2.0 PKCE flow via Python gppt library, supports terminal login |
+| **🌐 WebUI Interface** | Modern web management interface with file preview, real-time logs, and task management |
 
 ### 🎁 Additional Advantages
 
 - ✅ **Fully Standalone**: No browser required, pure CLI tool
+- ✅ **WebUI Support**: Modern web management interface with graphical operations
 - ✅ **Cross-Platform**: Windows / macOS / Linux support
 - ✅ **Lightweight**: Low resource usage, suitable for long-term server running
 - ✅ **Open Source**: GPL-3.0 license, free to customize and distribute
@@ -201,6 +205,32 @@ That's it! 🎉
 > **💡 Tip**: For first use, it's recommended to run `test` to download 1-2 artworks first, confirm the configuration is correct before formal use.
 > 
 > ✅ **Verified**: Test scripts have been verified and can download artworks normally. See [TEST_GUIDE.md](TEST_GUIDE.md) for detailed test results.
+
+---
+
+### 🌐 Using WebUI (Optional)
+
+PixivFlow also provides a modern web management interface with graphical operations:
+
+```bash
+# 1. Start WebUI backend
+npm run webui
+
+# 2. Start frontend in another terminal (development mode)
+npm run webui:frontend
+```
+
+Then visit http://localhost:5173 to use the WebUI.
+
+**WebUI Features**:
+- 📊 Download statistics and overview
+- 📁 File browsing and preview (supports special characters in filenames like Japanese, Chinese)
+- 📝 Real-time log viewing
+- ⚙️ Configuration management
+- 🎯 Task management (start/stop downloads)
+- 📈 Download history viewing
+
+For detailed instructions, see [WebUI Usage Guide](WEBUI_README.md) and [WebUI Setup Guide](WEBUI_SETUP.md).
 
 ---
 
@@ -326,6 +356,8 @@ Detailed guide: [Script Usage Guide](SCRIPTS_GUIDE.md)
 | [🛠️ SCRIPTS_GUIDE](SCRIPTS_GUIDE.md) | All scripts detailed guide |
 | [📋 CONFIG_GUIDE](CONFIG_GUIDE.md) | Configuration file usage guide |
 | [📊 RANKING_DOWNLOAD_GUIDE](RANKING_DOWNLOAD_GUIDE.md) | Ranking download guide |
+| [🌐 WEBUI_README](WEBUI_README.md) | WebUI usage guide |
+| [🚀 WEBUI_SETUP](WEBUI_SETUP.md) | WebUI setup guide |
 
 ### 📄 Project Documentation
 
