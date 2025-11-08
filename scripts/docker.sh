@@ -440,6 +440,114 @@ cmd_test() {
     log_success "测试完成"
 }
 
+cmd_random() {
+    print_header "随机下载"
+    
+    if ! check_docker; then
+        exit 1
+    fi
+    
+    if ! check_docker_compose; then
+        exit 1
+    fi
+    
+    if ! check_docker_compose_file; then
+        exit 1
+    fi
+    
+    # 检查配置文件是否存在
+    if [[ ! -f "config/standalone.config.json" ]]; then
+        log_error "配置文件不存在: config/standalone.config.json"
+        log_info "请先运行: $0 setup"
+        exit 1
+    fi
+    
+    # 检查镜像是否存在
+    if ! docker images "$DOCKER_IMAGE_NAME" --format "{{.Repository}}" | grep -q "^${DOCKER_IMAGE_NAME}$"; then
+        log_info "镜像不存在，正在构建..."
+        cmd_build
+    fi
+    
+    local compose_cmd
+    compose_cmd=$(get_docker_compose_cmd)
+    
+    # 解析参数
+    local type="illustration"
+    local limit=1
+    local skip_auth_check=false
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --type|-t)
+                type="$2"
+                shift 2
+                ;;
+            --limit|-l)
+                limit="$2"
+                shift 2
+                ;;
+            --novel|-n)
+                type="novel"
+                shift
+                ;;
+            --skip-auth-check)
+                skip_auth_check=true
+                shift
+                ;;
+            *)
+                log_warn "未知参数: $1"
+                shift
+                ;;
+        esac
+    done
+    
+    # 在主机上验证 token（如果可能）
+    if [[ "$skip_auth_check" == "false" ]] && command_exists node; then
+        log_info "验证 refresh token..."
+        if node -e "
+            const { loadConfig, getConfigPath } = require('./dist/config');
+            const { TerminalLogin } = require('./dist/terminal-login');
+            const config = loadConfig(getConfigPath());
+            TerminalLogin.refresh(config.pixiv.refreshToken)
+                .then(() => { console.log('✓ Token is valid'); process.exit(0); })
+                .catch(e => { console.log('✗ Token may be invalid:', e.message); process.exit(1); });
+        " 2>/dev/null; then
+            log_success "Token 验证通过"
+        else
+            log_warn "Token 可能无效，将在容器内尝试刷新"
+            log_info "如果失败，请在主机上运行: node dist/index.js login"
+        fi
+        echo
+    fi
+    
+    log_info "随机下载类型: $type, 数量: $limit"
+    log_info "使用 docker-compose 运行（自动使用代理和配置）..."
+    echo
+    
+    # 使用 docker-compose run 执行，自动使用 docker-compose.yml 中的环境变量和卷挂载
+    # 注意：如果 token 无效，容器内无法进行交互式登录，需要先在主机上登录
+    # 设置环境变量跳过自动登录（如果 token 无效，会直接报错而不是尝试登录）
+    if $compose_cmd run --rm \
+        -e PIXIV_SKIP_AUTO_LOGIN=true \
+        pixivflow \
+        node dist/index.js random \
+        --type "$type" \
+        --limit "$limit"; then
+        echo
+        log_success "随机下载完成"
+    else
+        echo
+        log_error "随机下载失败"
+        log_info "可能的原因："
+        log_info "  1. Token 无效或过期 - 请在主机上运行: node dist/index.js login"
+        log_info "  2. 代理不可用 - 请检查 docker-compose.yml 中的代理端口（当前: 6152）"
+        log_info "  3. 网络问题 - 请检查网络连接和代理服务是否运行"
+        log_info ""
+        log_info "提示：如果代理端口不是 6152，请修改 docker-compose.yml 中的 HTTP_PROXY 和 HTTPS_PROXY"
+        exit 1
+    fi
+}
+
 cmd_check() {
     print_header "Docker 环境检查"
     
@@ -528,6 +636,7 @@ show_help() {
     setup            初始化 Docker 环境
     login            在容器中登录 Pixiv 账号
     test             运行测试下载
+    random|rd        随机下载作品（支持 --type, --limit, --novel）
     check            检查 Docker 环境
     clean            清理未使用的资源
     clean-all        清理所有资源（危险）
@@ -542,6 +651,9 @@ show_help() {
     $0 exec ls        # 在容器中执行命令
     $0 login          # 登录账号
     $0 test           # 测试下载
+    $0 random         # 随机下载一张图片
+    $0 random --novel # 随机下载一篇小说
+    $0 random --limit 5  # 随机下载5个作品
 
 📚 文档:
     详细说明: DOCKER.md
@@ -573,6 +685,7 @@ main() {
         setup)          cmd_setup "$@" ;;
         login)          cmd_login "$@" ;;
         test)           cmd_test "$@" ;;
+        random|rd)      cmd_random "$@" ;;
         check)          cmd_check "$@" ;;
         clean)          cmd_clean "$@" ;;
         clean-all)      cmd_clean_all "$@" ;;

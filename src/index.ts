@@ -463,7 +463,8 @@ async function handleRandomDownload(args: {
     }
 
     // Parse count parameter (default: 1)
-    const countArg = args.options.count || args.options.c;
+    // Support both --limit and --count for compatibility
+    const countArg = args.options.limit || args.options.count || args.options.c || args.options.l;
     const downloadCount = countArg ? parseInt(String(countArg), 10) : 1;
     if (isNaN(downloadCount) || downloadCount < 1) {
       logger.warn(`Invalid count value: ${countArg}, using default: 1`);
@@ -471,13 +472,17 @@ async function handleRandomDownload(args: {
     const limit = isNaN(downloadCount) || downloadCount < 1 ? 1 : downloadCount;
 
     // Ensure valid token exists (login if needed)
+    // In Docker environment, skip auto-login if PIXIV_SKIP_AUTO_LOGIN is set
+    // because interactive login doesn't work in containers
     logger.info('Checking authentication status...');
+    const skipAutoLogin = process.env.PIXIV_SKIP_AUTO_LOGIN === 'true';
+    logger.debug(`handleRandomDownload: PIXIV_SKIP_AUTO_LOGIN=${process.env.PIXIV_SKIP_AUTO_LOGIN}, skipAutoLogin=${skipAutoLogin}, autoLogin=${!skipAutoLogin}`);
     await ensureValidToken({
       configPath,
       headless,
       username,
       password,
-      autoLogin: true,
+      autoLogin: !skipAutoLogin,
     });
 
     // Load config after ensuring token

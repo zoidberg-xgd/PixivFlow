@@ -4,6 +4,8 @@ import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import path from 'path';
 import { logger } from '../logger';
+import { Database } from '../storage/Database';
+import { loadConfig, getConfigPath } from '../config';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -172,6 +174,24 @@ export async function startWebUI(options?: WebUIServerOptions): Promise<void> {
   // Set up log file path
   const logPath = path.join(process.cwd(), 'data', 'pixiv-downloader.log');
   logger.setLogPath(logPath);
+
+  // Initialize database to ensure tables exist
+  try {
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
+    if (config.storage?.databasePath) {
+      const database = new Database(config.storage.databasePath);
+      database.migrate();
+      database.close();
+      logger.info('Database initialized successfully');
+    }
+  } catch (error) {
+    logger.warn('Failed to initialize database at startup', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    // Continue startup even if database initialization fails
+    // Routes will handle database initialization on their own
+  }
 
   const server = new WebUIServer(options);
   await server.start();

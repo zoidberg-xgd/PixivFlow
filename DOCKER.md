@@ -86,6 +86,15 @@ docker-compose build
 
 # 查看运行状态
 docker-compose ps
+
+# 随机下载作品（使用 docker.sh 脚本，推荐 ⭐）
+./scripts/docker.sh random
+
+# 随机下载小说
+./scripts/docker.sh random --novel
+
+# 随机下载多个作品
+./scripts/docker.sh random --limit 5
 ```
 
 ### 自定义配置
@@ -157,6 +166,60 @@ docker run -it --rm \
   pixivflow:latest \
   node dist/index.js login
 ```
+
+#### 方式 5：随机下载（推荐 ⭐）
+
+随机下载是快速体验 Docker 环境下下载功能的最佳方式。
+
+**使用 docker.sh 脚本（推荐）**：
+
+```bash
+# 随机下载一张图片（默认）
+./scripts/docker.sh random
+
+# 或使用简写
+./scripts/docker.sh rd
+
+# 随机下载一篇小说
+./scripts/docker.sh random --novel
+
+# 随机下载 5 个作品
+./scripts/docker.sh random --limit 5
+
+# 随机下载 3 篇小说
+./scripts/docker.sh random --novel --limit 3
+```
+
+**直接使用 docker-compose**：
+
+```bash
+# 随机下载一张图片
+docker-compose run --rm pixivflow \
+  node dist/index.js random
+
+# 随机下载小说
+docker-compose run --rm pixivflow \
+  node dist/index.js random --type novel
+
+# 随机下载多个作品
+docker-compose run --rm pixivflow \
+  node dist/index.js random --limit 5
+```
+
+**功能特点**：
+
+- ✅ 自动从热门标签中随机选择作品
+- ✅ 自动使用 docker-compose.yml 中的代理配置
+- ✅ 自动挂载配置、数据和下载目录
+- ✅ 支持图片和小说两种类型
+- ✅ 支持指定下载数量
+
+**注意事项**：
+
+1. 首次使用需要先完成登录：`./scripts/docker.sh login`
+2. 确保配置文件存在：`config/standalone.config.json`
+3. 确保 docker-compose.yml 中的代理配置正确
+4. 如果 token 无效，脚本会自动提示需要重新登录
 
 ---
 
@@ -271,6 +334,16 @@ services:
 | `ALL_PROXY` | 全局代理 | - |
 | `PORT` | WebUI 端口 | `3000` |
 | `HOST` | WebUI 主机 | `0.0.0.0` |
+| `PIXIV_DATABASE_PATH` | 数据库文件路径（容器内路径） | `/app/data/pixiv-downloader.db` |
+| `PIXIV_DOWNLOAD_DIR` | 下载根目录（容器内路径） | `/app/downloads` |
+| `PIXIV_ILLUSTRATION_DIR` | 插画保存目录（容器内路径） | `/app/downloads/downloads/illustrations` |
+| `PIXIV_NOVEL_DIR` | 小说保存目录（容器内路径） | `/app/downloads/downloads/novels` |
+| `PIXIV_SKIP_AUTO_LOGIN` | 跳过容器内自动登录 | `true`（Docker 环境推荐） |
+
+**重要提示**：
+- Docker 环境中的路径配置需要使用**容器内路径**（如 `/app/data/...`），而不是宿主机路径
+- `docker-compose.yml` 已自动配置这些环境变量，通常无需手动修改
+- 如果修改了卷挂载路径，需要相应更新这些环境变量
 
 ### 代理设置
 
@@ -416,7 +489,38 @@ rm -rf data downloads
 docker-compose up -d
 ```
 
-### 7. Docker 构建时无法连接 Docker Hub
+### 7. WebUI 无法显示下载历史或预览文件
+
+**可能原因**：
+- 数据库中的文件路径是宿主机路径，但容器需要使用容器内路径
+- 路径配置不正确
+
+**解决方法**：
+1. **检查环境变量配置**：确保 `docker-compose.yml` 中已正确配置路径环境变量：
+   ```yaml
+   environment:
+     - PIXIV_DATABASE_PATH=/app/data/pixiv-downloader.db
+     - PIXIV_DOWNLOAD_DIR=/app/downloads
+     - PIXIV_ILLUSTRATION_DIR=/app/downloads/downloads/illustrations
+     - PIXIV_NOVEL_DIR=/app/downloads/downloads/novels
+   ```
+
+2. **重启服务**：
+   ```bash
+   docker-compose restart pixivflow-webui
+   ```
+
+3. **验证路径**：
+   ```bash
+   # 检查容器内的路径配置
+   docker exec pixivflow-webui env | grep PIXIV
+   ```
+
+**说明**：
+- 系统会自动将数据库中的宿主机路径转换为容器内路径
+- 如果仍有问题，检查卷挂载是否正确：`docker-compose ps` 和 `docker-compose config`
+
+### 8. Docker 构建时无法连接 Docker Hub
 
 **可能原因**：
 - 网络连接问题
@@ -499,6 +603,8 @@ docker-compose build
 - [配置指南](CONFIG_GUIDE.md)
 - [快速开始](QUICKSTART.md)
 - [WebUI 使用指南](WEBUI_README.md)
+- [Docker 网络问题解决方案](DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
+- [Docker 随机下载问题解决方案](DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
 
 ---
 

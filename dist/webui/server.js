@@ -11,9 +11,11 @@ const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const path_1 = __importDefault(require("path"));
 const logger_1 = require("../logger");
+const Database_1 = require("../storage/Database");
+const config_1 = require("../config");
 // Routes
 const auth_1 = __importDefault(require("./routes/auth"));
-const config_1 = __importDefault(require("./routes/config"));
+const config_2 = __importDefault(require("./routes/config"));
 const download_1 = __importDefault(require("./routes/download"));
 const stats_1 = __importDefault(require("./routes/stats"));
 const logs_1 = __importDefault(require("./routes/logs"));
@@ -82,7 +84,7 @@ class WebUIServer {
         });
         // API routes
         this.app.use('/api/auth', auth_1.default);
-        this.app.use('/api/config', config_1.default);
+        this.app.use('/api/config', config_2.default);
         this.app.use('/api/download', download_1.default);
         this.app.use('/api/stats', stats_1.default);
         this.app.use('/api/logs', logs_1.default);
@@ -142,6 +144,24 @@ async function startWebUI(options) {
     // Set up log file path
     const logPath = path_1.default.join(process.cwd(), 'data', 'pixiv-downloader.log');
     logger_1.logger.setLogPath(logPath);
+    // Initialize database to ensure tables exist
+    try {
+        const configPath = (0, config_1.getConfigPath)();
+        const config = (0, config_1.loadConfig)(configPath);
+        if (config.storage?.databasePath) {
+            const database = new Database_1.Database(config.storage.databasePath);
+            database.migrate();
+            database.close();
+            logger_1.logger.info('Database initialized successfully');
+        }
+    }
+    catch (error) {
+        logger_1.logger.warn('Failed to initialize database at startup', {
+            error: error instanceof Error ? error.message : String(error),
+        });
+        // Continue startup even if database initialization fails
+        // Routes will handle database initialization on their own
+    }
     const server = new WebUIServer(options);
     await server.start();
     // Graceful shutdown

@@ -107,25 +107,32 @@ async function ensureValidToken(options = {}) {
     try {
         const config = (0, config_1.loadConfig)(configPath);
         const refreshToken = config.pixiv.refreshToken;
+        // In Docker/non-interactive environments, skip token validation
+        // and trust the token in config file (should be validated on host)
+        logger_1.logger.info(`ensureValidToken: autoLogin=${options.autoLogin}, refreshToken=${refreshToken ? 'exists' : 'missing'}`);
+        if (options.autoLogin === false) {
+            if (refreshToken) {
+                logger_1.logger.info('Using refresh token from config (skip validation in Docker environment)');
+                return refreshToken;
+            }
+            else {
+                throw new Error('No refresh token found in config and auto-login is disabled. Please login on host first.');
+            }
+        }
         // Check if token is valid
         if (refreshToken && await isTokenValid(refreshToken)) {
             logger_1.logger.info('Valid refresh token found in config');
             return refreshToken;
         }
         // Token invalid or missing, need to login
-        if (options.autoLogin !== false) {
-            logger_1.logger.warn('Invalid or missing refresh token, performing login...');
-            const loginInfo = await loginAndUpdateConfig({
-                configPath,
-                headless: options.headless,
-                username: options.username,
-                password: options.password,
-            });
-            return loginInfo.refresh_token;
-        }
-        else {
-            throw new Error('No valid refresh token found and auto-login is disabled');
-        }
+        logger_1.logger.warn('Invalid or missing refresh token, performing login...');
+        const loginInfo = await loginAndUpdateConfig({
+            configPath,
+            headless: options.headless,
+            username: options.username,
+            password: options.password,
+        });
+        return loginInfo.refresh_token;
     }
     catch (error) {
         if (error instanceof Error && error.message.includes('Configuration file not found')) {

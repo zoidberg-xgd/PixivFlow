@@ -395,6 +395,118 @@ npm run login -- --help
 
 ---
 
+### docker.sh - Docker 管理脚本
+
+**Docker 环境下的管理工具**，提供完整的 Docker 操作和随机下载功能。
+
+#### 基本用法
+
+```bash
+./scripts/docker.sh <command> [options]
+```
+
+#### 核心命令
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `build` | 构建 Docker 镜像 | `./scripts/docker.sh build` |
+| `deploy` | 部署服务（构建 + 启动） | `./scripts/docker.sh deploy` |
+| `up` | 启动 Docker 服务 | `./scripts/docker.sh up` |
+| `down` | 停止 Docker 服务 | `./scripts/docker.sh down` |
+| `restart` | 重启 Docker 服务 | `./scripts/docker.sh restart` |
+| `status` | 查看服务状态 | `./scripts/docker.sh status` |
+| `logs` | 查看服务日志 | `./scripts/docker.sh logs` |
+| `shell` | 进入容器 Shell | `./scripts/docker.sh shell` |
+| `setup` | 初始化 Docker 环境 | `./scripts/docker.sh setup` |
+| `login` | 在容器中登录 Pixiv 账号 | `./scripts/docker.sh login` |
+| `test` | 运行测试下载 | `./scripts/docker.sh test` |
+| `random` 或 `rd` | 随机下载作品 | `./scripts/docker.sh random` |
+| `check` | 检查 Docker 环境 | `./scripts/docker.sh check` |
+
+#### 随机下载功能 ⭐ 推荐
+
+`random` 命令是 Docker 环境下快速体验下载功能的最佳方式。
+
+##### 基本用法
+
+```bash
+# 随机下载一张图片（默认）
+./scripts/docker.sh random
+
+# 或使用简写
+./scripts/docker.sh rd
+```
+
+##### 命令选项
+
+| 选项 | 说明 | 示例 |
+|------|------|------|
+| `--type <type>` 或 `-t <type>` | 指定作品类型（illustration/novel） | `./scripts/docker.sh random --type illustration` |
+| `--limit <num>` 或 `-l <num>` | 指定下载数量 | `./scripts/docker.sh random --limit 5` |
+| `--novel` 或 `-n` | 下载小说（快捷方式） | `./scripts/docker.sh random --novel` |
+| `--skip-auth-check` | 跳过 token 验证 | `./scripts/docker.sh random --skip-auth-check` |
+
+##### 使用示例
+
+```bash
+# 随机下载一张图片（默认）
+./scripts/docker.sh random
+
+# 随机下载一篇小说
+./scripts/docker.sh random --novel
+
+# 随机下载 5 个作品
+./scripts/docker.sh random --limit 5
+
+# 随机下载 3 篇小说
+./scripts/docker.sh random --novel --limit 3
+
+# 组合使用
+./scripts/docker.sh random --type illustration --limit 10
+```
+
+##### 功能特点
+
+- ✅ **自动环境检查**：自动检查 Docker 和 docker-compose 是否安装
+- ✅ **自动构建镜像**：如果镜像不存在，会自动构建
+- ✅ **自动配置验证**：自动验证配置文件是否存在
+- ✅ **Token 验证**：在主机上验证 refresh token（如果可能）
+- ✅ **自动使用代理**：自动使用 docker-compose.yml 中配置的代理
+- ✅ **卷挂载管理**：自动处理配置、数据和下载目录的挂载
+
+##### 使用场景
+
+- 🎲 **快速体验**：快速体验 Docker 环境下的下载功能
+- 🧪 **功能测试**：测试 Docker 环境配置是否正确
+- 📥 **随机收集**：随机下载热门作品进行收集
+
+##### 注意事项
+
+1. **首次使用**：需要先运行 `./scripts/docker.sh setup` 初始化环境
+2. **Token 要求**：需要有效的 refresh token，如果无效请先运行 `./scripts/docker.sh login`
+3. **代理配置**：确保 docker-compose.yml 中的代理配置正确（默认端口：6152）
+4. **网络连接**：确保网络连接正常，能够访问 Pixiv
+
+##### 故障排查
+
+如果随机下载失败，可以：
+
+```bash
+# 1. 检查 Docker 环境
+./scripts/docker.sh check
+
+# 2. 验证配置文件
+cat config/standalone.config.json
+
+# 3. 检查日志
+./scripts/docker.sh logs
+
+# 4. 重新登录（如果 token 无效）
+./scripts/docker.sh login
+```
+
+---
+
 ## ⚙️ 配置管理
 
 ### config-manager.sh - 配置管理工具

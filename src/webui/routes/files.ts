@@ -119,7 +119,16 @@ router.get('/preview', async (req: Request, res: Response) => {
         ? config.storage!.novelDirectory!
         : config.storage!.illustrationDirectory!;
 
-    const fullPath = join(baseDir, String(filePath));
+    // Handle both absolute paths (from database) and relative paths
+    let fullPath: string;
+    const filePathStr = String(filePath);
+    if (filePathStr.startsWith('/')) {
+      // Absolute path - use directly, but ensure it's within base directory
+      fullPath = filePathStr;
+    } else {
+      // Relative path - join with base directory
+      fullPath = join(baseDir, filePathStr);
+    }
 
     // Security: Ensure path is within base directory
     const resolvedBaseDir = resolve(baseDir);

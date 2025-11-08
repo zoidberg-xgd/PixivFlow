@@ -255,6 +255,112 @@ class Database {
         }
         return count;
     }
+    /**
+     * Get download history with pagination and filtering
+     */
+    getDownloadHistory(options) {
+        const { page = 1, limit = 20, type, tag } = options;
+        // Build query
+        let whereClause = '1=1';
+        const params = [];
+        if (type) {
+            whereClause += ' AND type = ?';
+            params.push(type);
+        }
+        if (tag) {
+            whereClause += ' AND tag = ?';
+            params.push(tag);
+        }
+        // Get total count
+        const countStmt = this.db.prepare(`SELECT COUNT(*) as total FROM downloads WHERE ${whereClause}`);
+        const countRow = countStmt.get(...params);
+        const total = countRow.total || 0;
+        // Get paginated results
+        const offset = (Number(page) - 1) * Number(limit);
+        const stmt = this.db.prepare(`SELECT * FROM downloads 
+       WHERE ${whereClause}
+       ORDER BY downloaded_at DESC 
+       LIMIT ? OFFSET ?`);
+        const items = stmt.all(...params, Number(limit), offset);
+        return {
+            items: items.map(item => ({
+                id: item.id,
+                pixivId: item.pixiv_id,
+                type: item.type,
+                tag: item.tag,
+                title: item.title,
+                filePath: item.file_path,
+                author: item.author,
+                userId: item.user_id,
+                downloadedAt: item.downloaded_at,
+            })),
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(total / Number(limit)),
+        };
+    }
+    /**
+     * Get overview statistics
+     */
+    getOverviewStats() {
+        // Get total downloads
+        const totalStmt = this.db.prepare('SELECT COUNT(*) as total FROM downloads');
+        const totalRow = totalStmt.get();
+        const totalDownloads = totalRow.total || 0;
+        // Get downloads by type
+        const illustrationsStmt = this.db.prepare("SELECT COUNT(*) as total FROM downloads WHERE type = 'illustration'");
+        const illustrationsRow = illustrationsStmt.get();
+        const illustrations = illustrationsRow.total || 0;
+        const novelsStmt = this.db.prepare("SELECT COUNT(*) as total FROM downloads WHERE type = 'novel'");
+        const novelsRow = novelsStmt.get();
+        const novels = novelsRow.total || 0;
+        // Get recent downloads (last 7 days)
+        const recentStmt = this.db.prepare(`SELECT COUNT(*) as total FROM downloads 
+       WHERE downloaded_at >= datetime('now', '-7 days')`);
+        const recentRow = recentStmt.get();
+        const recentDownloads = recentRow.total || 0;
+        return {
+            totalDownloads,
+            illustrations,
+            novels,
+            recentDownloads,
+        };
+    }
+    /**
+     * Get downloads by period
+     */
+    getDownloadsByPeriod(days) {
+        const stmt = this.db.prepare(`SELECT * FROM downloads 
+       WHERE downloaded_at >= datetime('now', '-${days} days')
+       ORDER BY downloaded_at DESC`);
+        return stmt.all();
+    }
+    /**
+     * Get tag statistics
+     */
+    getTagStats(limit = 10) {
+        const stmt = this.db.prepare(`SELECT tag, COUNT(*) as count 
+       FROM downloads 
+       GROUP BY tag 
+       ORDER BY count DESC 
+       LIMIT ?`);
+        const tags = stmt.all(limit);
+        return tags.map(t => ({ name: t.tag, count: t.count }));
+    }
+    /**
+     * Get author statistics
+     */
+    getAuthorStats(limit = 10) {
+        const stmt = this.db.prepare(`SELECT author, COUNT(*) as count 
+       FROM downloads 
+       WHERE author IS NOT NULL
+       GROUP BY author 
+       ORDER BY count DESC 
+       LIMIT ?`);
+        const authors = stmt.all(limit);
+        return authors.map(a => ({ name: a.author, count: a.count }));
+    }
     close() {
         this.db.close();
     }

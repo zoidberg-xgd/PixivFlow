@@ -5,7 +5,44 @@ const logger_1 = require("../../logger");
 const DownloadTaskManager_1 = require("../services/DownloadTaskManager");
 const Database_1 = require("../../storage/Database");
 const config_1 = require("../../config");
+const path_1 = require("path");
 const router = (0, express_1.Router)();
+/**
+ * Convert host file path to container path if needed
+ * This handles the case where database contains host paths but we're running in Docker
+ */
+function convertFilePathToContainerPath(filePath, config) {
+    // If already using container paths, return as is
+    if (filePath.startsWith('/app/')) {
+        return filePath;
+    }
+    // Try to extract relative path from host absolute path
+    // Common patterns:
+    // - /Users/.../downloads/downloads/illustrations/... -> /app/downloads/downloads/illustrations/...
+    // - /Users/.../downloads/downloads/novels/... -> /app/downloads/downloads/novels/...
+    const illustrationDir = config.storage?.illustrationDirectory || '';
+    const novelDir = config.storage?.novelDirectory || '';
+    // Check if file path is under illustration directory
+    if (illustrationDir && filePath.includes('illustrations')) {
+        // Extract the relative path from the illustrations directory
+        // Pattern: .../illustrations/filename.jpg
+        const match = filePath.match(/illustrations\/(.+)$/);
+        if (match) {
+            return (0, path_1.join)(illustrationDir, match[1]);
+        }
+    }
+    // Check if file path is under novel directory
+    if (novelDir && filePath.includes('novels')) {
+        // Pattern: .../novels/filename.txt
+        const match = filePath.match(/novels\/(.+)$/);
+        if (match) {
+            return (0, path_1.join)(novelDir, match[1]);
+        }
+    }
+    // If we can't convert, return original path
+    // The file preview route will handle the error
+    return filePath;
+}
 /**
  * POST /api/download/start
  * Start a download task
@@ -99,56 +136,47 @@ router.get('/status', async (req, res) => {
  * Get download history from database
  */
 router.get('/history', async (req, res) => {
+    let database = null;
     try {
         const { page = 1, limit = 20, type, tag } = req.query;
         const configPath = (0, config_1.getConfigPath)();
         const config = (0, config_1.loadConfig)(configPath);
-        const database = new Database_1.Database(config.storage.databasePath);
-        const db = database.db;
-        // Build query
-        let whereClause = '1=1';
-        const params = [];
-        if (type) {
-            whereClause += ' AND type = ?';
-            params.push(type);
-        }
-        if (tag) {
-            whereClause += ' AND tag = ?';
-            params.push(tag);
-        }
-        // Get total count
-        const countStmt = db.prepare(`SELECT COUNT(*) as total FROM downloads WHERE ${whereClause}`);
-        const countRow = countStmt.get(...params);
-        const total = countRow.total || 0;
-        // Get paginated results
-        const offset = (Number(page) - 1) * Number(limit);
-        const stmt = db.prepare(`SELECT * FROM downloads 
-       WHERE ${whereClause}
-       ORDER BY downloaded_at DESC 
-       LIMIT ? OFFSET ?`);
-        const items = stmt.all(...params, Number(limit), offset);
-        database.close();
-        res.json({
-            items: items.map(item => ({
-                id: item.id,
-                pixivId: item.pixiv_id,
-                type: item.type,
-                tag: item.tag,
-                title: item.title,
-                filePath: item.file_path,
-                author: item.author,
-                userId: item.user_id,
-                downloadedAt: item.downloaded_at,
-            })),
-            total,
+        database = new Database_1.Database(config.storage.databasePath);
+        database.migrate(); // Ensure database tables exist
+        const result = database.getDownloadHistory({
             page: Number(page),
             limit: Number(limit),
-            totalPages: Math.ceil(total / Number(limit)),
+            type: type,
+            tag: tag,
         });
+        database.close();
+        database = null;
+        // Convert file paths from host paths to container paths if needed
+        const convertedResult = {
+            ...result,
+            items: result.items.map(item => ({
+                ...item,
+                filePath: convertFilePathToContainerPath(item.filePath, config),
+            })),
+        };
+        res.json(convertedResult);
     }
     catch (error) {
-        logger_1.logger.error('Failed to get download history', { error });
-        res.status(500).json({ error: 'Failed to get download history' });
+        if (database) {
+            try {
+                database.close();
+            }
+            catch (closeError) {
+                // Ignore close errors
+            }
+        }
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorDetails = error instanceof Error ? { message: errorMessage, stack: error.stack } : { message: errorMessage };
+        logger_1.logger.error('Failed to get download history', { error: errorDetails });
+        res.status(500).json({
+            error: 'Failed to get download history',
+            message: errorMessage
+        });
     }
 });
 /**

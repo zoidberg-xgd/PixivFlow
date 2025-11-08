@@ -67,6 +67,68 @@ export declare class Database {
      * Get consecutive failure count
      */
     getConsecutiveFailures(): number;
+    /**
+     * Get download history with pagination and filtering
+     */
+    getDownloadHistory(options: {
+        page?: number;
+        limit?: number;
+        type?: string;
+        tag?: string;
+    }): {
+        items: Array<{
+            id: number;
+            pixivId: string;
+            type: string;
+            tag: string;
+            title: string;
+            filePath: string;
+            author: string | null;
+            userId: string | null;
+            downloadedAt: string;
+        }>;
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+    /**
+     * Get overview statistics
+     */
+    getOverviewStats(): {
+        totalDownloads: number;
+        illustrations: number;
+        novels: number;
+        recentDownloads: number;
+    };
+    /**
+     * Get downloads by period
+     */
+    getDownloadsByPeriod(days: number): Array<{
+        id: number;
+        pixiv_id: string;
+        type: string;
+        tag: string;
+        title: string;
+        file_path: string;
+        author: string | null;
+        user_id: string | null;
+        downloaded_at: string;
+    }>;
+    /**
+     * Get tag statistics
+     */
+    getTagStats(limit?: number): Array<{
+        name: string;
+        count: number;
+    }>;
+    /**
+     * Get author statistics
+     */
+    getAuthorStats(limit?: number): Array<{
+        name: string;
+        count: number;
+    }>;
     close(): void;
 }
 //# sourceMappingURL=Database.d.ts.map

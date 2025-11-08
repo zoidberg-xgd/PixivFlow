@@ -245,6 +245,18 @@ function applyEnvironmentOverrides(config) {
         }
         overridden.storage.databasePath = process.env.PIXIV_DATABASE_PATH;
     }
+    if (process.env.PIXIV_ILLUSTRATION_DIR) {
+        if (!overridden.storage) {
+            overridden.storage = {};
+        }
+        overridden.storage.illustrationDirectory = process.env.PIXIV_ILLUSTRATION_DIR;
+    }
+    if (process.env.PIXIV_NOVEL_DIR) {
+        if (!overridden.storage) {
+            overridden.storage = {};
+        }
+        overridden.storage.novelDirectory = process.env.PIXIV_NOVEL_DIR;
+    }
     // Override log level
     if (process.env.PIXIV_LOG_LEVEL) {
         const logLevel = process.env.PIXIV_LOG_LEVEL.toLowerCase();
