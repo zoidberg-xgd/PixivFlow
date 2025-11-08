@@ -71,29 +71,93 @@ step1_login() {
     
     echo_info "我们需要您的 Pixiv 账号信息来下载作品"
     echo ""
+    
+    # 检查 Python 依赖（如果选择自动登录）
+    echo_info "检查 Python 依赖..."
+    echo ""
+    
+    if [ -f "$PROJECT_ROOT/scripts/install-python-deps.sh" ]; then
+        # 检查 Python 和 gppt
+        if ! python3 -c "from gppt import GetPixivToken" >/dev/null 2>&1; then
+            echo_warn "Python 依赖未安装（需要用于登录）"
+            echo ""
+            read -p "是否现在安装 Python 依赖？[Y/n，默认 Y]: " install_python
+            install_python=${install_python:-Y}
+            
+            if [[ "$install_python" =~ ^[Yy]$ ]]; then
+                echo ""
+                echo_step "正在安装 Python 依赖..."
+                echo ""
+                
+                if bash "$PROJECT_ROOT/scripts/install-python-deps.sh"; then
+                    echo ""
+                    echo_success "Python 依赖安装成功！"
+                else
+                    echo ""
+                    echo_error "Python 依赖安装失败"
+                    echo_warn "您可以稍后手动运行: bash scripts/install-python-deps.sh"
+                    echo ""
+                    read -p "按 Enter 继续（将使用手动输入 token 方式）..." dummy
+                fi
+            else
+                echo_warn "跳过 Python 依赖安装，将使用手动输入 token 方式"
+            fi
+            echo ""
+        else
+            echo_success "Python 依赖已就绪"
+            echo ""
+        fi
+    fi
+    
     echo "有两种登录方式："
     echo ""
     echo "  ${CYAN}1. 自动登录${NC}（推荐）- 浏览器会自动打开，您只需登录即可"
+    echo "     需要 Python 和 gppt（已检查）"
     echo "  ${CYAN}2. 手动输入${NC} - 如果您已经有 refresh token"
+    echo "     不需要 Python 依赖"
     echo ""
     
     read -p "请选择登录方式 [1/2，默认 1]: " login_method
     login_method=${login_method:-1}
     
     if [ "$login_method" = "1" ]; then
-        echo ""
-        echo_step "准备打开浏览器..."
-        echo_info "请在浏览器中登录您的 Pixiv 账号"
-        echo ""
-        
-        # 这里调用现有的登录逻辑
-        if [ -f "$PROJECT_ROOT/scripts/config-manager.sh" ]; then
-            bash "$PROJECT_ROOT/scripts/config-manager.sh" auth
-        else
-            echo_warn "未找到登录脚本，请手动输入 refresh token"
-            read -p "请输入 refresh token: " REFRESH_TOKEN
+        # 再次检查 Python 依赖
+        if ! python3 -c "from gppt import GetPixivToken" >/dev/null 2>&1; then
+            echo ""
+            echo_error "Python 依赖未安装，无法使用自动登录"
+            echo_warn "请选择手动输入方式，或先安装 Python 依赖"
+            echo ""
+            read -p "是否切换到手动输入方式？[Y/n，默认 Y]: " switch_method
+            switch_method=${switch_method:-Y}
+            
+            if [[ "$switch_method" =~ ^[Yy]$ ]]; then
+                login_method="2"
+            else
+                echo ""
+                echo_error "无法继续，请先安装 Python 依赖"
+                echo_info "运行: bash scripts/install-python-deps.sh"
+                exit 1
+            fi
         fi
-    else
+        
+        if [ "$login_method" = "1" ]; then
+            echo ""
+            echo_step "准备打开浏览器..."
+            echo_info "请在浏览器中登录您的 Pixiv 账号"
+            echo ""
+            
+            # 这里调用现有的登录逻辑
+            if [ -f "$PROJECT_ROOT/scripts/config-manager.sh" ]; then
+                bash "$PROJECT_ROOT/scripts/config-manager.sh" auth
+            else
+                # 使用 npm run login
+                cd "$PROJECT_ROOT"
+                npm run login
+            fi
+        fi
+    fi
+    
+    if [ "$login_method" = "2" ]; then
         echo ""
         read -p "请输入您的 refresh token: " REFRESH_TOKEN
     fi

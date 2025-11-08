@@ -51,10 +51,12 @@ Make Pixiv artwork collection elegant and efficient | 让 Pixiv 作品收集变�
   - [⚙️ Configuration Management](#️-configuration-management)
   - [📊 Monitoring and Maintenance](#-monitoring-and-maintenance)
   - [🚀 Deployment and Backup](#-deployment-and-backup)
+  - [🐳 Docker Management](#-docker-management)
   - [🎨 Advanced CLI Tool](#-advanced-cli-tool)
 - [📚 Documentation](#-documentation)
   - [🌟 Must Read for Beginners](#-must-read-for-beginners)
   - [📘 Advanced Documentation](#-advanced-documentation)
+  - [🐳 Docker Documentation](#-docker-documentation)
   - [📄 Project Documentation](#-project-documentation)
 
 **Usage & Configuration**
@@ -150,8 +152,6 @@ Compared to other Pixiv downloaders, PixivFlow focuses on **automation** and **s
 - ✅ **Open Source**: GPL-3.0 license, free to customize and distribute
 - ✅ **Type Safe**: Written in TypeScript with complete type hints
 - ✅ **Well Documented**: Detailed documentation and tutorials
-- ✅ **Actively Maintained**: Continuous updates, timely bug fixes
-- ✅ **Community Support**: Active GitHub Issues and Discussions
 
 ---
 
@@ -159,8 +159,15 @@ Compared to other Pixiv downloaders, PixivFlow focuses on **automation** and **s
 
 ### 📋 Requirements
 
+**Required Environment**:
 - Node.js 18+ and npm 9+
 - A Pixiv account
+
+**Login Functionality (Only needed for first-time login)**:
+- Python 3.9+ and `gppt` package (`pip install gppt`)
+  - ⚠️ **Note**: Python is only used for first-time login to obtain refresh token, not a required dependency for running the project
+  - If already logged in (have refresh token), Python is not needed
+  - If refresh token expires, Python is needed only when re-logging in
 
 ### 🎬 Quick Start (Recommended)
 
@@ -182,7 +189,7 @@ That's it! The quick start script will automatically guide you through:
 
 ---
 
-### 🌐 Global Installation (Optional)
+### 🌐 Global Installation (Recommended ⭐)
 
 If you want to use `pixivflow` command from any directory, you can install it globally:
 
@@ -293,11 +300,23 @@ npm run setup
 ```
 
 **Login Notes**:
-- ✅ **Default login mode**: Interactive login (opens browser window, manual login in browser)
-- ✅ **Headless login mode**: Use `-u` and `-p` parameters to provide username and password (no browser window)
+- ✅ **Interactive login mode** (default): Opens browser window, manual login in browser
+  - Uses Python gppt library, which internally uses Selenium to open browser window
+  - Suitable for: Cases requiring manual CAPTCHA or security verification
+- ✅ **Headless login mode**: Runs browser in background, automatically enters username and password
+  - Uses Python gppt library, which internally uses Selenium to run browser in background
+  - Requires `-u` and `-p` parameters (username and password)
+  - Suitable for: Server environments or automation scenarios
 - ✅ Auto update config: Automatically updates refresh token in config after successful login
-- ✅ Default uses Python gppt: Automatically uses gppt for login to avoid detection
 - ✅ Setup wizard: Use `npm run setup` for interactive configuration
+
+**About Python Dependency**:
+- 🔐 **Only for login**: Python and gppt are only used for first-time login to obtain refresh token
+  - Both login modes use Python gppt library
+  - gppt internally uses Selenium to automate browser (interactive mode opens window, headless mode runs in background)
+- ✅ **Not needed after login**: If already logged in (have refresh token), Python is not needed
+- 🔄 **When token expires**: If refresh token expires, Python is needed only when re-logging in
+- 💡 **Alternative**: You can complete first-time login on a machine with Python installed, then copy the refresh token to the config file
 
 **Login Mode Details**:
 - **Default mode** (`npm run login`): Opens browser window, manual login in browser
@@ -343,15 +362,42 @@ That's it! 🎉
 
 PixivFlow also provides a modern web management interface with graphical operations:
 
+**Development Mode (Frontend-Backend Separation):**
 ```bash
 # 1. Start WebUI backend
 npm run webui
 
-# 2. Start frontend in another terminal (development mode)
+# 2. Start frontend in another terminal
 npm run webui:frontend
 ```
 
-Then visit http://localhost:5173 to use the WebUI.
+Then visit http://localhost:5173 to use the WebUI (frontend development server).
+
+**Production Mode (Single Server):**
+```bash
+# 1. Build frontend
+npm run webui:build
+
+# 2. Start WebUI (automatically serves frontend static files)
+STATIC_PATH=webui-frontend/dist npm run webui
+```
+
+Then visit http://localhost:3000 to use the WebUI (backend server).
+
+> **Note**:
+> - Development mode uses Vite dev server (port 5173), production mode uses Express server (port 3000)
+> - Docker deployment uses production mode, frontend static files are built into the image, access port is 3000
+> - For detailed Docker deployment instructions, see [Docker Usage Guide](docs/docker/DOCKER.md) and [WebUI Setup Guide](docs/webui/WEBUI_SETUP.md)
+
+**WebUI API Endpoints**:
+- Root path `GET /` - Returns API info (when static files not configured)
+- Health check `GET /api/health` - Server health status
+- Authentication `GET /api/auth/*` - Login, logout, status query
+- Config management `GET /api/config` - Get and update config
+- Download tasks `POST /api/download/*` - Start, stop, query download tasks
+- Statistics `GET /api/stats/*` - Download stats, tag stats, author stats
+- Log viewing `GET /api/logs` - Get logs, WebSocket real-time log stream
+- File browsing `GET /api/files/*` - File list, preview, delete
 
 **WebUI Features**:
 - 📊 Download statistics and overview
@@ -362,6 +408,108 @@ Then visit http://localhost:5173 to use the WebUI.
 - 📈 Download history viewing
 
 For detailed instructions, see [WebUI Usage Guide](docs/webui/WEBUI_README.md) and [WebUI Setup Guide](docs/webui/WEBUI_SETUP.md).
+
+---
+
+### 🐳 Using Docker (Recommended)
+
+PixivFlow supports Docker deployment, no need to install Node.js environment:
+
+#### Quick Start
+
+```bash
+# 1. Prepare configuration file
+cp config/standalone.config.example.json config/standalone.config.json
+
+# 2. Login to Pixiv account (on host)
+npm run login
+
+# 3. Start scheduled task service
+docker-compose up -d pixivflow
+
+# Or start WebUI service
+docker-compose up -d pixivflow-webui
+
+# Or start both services
+docker-compose up -d
+```
+
+#### Using Script Tools
+
+```bash
+# 1. Initialize Docker environment
+./scripts/pixiv.sh docker setup
+
+# 2. Login to Pixiv account
+./scripts/pixiv.sh docker login
+
+# 3. Build and deploy
+./scripts/pixiv.sh docker deploy
+
+# 4. Check status
+./scripts/pixiv.sh docker status
+
+# 5. View logs
+./scripts/pixiv.sh docker logs -f
+```
+
+#### Docker Services
+
+`docker-compose.yml` provides two services:
+
+1. **pixivflow** - Scheduled task service (default)
+   - Automatically executes scheduled download tasks
+   - Runs continuously in background
+
+2. **pixivflow-webui** - WebUI management interface (optional)
+   - Provides modern web management interface
+   - Access address: http://localhost:3000
+   - Supports file browsing, statistics viewing, task management, etc.
+
+#### Docker Common Commands
+
+```bash
+# Start scheduled task service
+docker-compose up -d pixivflow
+
+# Start WebUI service
+docker-compose up -d pixivflow-webui
+
+# Start both services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f pixivflow
+docker-compose logs -f pixivflow-webui
+
+# Stop services
+docker-compose stop
+
+# Stop and remove containers
+docker-compose down
+
+# Rebuild images
+docker-compose build
+```
+
+#### Docker Script Commands
+
+- `docker setup` - Initialize Docker environment
+- `docker build` - Build Docker image
+- `docker deploy` - Deploy service (build + start)
+- `docker up` - Start service
+- `docker down` - Stop service
+- `docker status` - View service status
+- `docker logs` - View logs
+- `docker login` - Login to account in container
+- `docker random` - Random download artwork (for testing)
+
+For detailed instructions, see [Docker Usage Guide](docs/docker/DOCKER.md).
+
+**Related Documentation**:
+- [Docker Usage Guide](docs/docker/DOCKER.md) - Complete Docker deployment and usage instructions
+- [Docker Network Solution](docs/docker/DOCKER_NETWORK_SOLUTION.md) - Solve proxy connection issues
+- [Docker Random Download Fix](docs/docker/DOCKER_RANDOM_DOWNLOAD_FIX.md) - Solve random download related issues
 
 ---
 
@@ -442,6 +590,34 @@ npm run login
 ./scripts/auto-backup.sh
 ```
 
+### 🐳 Docker Management
+
+```bash
+# Use main control script
+./scripts/pixiv.sh docker <command>
+
+# Or directly use Docker script
+./scripts/docker.sh <command>
+```
+
+**Common Commands**:
+- `docker setup` - Initialize Docker environment
+- `docker build` - Build image
+- `docker deploy` - Deploy service
+- `docker up` - Start service
+- `docker down` - Stop service
+- `docker status` - View status
+- `docker logs` - View logs
+- `docker login` - Login to account
+- `docker test` - Test download
+
+For detailed instructions, see [Docker Usage Guide](docs/docker/DOCKER.md).
+
+**Related Documentation**:
+- [Docker Usage Guide](docs/docker/DOCKER.md) - Complete Docker deployment and usage instructions
+- [Docker Network Solution](docs/docker/DOCKER_NETWORK_SOLUTION.md) - Solve proxy connection issues
+- [Docker Random Download Fix](docs/docker/DOCKER_RANDOM_DOWNLOAD_FIX.md) - Solve random download related issues
+
 ### 🎨 Advanced CLI Tool
 
 ```bash
@@ -489,6 +665,14 @@ Detailed guide: [Script Usage Guide](docs/scripts/SCRIPTS_GUIDE.md)
 | [📊 RANKING_DOWNLOAD_GUIDE](docs/guides/RANKING_DOWNLOAD_GUIDE.md) | Ranking download guide |
 | [🌐 WEBUI_README](docs/webui/WEBUI_README.md) | WebUI usage guide |
 | [🚀 WEBUI_SETUP](docs/webui/WEBUI_SETUP.md) | WebUI setup guide |
+
+### 🐳 Docker Documentation
+
+| Document | Description |
+|----------|-------------|
+| [🐳 DOCKER](docs/docker/DOCKER.md) | Docker usage guide |
+| [🔧 DOCKER_NETWORK_SOLUTION](docs/docker/DOCKER_NETWORK_SOLUTION.md) | Docker network issue solution |
+| [🔧 DOCKER_RANDOM_DOWNLOAD_FIX](docs/docker/DOCKER_RANDOM_DOWNLOAD_FIX.md) | Docker random download issue solution |
 
 ### 📄 Project Documentation
 
@@ -991,13 +1175,23 @@ rm data/pixiv-downloader.db
 
 ### Deploy on Server
 
-#### Method 1: Use Auto Deploy Script
+#### Method 1: Use Docker (Recommended ⭐)
+
+```bash
+# Docker mode deployment
+./scripts/auto-deploy.sh production docker
+
+# Or use Docker management script
+./scripts/pixiv.sh docker deploy
+```
+
+#### Method 2: Use Auto Deploy Script (Native Mode)
 
 ```bash
 ./scripts/auto-deploy.sh
 ```
 
-#### Method 2: Use PM2 Management
+#### Method 3: Use PM2 Management
 
 ```bash
 # Install PM2
@@ -1013,7 +1207,7 @@ pm2 save
 pm2 startup
 ```
 
-#### Method 3: Use systemd
+#### Method 4: Use systemd
 
 Create service file `/etc/systemd/system/pixivflow.service`:
 

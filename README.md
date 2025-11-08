@@ -151,7 +151,6 @@
 - ✅ **开源免费**：GPL-3.0 许可证，可自由定制和分发
 - ✅ **类型安全**：TypeScript 编写，类型提示完善
 - ✅ **文档完善**：详细的中文文档和教程
-- ✅ **活跃维护**：持续更新，及时修复问题
 
 ---
 
@@ -1388,7 +1387,7 @@ pm2 save
 pm2 startup
 ```
 
-#### 方式 3：使用 systemd
+#### 方式 4：使用 systemd
 
 创建服务文件 `/etc/systemd/system/pixivflow.service`：
 

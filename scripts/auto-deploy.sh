@@ -26,6 +26,67 @@ readonly DEPLOY_MODE="${2:-native}"  # native 或 docker
 # 部署函数
 # ============================================================================
 
+# 检查并安装 Python 依赖
+check_and_install_python_deps() {
+    print_subheader "检查 Python 依赖"
+    
+    # 检查是否有 refresh token（如果已有 token，则不需要 Python）
+    if check_config && validate_json "$CONFIG_FILE"; then
+        local refresh_token
+        refresh_token=$(read_json_value "$CONFIG_FILE" "pixiv.refreshToken" 2>/dev/null || echo "")
+        
+        if [[ -n "$refresh_token" ]] && [[ "$refresh_token" != "YOUR_REFRESH_TOKEN" ]] && [[ "$refresh_token" != "" ]]; then
+            log_info "检测到 refresh token，Python 依赖可选"
+            log_info "如果 token 过期需要重新登录，则仍需要 Python"
+            echo
+            
+            if ask_yes_no "是否检查 Python 依赖？" "n"; then
+                # 继续检查
+            else
+                log_info "跳过 Python 依赖检查"
+                return 0
+            fi
+        fi
+    fi
+    
+    # 运行 Python 依赖安装脚本
+    if [[ -f "$SCRIPT_DIR/install-python-deps.sh" ]]; then
+        log_info "正在检查 Python 依赖..."
+        echo
+        
+        if bash "$SCRIPT_DIR/install-python-deps.sh" --skip-python-check 2>&1 | tee /tmp/python_deps_check.log; then
+            log_success "Python 依赖检查完成"
+            return 0
+        else
+            log_warn "Python 依赖检查失败或未安装"
+            log_info "检查日志已保存到: /tmp/python_deps_check.log"
+            echo
+            
+            if ask_yes_no "是否尝试安装 Python 依赖？" "y"; then
+                log_info "正在安装 Python 依赖..."
+                echo
+                
+                if bash "$SCRIPT_DIR/install-python-deps.sh" 2>&1 | tee /tmp/python_deps_install.log; then
+                    log_success "Python 依赖安装成功"
+                    return 0
+                else
+                    log_error "Python 依赖安装失败"
+                    log_info "安装日志已保存到: /tmp/python_deps_install.log"
+                    log_warn "可以稍后手动运行: bash scripts/install-python-deps.sh"
+                    return 1
+                fi
+            else
+                log_warn "跳过 Python 依赖安装"
+                log_info "如果登录失败，请运行: bash scripts/install-python-deps.sh"
+                return 1
+            fi
+        fi
+    else
+        log_warn "Python 依赖安装脚本不存在"
+        return 1
+    fi
+}
+
 pre_deploy_check() {
     print_header "部署前检查"
     
@@ -85,6 +146,14 @@ pre_deploy_check() {
     else
         log_error "配置文件无效"
         ((issues++))
+    fi
+    
+    echo
+    
+    # 检查 Python 依赖（可选，但建议安装）
+    if ! check_and_install_python_deps; then
+        log_warn "Python 依赖未就绪（不影响部署，但首次登录需要）"
+        # 不增加 issues，因为 Python 依赖是可选的
     fi
     
     echo
@@ -203,14 +272,17 @@ post_deploy() {
     else
         log_info "📝 部署后，请执行以下操作："
         echo
-        log_info "1. 登录账号："
+        log_info "1. 安装 Python 依赖（如果未安装）："
+        echo "   bash scripts/install-python-deps.sh"
+        echo
+        log_info "2. 登录账号："
         echo "   npm run login                    # 默认模式（打开浏览器窗口）"
         echo "   npm run login -- --headless -u <username> -p <password>  # Headless 模式"
         echo
-        log_info "2. 测试下载："
+        log_info "3. 测试下载："
         echo "   ./scripts/pixiv.sh test"
         echo
-        log_info "📚 详细说明请查看: LOGIN_GUIDE.md"
+        log_info "📚 详细说明请查看: docs/guides/LOGIN_GUIDE.md"
     fi
     echo
 }
