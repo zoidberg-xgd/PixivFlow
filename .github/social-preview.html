@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixivFlow - Social Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .preview-container {
+            width: 1280px;
+            height: 640px;
+            min-width: 1280px;
+            min-height: 640px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 60px;
+            color: white;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .logo {
+            font-size: 72px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 28px;
+            opacity: 0.95;
+            text-align: center;
+            font-weight: 400;
+            line-height: 1.4;
+        }
+
+        .content {
+            padding: 40px 60px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: #f8f9fa;
+        }
+
+        .description {
+            font-size: 24px;
+            color: #2d3748;
+            line-height: 1.6;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .features {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+        }
+
+        .feature {
+            text-align: center;
+            flex: 1;
+        }
+
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .feature-text {
+            font-size: 18px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .footer {
+            background: #2d3748;
+            padding: 24px 100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .github-info {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .tech-stack {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .tech-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .instructions {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+            z-index: 1000;
+            display: none; /* 默认隐藏，避免出现在截图中 */
+        }
+
+        .instructions.show {
+            display: block; /* 仅在需要时显示 */
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        @media print {
+            .instructions {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions" id="instructions">
+        <h3>📸 如何生成预览图片</h3>
+        <p><strong>推荐方法：</strong></p>
+        <ol>
+            <li>运行自动化脚本：<br><code>node .github/capture-preview.js</code></li>
+        </ol>
+        <p style="margin-top: 15px;"><strong>手动方法：</strong></p>
+        <ol start="2">
+            <li>按 F12 打开开发者工具</li>
+            <li>按 Ctrl+Shift+P (Mac: Cmd+Shift+P)</li>
+            <li>输入 "screenshot" 选择 "Capture node screenshot"</li>
+            <li>点击预览容器区域</li>
+            <li>确保截图尺寸为 1280x640 像素</li>
+        </ol>
+        <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+            💡 提示：双击预览区域可显示/隐藏此说明
+        </p>
+    </div>
+
+    <div class="preview-container" id="preview">
+        <div class="header">
+            <div class="logo">🎨</div>
+            <div class="title">PixivFlow</div>
+            <div class="subtitle">智能的 Pixiv 自动化下载工具</div>
+        </div>
+        
+        <div class="content">
+            <div class="description">
+                让 Pixiv 作品收集变得优雅而高效<br>
+                Make Pixiv artwork collection elegant and efficient
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-text">智能自动化</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🚀</div>
+                    <div class="feature-text">批量下载</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📅</div>
+                    <div class="feature-text">定时任务</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🌐</div>
+                    <div class="feature-text">WebUI 界面</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="github-info">github.com/zoidberg-xgd/pixivflow</div>
+            <div class="tech-stack">
+                <span class="tech-badge">TypeScript</span>
+                <span class="tech-badge">Node.js</span>
+                <span class="tech-badge">SQLite</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加一些交互提示
+        console.log('📸 截图提示：');
+        console.log('1. 使用浏览器开发者工具截图功能');
+        console.log('2. 或使用截图工具（如 Snipaste, ShareX）');
+        console.log('3. 确保截图尺寸为 1280x640 像素');
+        console.log('4. 保存为 PNG 或 JPG 格式');
+        
+        // 双击预览区域可以显示/隐藏说明
+        let clickCount = 0;
+        document.getElementById('preview').addEventListener('dblclick', function() {
+            const instructions = document.getElementById('instructions');
+            instructions.classList.toggle('show');
+        });
+        
+        // 控制台提示
+        console.log('📸 生成预览图片：');
+        console.log('   推荐：运行 node .github/capture-preview.js');
+        console.log('   手动：双击预览区域查看说明');
+    </script>
+</body>
+</html>
+
