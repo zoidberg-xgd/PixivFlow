@@ -37,6 +37,8 @@ export const api = {
     apiClient.post('/download/stop', { taskId }),
   getDownloadStatus: (taskId?: string) =>
     apiClient.get('/download/status', { params: { taskId } }),
+  getTaskLogs: (taskId: string, limit?: number) =>
+    apiClient.get('/download/logs', { params: { taskId, limit } }),
   getDownloadHistory: (params?: {
     page?: number;
     limit?: number;
@@ -56,6 +58,8 @@ export const api = {
     apiClient.post('/download/resume', { tag, type }),
   deleteIncompleteTask: (id: number) =>
     apiClient.delete(`/download/incomplete/${id}`),
+  deleteAllIncompleteTasks: () =>
+    apiClient.delete('/download/incomplete'),
 
   // Stats
   getStatsOverview: (): Promise<{ data: StatsOverview }> =>

@@ -123,6 +123,10 @@ function serializeTaskStatus(task: any) {
     ...task,
     startTime: task.startTime instanceof Date ? task.startTime.toISOString() : task.startTime,
     endTime: task.endTime instanceof Date ? task.endTime.toISOString() : task.endTime,
+    logs: task.logs?.map((log: any) => ({
+      ...log,
+      timestamp: log.timestamp instanceof Date ? log.timestamp.toISOString() : log.timestamp,
+    })),
   };
 }
 
@@ -156,6 +160,43 @@ router.get('/status', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error('Failed to get download status', { error });
     res.status(500).json({ error: 'Failed to get download status' });
+  }
+});
+
+/**
+ * GET /api/download/logs
+ * Get logs for a specific task
+ */
+router.get('/logs', async (req: Request, res: Response) => {
+  try {
+    const { taskId, limit } = req.query;
+
+    if (!taskId) {
+      return res.status(400).json({
+        error: 'Task ID is required',
+      });
+    }
+
+    const logs = downloadTaskManager.getTaskLogs(
+      taskId as string,
+      limit ? parseInt(limit as string, 10) : undefined
+    );
+
+    res.json({
+      success: true,
+      taskId,
+      logs: logs.map(log => ({
+        ...log,
+        timestamp: log.timestamp instanceof Date ? log.timestamp.toISOString() : log.timestamp,
+      })),
+      count: logs.length,
+    });
+  } catch (error) {
+    logger.error('Failed to get task logs', { error });
+    res.status(500).json({
+      error: 'Failed to get task logs',
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
@@ -306,6 +347,101 @@ router.get('/incomplete', async (req: Request, res: Response) => {
     logger.error('Failed to get incomplete tasks', { error });
     res.status(500).json({
       error: 'Failed to get incomplete tasks',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+/**
+ * DELETE /api/download/incomplete
+ * Delete all incomplete download tasks
+ */
+router.delete('/incomplete', async (req: Request, res: Response) => {
+  let database: Database | null = null;
+  try {
+    logger.info('Attempting to delete all incomplete tasks');
+
+    // Initialize database connection
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
+    
+    if (!config.storage?.databasePath) {
+      logger.error('Database path not configured');
+      return res.status(500).json({
+        error: 'Database not configured',
+        message: 'Database path is not set in configuration',
+      });
+    }
+
+    try {
+      database = new Database(config.storage.databasePath);
+      database.migrate();
+    } catch (dbError) {
+      logger.error('Failed to initialize database', { 
+        error: dbError instanceof Error ? dbError.message : String(dbError),
+        databasePath: config.storage.databasePath,
+      });
+      return res.status(500).json({
+        error: 'Database initialization failed',
+        message: dbError instanceof Error ? dbError.message : String(dbError),
+      });
+    }
+
+    // Perform deletion
+    const result = database.deleteAllIncompleteTasks();
+    
+    // Close database connection immediately after operation
+    try {
+      database.close();
+      database = null;
+    } catch (closeError) {
+      logger.warn('Error closing database connection', { 
+        error: closeError instanceof Error ? closeError.message : String(closeError) 
+      });
+    }
+
+    // Handle result
+    if (!result.success) {
+      logger.warn('Failed to delete all incomplete tasks', { 
+        reason: result.message 
+      });
+      return res.status(500).json({
+        error: result.message || 'Failed to delete all incomplete tasks',
+        message: result.message || 'Failed to delete all incomplete tasks',
+      });
+    }
+
+    logger.info('Successfully deleted all incomplete tasks via API', { 
+      deletedCount: result.deletedCount 
+    });
+    
+    // Return success even if no tasks were deleted (count = 0)
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: result.deletedCount === 0 
+        ? '没有未完成的任务需要删除' 
+        : `成功删除 ${result.deletedCount} 个未完成任务`,
+    });
+  } catch (error) {
+    // Ensure database is closed even on error
+    if (database) {
+      try {
+        database.close();
+      } catch (closeError) {
+        logger.warn('Error closing database connection in error handler', { 
+          error: closeError instanceof Error ? closeError.message : String(closeError) 
+        });
+      }
+    }
+    
+    logger.error('Unexpected error while deleting all incomplete tasks', { 
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+    res.status(500).json({
+      error: 'Failed to delete all incomplete tasks',
       message: error instanceof Error ? error.message : String(error),
     });
   }

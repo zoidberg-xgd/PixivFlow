@@ -326,6 +326,55 @@ export class Database {
   }
 
   /**
+   * Delete all incomplete tasks (failed or partial)
+   * Returns an object with success status, deleted count, and message
+   */
+  public deleteAllIncompleteTasks(): { success: boolean; deletedCount: number; message?: string } {
+    try {
+      // Use a transaction to ensure atomicity
+      const transaction = this.db.transaction(() => {
+        // First get count of tasks to be deleted
+        const countStmt = this.db.prepare(
+          `SELECT COUNT(*) as count FROM execution_log WHERE status IN ('failed', 'partial')`
+        );
+        const countResult = countStmt.get() as { count: number };
+        const count = countResult.count;
+        
+        if (count === 0) {
+          return { success: true, deletedCount: 0 };
+        }
+        
+        // Delete all incomplete tasks
+        const deleteStmt = this.db.prepare(
+          `DELETE FROM execution_log WHERE status IN ('failed', 'partial')`
+        );
+        const result = deleteStmt.run();
+        
+        return { success: true, deletedCount: result.changes };
+      });
+
+      const result = transaction();
+      logger.info('Successfully deleted all incomplete tasks', { 
+        deletedCount: result.deletedCount 
+      });
+      return { 
+        success: true, 
+        deletedCount: result.deletedCount 
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to delete all incomplete tasks', { 
+        error: errorMessage 
+      });
+      return { 
+        success: false, 
+        deletedCount: 0,
+        message: errorMessage 
+      };
+    }
+  }
+
+  /**
    * Get the next execution number for the scheduler
    */
   public getNextExecutionNumber(): number {

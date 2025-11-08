@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
@@ -18,6 +18,7 @@ import {
   Statistic,
   Row,
   Col,
+  Collapse,
 } from 'antd';
 import {
   PlayCircleOutlined,
@@ -39,6 +40,7 @@ export default function Download() {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [showStartModal, setShowStartModal] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   // Poll download status every 2 seconds
   const { data: statusData, isLoading: statusLoading } = useQuery({
@@ -46,6 +48,22 @@ export default function Download() {
     queryFn: () => api.getDownloadStatus(),
     refetchInterval: 2000,
   });
+
+  // Get task logs for active task
+  const activeTaskId = statusData?.data?.activeTask?.taskId;
+  const { data: taskLogsData } = useQuery({
+    queryKey: ['download', 'logs', activeTaskId],
+    queryFn: () => api.getTaskLogs(activeTaskId!),
+    enabled: !!activeTaskId,
+    refetchInterval: activeTaskId ? 2000 : false,
+  });
+
+  // Auto-scroll logs to bottom when new logs arrive
+  useEffect(() => {
+    if (logsEndRef.current && taskLogsData?.data?.logs) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [taskLogsData?.data?.logs]);
 
   // Get config to show available targets and paths
   // Add refetchInterval to auto-refresh config (e.g., when paths are updated)
@@ -118,6 +136,24 @@ export default function Download() {
     },
     onError: (error: any) => {
       message.error(error.response?.data?.error || '删除任务失败');
+    },
+  });
+
+  const deleteAllIncompleteTasksMutation = useMutation({
+    mutationFn: () => api.deleteAllIncompleteTasks(),
+    onSuccess: (response) => {
+      const deletedCount = response.data?.deletedCount || 0;
+      if (deletedCount === 0) {
+        message.info('没有未完成的任务需要删除');
+      } else {
+        message.success(`已成功删除 ${deletedCount} 个未完成任务`);
+      }
+      refetchIncompleteTasks();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || '删除所有未完成任务失败';
+      message.error(errorMessage);
+      console.error('Delete all incomplete tasks error:', error);
     },
   });
 
@@ -430,6 +466,74 @@ export default function Download() {
               </Descriptions.Item>
             )}
           </Descriptions>
+          
+          {/* Task Logs */}
+          {taskLogsData?.data?.logs && taskLogsData.data.logs.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Collapse
+                items={[
+                  {
+                    key: 'logs',
+                    label: (
+                      <Space>
+                        <InfoCircleOutlined />
+                        <span>实时日志 ({taskLogsData.data.logs.length} 条)</span>
+                      </Space>
+                    ),
+                    children: (
+                      <div
+                        style={{
+                          maxHeight: '400px',
+                          overflowY: 'auto',
+                          backgroundColor: '#1f1f1f',
+                          padding: '12px',
+                          borderRadius: '4px',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          lineHeight: '1.6',
+                        }}
+                      >
+                        {taskLogsData.data.logs.map((log: any, index: number) => {
+                          const timestamp = new Date(log.timestamp).toLocaleTimeString('zh-CN');
+                          const levelColor: Record<string, string> = {
+                            error: '#ff4d4f',
+                            warn: '#faad14',
+                            info: '#1890ff',
+                            debug: '#8c8c8c',
+                          };
+                          return (
+                            <div
+                              key={index}
+                              style={{
+                                marginBottom: '4px',
+                                color: levelColor[log.level] || '#ffffff',
+                              }}
+                            >
+                              <span style={{ color: '#8c8c8c', marginRight: '8px' }}>
+                                [{timestamp}]
+                              </span>
+                              <span
+                                style={{
+                                  color: levelColor[log.level] || '#ffffff',
+                                  marginRight: '8px',
+                                  fontWeight: 'bold',
+                                }}
+                              >
+                                [{log.level.toUpperCase()}]
+                              </span>
+                              <span>{log.message}</span>
+                            </div>
+                          );
+                        })}
+                        <div ref={logsEndRef} />
+                      </div>
+                    ),
+                  },
+                ]}
+                defaultActiveKey={statusData.data.activeTask.status === 'running' ? ['logs'] : []}
+              />
+            </div>
+          )}
         </Card>
       )}
 
@@ -444,13 +548,36 @@ export default function Download() {
           }
           style={{ marginBottom: 16 }}
           extra={
-            <Button
-              size="small"
-              icon={<ReloadOutlined />}
-              onClick={() => refetchIncompleteTasks()}
-            >
-              刷新列表
-            </Button>
+            <Space>
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={() => refetchIncompleteTasks()}
+              >
+                刷新列表
+              </Button>
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '确认删除所有未完成任务',
+                    content: `确定要删除所有 ${incompleteTasksData.data.tasks.length} 个未完成的任务吗？此操作不可恢复。`,
+                    okText: '删除',
+                    okType: 'danger',
+                    cancelText: '取消',
+                    onOk: () => {
+                      deleteAllIncompleteTasksMutation.mutate();
+                    },
+                  });
+                }}
+                loading={deleteAllIncompleteTasksMutation.isPending}
+                disabled={deleteAllIncompleteTasksMutation.isPending}
+              >
+                一键删除所有
+              </Button>
+            </Space>
           }
         >
           <Alert
