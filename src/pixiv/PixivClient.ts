@@ -538,34 +538,45 @@ export class PixivClient {
       return response.novel_text;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.warn('API endpoint failed, trying web scraping fallback', { 
+      logger.warn('Primary API endpoint failed, trying alternative API endpoint', { 
         novelId, 
         url,
         error: errorMessage
       });
       
-      // Fallback: Try to get text from web page
+      // Fallback: Try alternative API endpoint (www.pixiv.net/ajax/novel)
+      // This is also an API endpoint, not web scraping - following "use API if available" principle
       try {
         const webUrl = `https://www.pixiv.net/ajax/novel/${novelId}`;
         const token = await this.auth.getAccessToken();
-        const webResponse = await fetch(webUrl, {
+        
+        // Use fetch with proxy support if configured
+        const fetchOptions: RequestInit = {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'User-Agent': this.config.pixiv.userAgent,
             'Referer': 'https://www.pixiv.net/',
             'Accept': 'application/json',
           },
-        });
+        };
+        
+        // Add proxy agent if configured
+        if (this.proxyAgent) {
+          (fetchOptions as any).dispatcher = this.proxyAgent;
+        }
+        
+        const webResponse = await fetch(webUrl, fetchOptions);
         
         if (webResponse.ok) {
           const webData: any = await webResponse.json();
           if (webData.body && webData.body.content) {
-            logger.info('Successfully retrieved novel text from web API', { novelId });
+            logger.info('Successfully retrieved novel text from alternative API endpoint', { novelId });
             return webData.body.content;
           }
         }
       } catch (webError) {
-        logger.debug('Web API fallback failed', { novelId, error: webError });
+        logger.debug('Alternative API endpoint fallback failed', { novelId, error: webError });
       }
       
       throw new Error(`Unable to retrieve novel text for novel ${novelId}: ${errorMessage}`);

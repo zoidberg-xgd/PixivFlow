@@ -26,22 +26,12 @@
   "targets": [
     {
       "type": "illustration",
-      "tag": "原神",
-      "limit": 1,
-      "searchTarget": "partial_match_for_tags",
-      "mode": "search",
-      "random": true,
-      "_comment": "任务1: 从搜索结果中随机选择一张原神图片下载"
-    },
-    {
-      "type": "novel",
-      "tag": "明日方舟",
-      "limit": 1,
+      "tag": "week_ranking_test",
+      "limit": 3,
       "mode": "ranking",
-      "rankingMode": "day",
-      "rankingDate": "YESTERDAY",
-      "filterTag": "明日方舟",
-      "_comment": "任务2: 下载昨天排名最高的明日方舟小说（rankingDate 会在运行时替换为昨天的日期）"
+      "rankingMode": "week",
+      "rankingDate": "2025-10-27",
+      "_comment": "测试周榜自动降级功能：使用上周一的日期，如果周榜失败会自动降级到本周周榜或日榜"
     }
   ],
   "_说明": {
