@@ -28,6 +28,12 @@ export interface PixivMetadata {
   total_view?: number;
   bookmark_count?: number;
   view_count?: number;
+  // Language detection (for novels)
+  detected_language?: {
+    code: string; // ISO 639-3 language code
+    name: string; // Language name
+    is_chinese: boolean;
+  };
 }
 
 export class FileService {

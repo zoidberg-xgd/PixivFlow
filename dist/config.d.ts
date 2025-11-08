@@ -75,6 +75,22 @@ export interface TargetConfig {
      * If specified, only works created on or before this date will be downloaded
      */
     endDate?: string;
+    /**
+     * Language filter for novels (only used when type='novel')
+     * - 'chinese': Only download Chinese novels
+     * - 'non-chinese': Only download non-Chinese novels (e.g., Japanese, English)
+     * - undefined: Download all novels regardless of language
+     *
+     * Note: Language detection requires at least 50 characters of text content.
+     * Novels that are too short for reliable detection will be downloaded by default.
+     */
+    languageFilter?: 'chinese' | 'non-chinese';
+    /**
+     * Enable language detection and logging for novels (only used when type='novel')
+     * If true, detected language will be logged and saved in metadata
+     * Default: true
+     */
+    detectLanguage?: boolean;
 }
 export interface PixivCredentialConfig {
     clientId: string;

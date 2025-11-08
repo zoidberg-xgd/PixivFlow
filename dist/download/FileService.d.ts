@@ -25,6 +25,11 @@ export interface PixivMetadata {
     total_view?: number;
     bookmark_count?: number;
     view_count?: number;
+    detected_language?: {
+        code: string;
+        name: string;
+        is_chinese: boolean;
+    };
 }
 export declare class FileService {
     private readonly storage;

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DownloadManager = void 0;
 const logger_1 = require("../logger");
 const errors_1 = require("../utils/errors");
+const language_detection_1 = require("../utils/language-detection");
 const node_fs_1 = require("node:fs");
 const node_path_1 = require("node:path");
 class DownloadManager {
@@ -539,7 +540,7 @@ class DownloadManager {
                     user: detail.user,
                     create_date: detail.create_date,
                 };
-                await this.downloadNovel(novel, `novel-${target.novelId}`);
+                await this.downloadNovel(novel, `novel-${target.novelId}`, target);
                 logger_1.logger.info(`Successfully downloaded novel ${target.novelId}`);
             }
             catch (error) {
@@ -578,7 +579,7 @@ class DownloadManager {
                         continue;
                     }
                     try {
-                        await this.downloadNovel(novel, `series-${target.seriesId}`);
+                        await this.downloadNovel(novel, `series-${target.seriesId}`, target);
                         downloaded++;
                         logger_1.logger.info(`Successfully downloaded novel ${novel.id} from series (${downloaded}/${Math.min(targetLimit, novels.length)})`);
                     }
@@ -663,7 +664,7 @@ class DownloadManager {
                 }
             }
             const targetLimit = target.limit || 10;
-            const { downloaded, skipped: skippedCount } = await this.downloadItems(novels, target, 'novel', (novel, tag) => this.downloadNovel(novel, tag));
+            const { downloaded, skipped: skippedCount } = await this.downloadItems(novels, target, 'novel', (novel, tag) => this.downloadNovel(novel, tag, target));
             const tagForLog = target.filterTag || target.tag || 'unknown';
             // Check if download actually succeeded
             if (downloaded === 0 && targetLimit > 0) {
@@ -1034,11 +1035,53 @@ class DownloadManager {
             throw new Error(`Failed to download any pages for illustration ${detail.id}`);
         }
     }
-    async downloadNovel(novel, tag) {
+    async downloadNovel(novel, tag, target) {
         // First verify the novel exists and get updated details with tags
         const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
         // Then get the novel text
         const text = await this.client.getNovelText(novel.id);
+        // Language detection (if enabled, default to true)
+        const enableDetection = target.detectLanguage !== false;
+        let detectedLang = null;
+        if (enableDetection) {
+            // Use full content (header + text) for detection to get more context
+            const fullContent = `${detail.title}\n${text}`;
+            detectedLang = (0, language_detection_1.detectLanguage)(fullContent);
+            if (detectedLang) {
+                logger_1.logger.info(`Detected language for novel ${detail.id}: ${detectedLang.name} (${detectedLang.code})`, {
+                    novelId: detail.id,
+                    language: detectedLang.name,
+                    code: detectedLang.code,
+                    isChinese: detectedLang.isChinese,
+                });
+            }
+            else {
+                logger_1.logger.debug(`Language detection inconclusive for novel ${detail.id} (text may be too short)`);
+            }
+        }
+        // Apply language filter if specified
+        if (target.languageFilter && detectedLang) {
+            const shouldDownload = (target.languageFilter === 'chinese' && detectedLang.isChinese) ||
+                (target.languageFilter === 'non-chinese' && !detectedLang.isChinese);
+            if (!shouldDownload) {
+                const filterReason = target.languageFilter === 'chinese'
+                    ? 'not Chinese'
+                    : 'is Chinese';
+                logger_1.logger.info(`Skipping novel ${detail.id} due to language filter (detected: ${detectedLang.name}, filter: ${target.languageFilter})`, {
+                    novelId: detail.id,
+                    detectedLanguage: detectedLang.name,
+                    filter: target.languageFilter,
+                    reason: filterReason,
+                });
+                // Use a regular Error that will be caught and handled as a skipable error
+                throw new Error(`Novel ${detail.id} skipped: language filter mismatch (detected: ${detectedLang.name}, required: ${target.languageFilter})`);
+            }
+        }
+        else if (target.languageFilter && !detectedLang) {
+            // Language filter is set but detection failed (text too short)
+            // Default behavior: download it (to avoid false negatives)
+            logger_1.logger.debug(`Language filter is set but detection failed for novel ${detail.id}, downloading anyway`);
+        }
         // Format tags for display
         const tagsDisplay = tags.map(t => {
             if (t.translated_name) {
@@ -1054,6 +1097,7 @@ class DownloadManager {
             `Download Tag: ${tag}`,
             `Original URL: https://www.pixiv.net/novel/show.php?id=${detail.id}`,
             `Created: ${new Date(detail.create_date).toISOString()}`,
+            ...(detectedLang ? [`Detected Language: ${detectedLang.name} (${detectedLang.code})`] : []),
             '',
             '---',
             '',
@@ -1083,6 +1127,13 @@ class DownloadManager {
             total_view: detail.total_view,
             bookmark_count: detail.bookmark_count,
             view_count: detail.view_count,
+            ...(detectedLang ? {
+                detected_language: {
+                    code: detectedLang.code,
+                    name: detectedLang.name,
+                    is_chinese: detectedLang.isChinese,
+                },
+            } : {}),
         };
         await this.fileService.saveMetadata(filePath, pixivMetadata);
         this.database.insertDownload({
@@ -1094,7 +1145,10 @@ class DownloadManager {
             author: detail.user?.name,
             userId: detail.user?.id,
         });
-        logger_1.logger.info(`Saved novel ${detail.id}`, { filePath });
+        logger_1.logger.info(`Saved novel ${detail.id}`, {
+            filePath,
+            ...(detectedLang ? { language: detectedLang.name, isChinese: detectedLang.isChinese } : {}),
+        });
     }
     getIllustrationPages(detail) {
         if (detail.meta_pages && detail.meta_pages.length > 0) {

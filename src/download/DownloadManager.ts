@@ -4,6 +4,7 @@ import { DownloadError, NetworkError, getErrorMessage, is404Error, isSkipableErr
 import { PixivClient, PixivIllust, PixivIllustPage, PixivNovel } from '../pixiv/PixivClient';
 import { Database } from '../storage/Database';
 import { FileService, FileMetadata, PixivMetadata } from './FileService';
+import { detectLanguage } from '../utils/language-detection';
 import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 
@@ -635,7 +636,7 @@ export class DownloadManager {
           create_date: detail.create_date,
         };
 
-        await this.downloadNovel(novel, `novel-${target.novelId}`);
+        await this.downloadNovel(novel, `novel-${target.novelId}`, target);
         logger.info(`Successfully downloaded novel ${target.novelId}`);
       } catch (error) {
         // Get detailed error information
@@ -681,7 +682,7 @@ export class DownloadManager {
           }
 
           try {
-            await this.downloadNovel(novel, `series-${target.seriesId}`);
+            await this.downloadNovel(novel, `series-${target.seriesId}`, target);
             downloaded++;
             logger.info(`Successfully downloaded novel ${novel.id} from series (${downloaded}/${Math.min(targetLimit, novels.length)})`);
           } catch (error) {
@@ -775,7 +776,7 @@ export class DownloadManager {
         novels,
         target,
         'novel',
-        (novel, tag) => this.downloadNovel(novel, tag)
+        (novel, tag) => this.downloadNovel(novel, tag, target)
       );
       
       const tagForLog = target.filterTag || target.tag || 'unknown';
@@ -1210,12 +1211,60 @@ export class DownloadManager {
     }
   }
 
-  private async downloadNovel(novel: PixivNovel, tag: string) {
+  private async downloadNovel(novel: PixivNovel, tag: string, target: TargetConfig) {
     // First verify the novel exists and get updated details with tags
     const { novel: detail, tags } = await this.client.getNovelDetailWithTags(novel.id);
     
     // Then get the novel text
     const text = await this.client.getNovelText(novel.id);
+
+    // Language detection (if enabled, default to true)
+    const enableDetection = target.detectLanguage !== false;
+    let detectedLang: ReturnType<typeof detectLanguage> = null;
+    
+    if (enableDetection) {
+      // Use full content (header + text) for detection to get more context
+      const fullContent = `${detail.title}\n${text}`;
+      detectedLang = detectLanguage(fullContent);
+      
+      if (detectedLang) {
+        logger.info(`Detected language for novel ${detail.id}: ${detectedLang.name} (${detectedLang.code})`, {
+          novelId: detail.id,
+          language: detectedLang.name,
+          code: detectedLang.code,
+          isChinese: detectedLang.isChinese,
+        });
+      } else {
+        logger.debug(`Language detection inconclusive for novel ${detail.id} (text may be too short)`);
+      }
+    }
+
+    // Apply language filter if specified
+    if (target.languageFilter && detectedLang) {
+      const shouldDownload = 
+        (target.languageFilter === 'chinese' && detectedLang.isChinese) ||
+        (target.languageFilter === 'non-chinese' && !detectedLang.isChinese);
+      
+      if (!shouldDownload) {
+        const filterReason = target.languageFilter === 'chinese' 
+          ? 'not Chinese' 
+          : 'is Chinese';
+        logger.info(`Skipping novel ${detail.id} due to language filter (detected: ${detectedLang.name}, filter: ${target.languageFilter})`, {
+          novelId: detail.id,
+          detectedLanguage: detectedLang.name,
+          filter: target.languageFilter,
+          reason: filterReason,
+        });
+        // Use a regular Error that will be caught and handled as a skipable error
+        throw new Error(
+          `Novel ${detail.id} skipped: language filter mismatch (detected: ${detectedLang.name}, required: ${target.languageFilter})`
+        );
+      }
+    } else if (target.languageFilter && !detectedLang) {
+      // Language filter is set but detection failed (text too short)
+      // Default behavior: download it (to avoid false negatives)
+      logger.debug(`Language filter is set but detection failed for novel ${detail.id}, downloading anyway`);
+    }
 
     // Format tags for display
     const tagsDisplay = tags.map(t => {
@@ -1233,6 +1282,7 @@ export class DownloadManager {
       `Download Tag: ${tag}`,
       `Original URL: https://www.pixiv.net/novel/show.php?id=${detail.id}`,
       `Created: ${new Date(detail.create_date).toISOString()}`,
+      ...(detectedLang ? [`Detected Language: ${detectedLang.name} (${detectedLang.code})`] : []),
       '',
       '---',
       '',
@@ -1266,6 +1316,13 @@ export class DownloadManager {
       total_view: detail.total_view,
       bookmark_count: detail.bookmark_count,
       view_count: detail.view_count,
+      ...(detectedLang ? {
+        detected_language: {
+          code: detectedLang.code,
+          name: detectedLang.name,
+          is_chinese: detectedLang.isChinese,
+        },
+      } : {}),
     };
     await this.fileService.saveMetadata(filePath, pixivMetadata);
 
@@ -1279,7 +1336,10 @@ export class DownloadManager {
       userId: detail.user?.id,
     });
 
-    logger.info(`Saved novel ${detail.id}`, { filePath });
+    logger.info(`Saved novel ${detail.id}`, { 
+      filePath,
+      ...(detectedLang ? { language: detectedLang.name, isChinese: detectedLang.isChinese } : {}),
+    });
   }
 
   private getIllustrationPages(detail: PixivIllust): PixivIllustPage[] {
