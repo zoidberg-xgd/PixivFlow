@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/zoidberg-xgd/pixivflow/issues"
   },
-  "author": "zoidberg-xgd <zoidberg.xgd@example.com>",
+  "author": "zoidberg-xgd <zoidberg-xgd@users.noreply.github.com>",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "bin": {

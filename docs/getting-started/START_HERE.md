@@ -49,9 +49,9 @@ npm --version     # 应该显示 9.0.0 或更高
 
 ## 🚀 快速开始（推荐 ⭐）
 
-**最简单的方式 - 一键完成所有设置**：
+### 方式一：本地安装（推荐首次使用）
 
-### 完整流程概览
+**最简单的方式 - 一键完成所有设置**：
 
 快速启动脚本会自动完成所有初始设置，你只需要按照提示操作即可。
 
@@ -62,6 +62,31 @@ npm install
 # 步骤 2：运行快速启动脚本
 ./scripts/quick-start.sh
 ```
+
+### 方式二：全局安装（推荐长期使用 ⭐）
+
+如果你想在任何目录下都能使用 `pixivflow` 命令，可以全局安装：
+
+```bash
+# 1. 克隆或下载项目
+git clone https://github.com/zoidberg-xgd/pixivflow.git
+cd pixivflow
+
+# 2. 安装依赖并构建
+npm install
+npm run build
+
+# 3. 全局安装
+npm install -g .
+
+# 4. 登录账号（首次使用）
+pixivflow login
+
+# 5. 开始使用
+pixivflow download
+```
+
+> **💡 提示**：全局安装后，可以在任何目录直接使用 `pixivflow` 命令，无需进入项目目录。
 
 ### 脚本会自动完成什么？
 

@@ -70,6 +70,30 @@ export declare class DownloadManager {
      */
     private getYesterdayDate;
     /**
+     * Get this week's Monday date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
+     */
+    private getThisWeekMonday;
+    /**
+     * Get last week's Monday date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
+     */
+    private getLastWeekMonday;
+    /**
+     * Get ranking illustrations with automatic fallback for week mode
+     * If week ranking fails, automatically tries:
+     * 1. This week's ranking (without date or with this week's date)
+     * 2. Day ranking with last week's Monday date
+     */
+    private getRankingIllustrationsWithFallback;
+    /**
+     * Get ranking novels with automatic fallback for week mode
+     * If week ranking API throws an error, automatically tries:
+     * 1. This week's ranking (without date or with this week's date)
+     * 2. Day ranking with last week's Monday date
+     */
+    private getRankingNovelsWithFallback;
+    /**
      * Check if illustration files already exist in the file system
      * Returns array of existing file paths, or empty array if none found
      */

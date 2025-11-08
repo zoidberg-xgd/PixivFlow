@@ -441,7 +441,7 @@ class DownloadManager {
                     }
                 }
                 else {
-                    // No filterTag, use ranking API directly
+                    // No filterTag, use ranking API directly with automatic fallback
                     const rankingMode = target.rankingMode || 'day';
                     let rankingDate = target.rankingDate || this.getTodayDate();
                     // Process YESTERDAY placeholder
@@ -449,20 +449,9 @@ class DownloadManager {
                         rankingDate = this.getYesterdayDate();
                     }
                     logger_1.logger.info(`Fetching ranking illustrations (mode: ${rankingMode}, date: ${rankingDate})`);
-                    illusts = await this.client.getRankingIllustrations(rankingMode, rankingDate, target.limit);
-                    // If ranking API returns no results, fallback to search mode with popularity sort
-                    if (illusts.length === 0) {
-                        logger_1.logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
-                        logger_1.logger.info(`Searching for illustrations with tag: ${target.tag || 'unknown'}, sorted by popularity`);
-                        const searchTarget = {
-                            ...target,
-                            tag: target.tag,
-                            sort: 'popular_desc',
-                            limit: Math.max((target.limit || 10) * 2, 50),
-                        };
-                        illusts = await this.client.searchIllustrations(searchTarget);
-                        logger_1.logger.info(`Found ${illusts.length} illustration(s) from search mode (sorted by popularity)`);
-                    }
+                    // Use ranking API directly - follow "use API if available" principle
+                    illusts = await this.getRankingIllustrationsWithFallback(rankingMode, rankingDate, target.limit);
+                    logger_1.logger.info(`Ranking API returned ${illusts.length} illustration(s)`);
                 }
             }
             else {
@@ -640,7 +629,7 @@ class DownloadManager {
                     }
                 }
                 else {
-                    // No filterTag, use ranking API directly
+                    // No filterTag, use ranking API directly with automatic fallback
                     const rankingMode = target.rankingMode || 'day';
                     let rankingDate = target.rankingDate || this.getTodayDate();
                     // Process YESTERDAY placeholder
@@ -648,21 +637,9 @@ class DownloadManager {
                         rankingDate = this.getYesterdayDate();
                     }
                     logger_1.logger.info(`Fetching ranking novels (mode: ${rankingMode}, date: ${rankingDate})`);
-                    novels = await this.client.getRankingNovels(rankingMode, rankingDate, target.limit);
-                    logger_1.logger.info(`Fetched ${novels.length} novels from ranking API (ordered by Pixiv ranking algorithm)`);
-                    // If ranking API returns no results, fallback to search mode with popularity sort
-                    if (novels.length === 0) {
-                        logger_1.logger.warn(`Ranking API returned 0 results. Falling back to search mode with popularity sort.`);
-                        logger_1.logger.info(`Searching for novels with tag: ${target.tag || 'unknown'}, sorted by popularity`);
-                        const searchTarget = {
-                            ...target,
-                            tag: target.tag,
-                            sort: 'popular_desc',
-                            limit: Math.max((target.limit || 10) * 2, 50),
-                        };
-                        novels = await this.client.searchNovels(searchTarget);
-                        logger_1.logger.info(`Found ${novels.length} novel(s) from search mode (sorted by popularity)`);
-                    }
+                    // Use ranking API directly - follow "use API if available" principle
+                    novels = await this.getRankingNovelsWithFallback(rankingMode, rankingDate, target.limit);
+                    logger_1.logger.info(`Ranking API returned ${novels.length} novel(s)`);
                 }
             }
             else {
@@ -773,6 +750,145 @@ class DownloadManager {
         const jstNoon = new Date(Date.UTC(year, month, day, 3, 0, 0, 0)); // 12:00 JST = 03:00 UTC
         jstNoon.setUTCDate(jstNoon.getUTCDate() - 1);
         return this.formatDateInJST(jstNoon);
+    }
+    /**
+     * Get this week's Monday date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
+     */
+    getThisWeekMonday() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Tokyo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            weekday: 'long',
+        });
+        // Get current date components in JST
+        const todayParts = formatter.formatToParts(now);
+        const year = parseInt(todayParts.find(p => p.type === 'year').value, 10);
+        const month = parseInt(todayParts.find(p => p.type === 'month').value, 10) - 1; // 0-indexed
+        const day = parseInt(todayParts.find(p => p.type === 'day').value, 10);
+        const weekday = todayParts.find(p => p.type === 'weekday').value;
+        // Calculate days to subtract to get Monday (Monday = 0, Sunday = 6)
+        const weekdayMap = {
+            'Monday': 0,
+            'Tuesday': 1,
+            'Wednesday': 2,
+            'Thursday': 3,
+            'Friday': 4,
+            'Saturday': 5,
+            'Sunday': 6,
+        };
+        const daysToSubtract = weekdayMap[weekday] || 0;
+        // Create a date object in JST at noon to avoid timezone edge cases
+        const jstNoon = new Date(Date.UTC(year, month, day, 3, 0, 0, 0)); // 12:00 JST = 03:00 UTC
+        jstNoon.setUTCDate(jstNoon.getUTCDate() - daysToSubtract);
+        return this.formatDateInJST(jstNoon);
+    }
+    /**
+     * Get last week's Monday date in YYYY-MM-DD format (Japan timezone)
+     * Pixiv rankings are based on Japan time (JST, UTC+9)
+     */
+    getLastWeekMonday() {
+        const thisWeekMonday = this.getThisWeekMonday();
+        const [year, month, day] = thisWeekMonday.split('-').map(Number);
+        // Create a date object in JST at noon and subtract 7 days
+        const jstNoon = new Date(Date.UTC(year, month - 1, day, 3, 0, 0, 0)); // 12:00 JST = 03:00 UTC
+        jstNoon.setUTCDate(jstNoon.getUTCDate() - 7);
+        return this.formatDateInJST(jstNoon);
+    }
+    /**
+     * Get ranking illustrations with automatic fallback for week mode
+     * If week ranking fails, automatically tries:
+     * 1. This week's ranking (without date or with this week's date)
+     * 2. Day ranking with last week's Monday date
+     */
+    async getRankingIllustrationsWithFallback(mode, date, limit) {
+        // If not week mode, use normal ranking API directly
+        if (mode !== 'week') {
+            return await this.client.getRankingIllustrations(mode, date, limit);
+        }
+        // For week mode: try API first, only fallback if API throws an error
+        try {
+            logger_1.logger.info(`Using week ranking API with date: ${date || 'current week'}`);
+            const results = await this.client.getRankingIllustrations(mode, date, limit);
+            logger_1.logger.info(`Week ranking API returned ${results.length} illustrations`);
+            return results; // Use API result directly, even if empty
+        }
+        catch (error) {
+            logger_1.logger.warn(`Week ranking API failed for date: ${date || 'current week'}`, { error: error instanceof Error ? error.message : String(error) });
+            // Only fallback if API throws an error
+            // Fallback 1: Try this week's ranking
+            try {
+                const thisWeekMonday = this.getThisWeekMonday();
+                logger_1.logger.info(`Fallback: Trying this week's ranking (date: ${thisWeekMonday})`);
+                const results = await this.client.getRankingIllustrations(mode, thisWeekMonday, limit);
+                logger_1.logger.info(`This week's ranking API returned ${results.length} illustrations`);
+                return results;
+            }
+            catch (fallbackError) {
+                logger_1.logger.warn(`This week's ranking API also failed`, { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) });
+                // Fallback 2: Try day ranking with last week's Monday
+                try {
+                    const lastWeekMonday = this.getLastWeekMonday();
+                    logger_1.logger.info(`Fallback: Trying day ranking with last week's Monday (date: ${lastWeekMonday})`);
+                    const results = await this.client.getRankingIllustrations('day', lastWeekMonday, limit);
+                    logger_1.logger.info(`Day ranking API returned ${results.length} illustrations`);
+                    return results;
+                }
+                catch (finalError) {
+                    logger_1.logger.error(`All ranking API calls failed. Returning empty results.`, { error: finalError instanceof Error ? finalError.message : String(finalError) });
+                    return [];
+                }
+            }
+        }
+    }
+    /**
+     * Get ranking novels with automatic fallback for week mode
+     * If week ranking API throws an error, automatically tries:
+     * 1. This week's ranking (without date or with this week's date)
+     * 2. Day ranking with last week's Monday date
+     */
+    async getRankingNovelsWithFallback(mode, date, limit) {
+        // If not week mode, use normal ranking API directly
+        if (mode !== 'week') {
+            return await this.client.getRankingNovels(mode, date, limit);
+        }
+        // For week mode: try API first, only fallback if API throws an error
+        try {
+            logger_1.logger.info(`Using week ranking API with date: ${date || 'current week'}`);
+            const results = await this.client.getRankingNovels(mode, date, limit);
+            logger_1.logger.info(`Week ranking API returned ${results.length} novels`);
+            return results; // Use API result directly, even if empty
+        }
+        catch (error) {
+            logger_1.logger.warn(`Week ranking API failed for date: ${date || 'current week'}`, { error: error instanceof Error ? error.message : String(error) });
+            // Only fallback if API throws an error
+            // Fallback 1: Try this week's ranking
+            try {
+                const thisWeekMonday = this.getThisWeekMonday();
+                logger_1.logger.info(`Fallback: Trying this week's ranking (date: ${thisWeekMonday})`);
+                const results = await this.client.getRankingNovels(mode, thisWeekMonday, limit);
+                logger_1.logger.info(`This week's ranking API returned ${results.length} novels`);
+                return results;
+            }
+            catch (fallbackError) {
+                logger_1.logger.warn(`This week's ranking API also failed`, { error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) });
+                // Fallback 2: Try day ranking with last week's Monday
+                try {
+                    const lastWeekMonday = this.getLastWeekMonday();
+                    logger_1.logger.info(`Fallback: Trying day ranking with last week's Monday (date: ${lastWeekMonday})`);
+                    const results = await this.client.getRankingNovels('day', lastWeekMonday, limit);
+                    logger_1.logger.info(`Day ranking API returned ${results.length} novels`);
+                    return results;
+                }
+                catch (finalError) {
+                    logger_1.logger.error(`All ranking API calls failed. Returning empty results.`, { error: finalError instanceof Error ? finalError.message : String(finalError) });
+                    return [];
+                }
+            }
+        }
     }
     /**
      * Check if illustration files already exist in the file system

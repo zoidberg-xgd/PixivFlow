@@ -10,6 +10,12 @@
 ## [未发布]
 
 ### 新增
+- ✨ 添加全局安装文档和说明（2025-01-XX）
+  - 在 README.md 中添加全局安装方式说明
+  - 在 QUICKSTART.md 中添加全局安装步骤
+  - 在 START_HERE.md 中添加全局安装选项
+  - 更新命令速查表，包含全局安装后的命令
+  - 说明全局安装后的配置文件位置和使用方法
 - ✨ 添加 WebUI 删除未完成任务功能（2025-11-08）
   - 支持删除单个未完成任务（`DELETE /api/download/incomplete/:id`）
   - 支持批量删除所有未完成任务（`DELETE /api/download/incomplete`）

@@ -183,6 +183,94 @@ npm install
 
 ---
 
+### 🌍 全局安装方式（推荐 ⭐）
+
+如果你想在任何目录下都能使用 `pixivflow` 命令，可以全局安装：
+
+#### 方法一：从本地目录全局安装
+
+```bash
+# 1. 克隆或下载项目
+git clone https://github.com/zoidberg-xgd/pixivflow.git
+cd pixivflow
+
+# 2. 安装依赖
+npm install
+
+# 3. 构建项目
+npm run build
+
+# 4. 全局安装
+npm install -g .
+```
+
+#### 方法二：从 GitHub 仓库直接安装
+
+```bash
+# 从 GitHub 仓库全局安装
+npm install -g git+https://github.com/zoidberg-xgd/pixivflow.git
+
+# 注意：安装后需要先构建
+# 找到全局安装目录（通常在 npm root -g 的父目录/bin）
+# 或重新安装并指定构建脚本
+```
+
+#### 验证全局安装
+
+安装完成后，可以在任何目录使用 `pixivflow` 命令：
+
+```bash
+# 查看帮助
+pixivflow --help
+
+# 查看安装位置
+which pixivflow
+
+# 登录账号
+pixivflow login
+
+# 执行下载
+pixivflow download
+
+# 启动定时任务
+pixivflow scheduler
+```
+
+#### 全局安装后的配置
+
+全局安装后，配置文件位置：
+- 配置文件：`~/.pixivflow/config/standalone.config.json`（如果使用默认路径）
+- 或使用 `--config` 参数指定配置文件路径
+
+```bash
+# 使用自定义配置文件
+pixivflow download --config /path/to/config.json
+
+# 登录（会自动创建配置文件）
+pixivflow login
+```
+
+#### 更新全局安装
+
+如果需要更新全局安装的版本：
+
+```bash
+# 方法一：重新安装（从本地目录）
+cd /path/to/pixivflow
+npm run build
+npm install -g .
+
+# 方法二：从 GitHub 更新
+npm install -g git+https://github.com/zoidberg-xgd/pixivflow.git
+```
+
+> **💡 提示**：
+> - 全局安装后，可以在任何目录直接使用 `pixivflow` 命令
+> - 首次使用需要运行 `pixivflow login` 进行登录
+> - 配置文件会自动创建在用户主目录或项目目录
+
+---
+
 ### 🎯 手动配置方式
 
 如果您想手动控制每个步骤：

@@ -35,9 +35,9 @@ npm --version    # 应该显示 9.0.0 或更高版本
 
 ## 🚀 快速开始（推荐 ⭐）
 
-**最简单的方式 - 一键完成所有设置**：
+### 方式一：本地安装（推荐首次使用）
 
-### 完整流程
+**最简单的方式 - 一键完成所有设置**：
 
 快速启动脚本会自动完成所有初始设置，你只需要按照提示操作即可。
 
@@ -48,6 +48,41 @@ npm install
 # 步骤 2：运行快速启动脚本
 ./scripts/quick-start.sh
 ```
+
+### 方式二：全局安装（推荐长期使用 ⭐）
+
+如果你想在任何目录下都能使用 `pixivflow` 命令，可以全局安装：
+
+```bash
+# 1. 克隆或下载项目
+git clone https://github.com/zoidberg-xgd/pixivflow.git
+cd pixivflow
+
+# 2. 安装依赖并构建
+npm install
+npm run build
+
+# 3. 全局安装
+npm install -g .
+```
+
+**全局安装后，可以在任何目录使用**：
+
+```bash
+# 查看帮助
+pixivflow --help
+
+# 登录账号
+pixivflow login
+
+# 执行下载
+pixivflow download
+
+# 启动定时任务
+pixivflow scheduler
+```
+
+> **💡 提示**：全局安装后，首次使用需要运行 `pixivflow login` 进行登录。
 
 ### 脚本会自动完成什么？
 
@@ -536,6 +571,8 @@ npm run login
 
 ### 主要操作
 
+**本地安装方式**：
+
 | 命令 | 说明 |
 |------|------|
 | `npm run random` | 随机下载一个插画作品（快速体验） |
@@ -549,12 +586,32 @@ npm run login
 | `./scripts/pixiv.sh health` | 健康检查 |
 | `./scripts/pixiv.sh logs` | 查看日志 |
 
+**全局安装方式**（如果已全局安装）：
+
+| 命令 | 说明 |
+|------|------|
+| `pixivflow random` | 随机下载一个插画作品（快速体验） |
+| `pixivflow random --novel` | 随机下载一个小说作品 |
+| `pixivflow download` | 执行一次下载 |
+| `pixivflow scheduler` | 启动定时任务 |
+| `pixivflow --help` | 查看帮助信息 |
+
 ### 登录管理
+
+**本地安装方式**：
 
 | 命令 | 说明 |
 |------|------|
 | `npm run login` | 登录 Pixiv 账号（推荐 ⭐，默认使用 Python gppt） |
 | `npm run login -- --help` | 查看登录帮助 |
+
+**全局安装方式**（如果已全局安装）：
+
+| 命令 | 说明 |
+|------|------|
+| `pixivflow login` | 登录 Pixiv 账号（推荐 ⭐） |
+| `pixivflow login --help` | 查看登录帮助 |
+| `pixivflow login -u username -p password` | Headless 模式登录 |
 
 ### 配置管理
 

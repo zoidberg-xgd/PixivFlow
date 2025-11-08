@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { loadConfig, getConfigPath } from './config';
 import { DownloadManager } from './download/DownloadManager';
 import { FileService } from './download/FileService';

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- ✨ Added global installation documentation and instructions (2025-01-XX)
+  - Added global installation method in README.md
+  - Added global installation steps in QUICKSTART.md
+  - Added global installation option in START_HERE.md
+  - Updated command quick reference, including commands after global installation
+  - Explained configuration file location and usage after global installation
+
 ### Fixed
 - 🐛 Fixed dynamic concurrency control rate limit detection logic (2025-01-XX)
   - Fixed incorrect rate limit detection in `processInParallel`

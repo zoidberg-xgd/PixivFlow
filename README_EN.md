@@ -182,6 +182,94 @@ That's it! The quick start script will automatically guide you through:
 
 ---
 
+### 🌐 Global Installation (Optional)
+
+If you want to use `pixivflow` command from any directory, you can install it globally:
+
+#### Method 1: Install from Local Directory
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/zoidberg-xgd/pixivflow.git
+cd pixivflow
+
+# 2. Install dependencies
+npm install
+
+# 3. Build the project
+npm run build
+
+# 4. Install globally
+npm install -g .
+```
+
+#### Method 2: Install Directly from GitHub Repository
+
+```bash
+# Install globally from GitHub repository
+npm install -g git+https://github.com/zoidberg-xgd/pixivflow.git
+
+# Note: After installation, you may need to build
+# Find the global installation directory (usually in npm root -g's parent directory/bin)
+# Or reinstall with build script specified
+```
+
+#### Verify Global Installation
+
+After installation, you can use the `pixivflow` command from any directory:
+
+```bash
+# View help
+pixivflow --help
+
+# Check installation location
+which pixivflow
+
+# Login to account
+pixivflow login
+
+# Execute download
+pixivflow download
+
+# Start scheduled task
+pixivflow scheduler
+```
+
+#### Configuration After Global Installation
+
+After global installation, the configuration file location:
+- Configuration file: `~/.pixivflow/config/standalone.config.json` (if using default path)
+- Or use `--config` parameter to specify configuration file path
+
+```bash
+# Use custom configuration file
+pixivflow download --config /path/to/config.json
+
+# Login (will automatically create configuration file)
+pixivflow login
+```
+
+#### Update Global Installation
+
+If you need to update the globally installed version:
+
+```bash
+# Method 1: Reinstall (from local directory)
+cd /path/to/pixivflow
+npm run build
+npm install -g .
+
+# Method 2: Update from GitHub
+npm install -g git+https://github.com/zoidberg-xgd/pixivflow.git
+```
+
+> **💡 Tips**:
+> - After global installation, you can use the `pixivflow` command directly from any directory
+> - First use requires running `pixivflow login` to login
+> - Configuration file will be automatically created in user home directory or project directory
+
+---
+
 ### 🎯 Manual Setup
 
 If you want to manually control each step:
