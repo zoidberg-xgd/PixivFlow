@@ -67,7 +67,7 @@ export const api = {
   clearLogs: () => apiClient.delete('/logs'),
 
   // Files
-  listFiles: (params?: { path?: string; type?: string }) =>
+  listFiles: (params?: { path?: string; type?: string; sort?: string; order?: string }) =>
     apiClient.get('/files/list', { params }),
   getFilePreview: (path: string, type?: string) =>
     apiClient.get('/files/preview', { params: { path, type }, responseType: 'blob' }),

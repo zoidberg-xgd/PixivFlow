@@ -1,3 +1,6 @@
+import { appendFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogMeta {
@@ -13,9 +16,19 @@ class Logger {
   };
 
   private threshold: LogLevel = 'info';
+  private logPath: string | null = null;
 
   public setLevel(level: LogLevel): void {
     this.threshold = level;
+  }
+
+  public setLogPath(path: string): void {
+    this.logPath = path;
+    // Ensure log directory exists
+    const logDir = join(path, '..');
+    if (!existsSync(logDir)) {
+      mkdirSync(logDir, { recursive: true });
+    }
   }
 
   public debug(message: string, meta?: LogMeta): void {
@@ -41,22 +54,34 @@ class Logger {
 
     const timestamp = new Date().toISOString();
     const payload = meta ? `${message} ${JSON.stringify(meta)}` : message;
+    const logLine = `[${timestamp}] [${level.toUpperCase()}] ${payload}`;
 
+    // Output to console
     switch (level) {
       case 'debug':
-        console.debug(`[${timestamp}] [DEBUG] ${payload}`);
+        console.debug(logLine);
         break;
       case 'info':
-        console.info(`[${timestamp}] [INFO] ${payload}`);
+        console.info(logLine);
         break;
       case 'warn':
-        console.warn(`[${timestamp}] [WARN] ${payload}`);
+        console.warn(logLine);
         break;
       case 'error':
-        console.error(`[${timestamp}] [ERROR] ${payload}`);
+        console.error(logLine);
         break;
       default:
-        console.log(`[${timestamp}] ${payload}`);
+        console.log(logLine);
+    }
+
+    // Write to file if log path is set
+    if (this.logPath) {
+      try {
+        appendFileSync(this.logPath, logLine + '\n', 'utf-8');
+      } catch (error) {
+        // Silently fail if file write fails to avoid breaking the application
+        console.error('Failed to write to log file', error);
+      }
     }
   }
 }

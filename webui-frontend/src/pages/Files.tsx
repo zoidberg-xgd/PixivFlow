@@ -54,14 +54,16 @@ export default function Files() {
   const queryClient = useQueryClient();
   const [currentPath, setCurrentPath] = useState<string>('');
   const [fileType, setFileType] = useState<'illustration' | 'novel'>('illustration');
+  const [sortBy, setSortBy] = useState<'name' | 'time'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [previewContent, setPreviewContent] = useState<string>('');
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   const { data, isLoading } = useQuery<{ data: FilesResponse }>({
-    queryKey: ['files', currentPath, fileType],
-    queryFn: () => api.listFiles({ path: currentPath, type: fileType }),
+    queryKey: ['files', currentPath, fileType, sortBy, sortOrder],
+    queryFn: () => api.listFiles({ path: currentPath, type: fileType, sort: sortBy, order: sortOrder }),
   });
 
   const deleteFileMutation = useMutation({
@@ -172,23 +174,39 @@ export default function Files() {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
+      width: 300,
+      ellipsis: {
+        showTitle: true,
+      },
       render: (name: string, record: FileItem) => (
-        <Space>
-          {record.type === 'directory' ? (
-            <FolderOutlined style={{ color: '#1890ff' }} />
-          ) : imageExtensions.includes(record.extension?.toLowerCase() || '') ? (
-            <PictureOutlined style={{ color: '#52c41a' }} />
-          ) : (
-            <FileTextOutlined />
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%', minWidth: 0 }}>
+          <span style={{ flexShrink: 0, marginRight: 8 }}>
+            {record.type === 'directory' ? (
+              <FolderOutlined style={{ color: '#1890ff' }} />
+            ) : imageExtensions.includes(record.extension?.toLowerCase() || '') ? (
+              <PictureOutlined style={{ color: '#52c41a' }} />
+            ) : (
+              <FileTextOutlined />
+            )}
+          </span>
           <Button
             type="link"
             onClick={() => handlePreview(record)}
-            style={{ padding: 0, height: 'auto' }}
+            style={{ 
+              padding: 0, 
+              height: 'auto',
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              textAlign: 'left',
+            }}
+            title={name}
           >
             {name}
           </Button>
-        </Space>
+        </div>
       ),
     },
     {
@@ -270,25 +288,43 @@ export default function Files() {
           </Title>
         </Col>
         <Col>
-          <Select
-            value={fileType}
-            onChange={(value) => {
-              setFileType(value);
-              setCurrentPath('');
-            }}
-            style={{ width: 150 }}
-          >
-            <Option value="illustration">
-              <PictureOutlined /> 插画
-            </Option>
-            <Option value="novel">
-              <FileTextOutlined /> 小说
-            </Option>
-          </Select>
+          <Space>
+            <Select
+              value={sortBy}
+              onChange={(value) => setSortBy(value)}
+              style={{ width: 120 }}
+            >
+              <Option value="name">按名称</Option>
+              <Option value="time">按时间</Option>
+            </Select>
+            <Select
+              value={sortOrder}
+              onChange={(value) => setSortOrder(value)}
+              style={{ width: 100 }}
+            >
+              <Option value="asc">升序</Option>
+              <Option value="desc">降序</Option>
+            </Select>
+            <Select
+              value={fileType}
+              onChange={(value) => {
+                setFileType(value);
+                setCurrentPath('');
+              }}
+              style={{ width: 150 }}
+            >
+              <Option value="illustration">
+                <PictureOutlined /> 插画
+              </Option>
+              <Option value="novel">
+                <FileTextOutlined /> 小说
+              </Option>
+            </Select>
+          </Space>
         </Col>
       </Row>
 
-      <Card>
+      <Card style={{ overflow: 'hidden' }}>
         <Breadcrumb items={breadcrumbItems} style={{ marginBottom: 16 }} />
         
         {currentPath && (
@@ -305,17 +341,20 @@ export default function Files() {
           </Button>
         )}
 
-        <Table
-          columns={columns}
-          dataSource={allItems}
-          rowKey="path"
-          loading={isLoading}
-          pagination={{
-            pageSize: 50,
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 项`,
-          }}
-        />
+        <div style={{ overflowX: 'auto' }}>
+          <Table
+            columns={columns}
+            dataSource={allItems}
+            rowKey="path"
+            loading={isLoading}
+            scroll={{ x: 850 }}
+            pagination={{
+              pageSize: 50,
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 项`,
+            }}
+          />
+        </div>
       </Card>
 
       <Modal

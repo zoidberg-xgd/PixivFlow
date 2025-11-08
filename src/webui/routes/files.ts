@@ -12,7 +12,7 @@ const router = Router();
  */
 router.get('/list', async (req: Request, res: Response) => {
   try {
-    const { path: dirPath = '', type = 'illustration' } = req.query;
+    const { path: dirPath = '', type = 'illustration', sort = 'name', order = 'asc' } = req.query;
     const configPath = getConfigPath();
     const config = loadConfig(configPath);
 
@@ -45,6 +45,7 @@ router.get('/list', async (req: Request, res: Response) => {
           name: item,
           path: dirPath ? `${dirPath}/${item}` : item,
           type: 'directory',
+          modified: stats.mtime.toISOString(),
         });
       } else {
         files.push({
@@ -56,6 +57,34 @@ router.get('/list', async (req: Request, res: Response) => {
           extension: extname(item),
         });
       }
+    }
+
+    // Sort directories and files based on sort parameter
+    const sortBy = String(sort);
+    const sortOrder = String(order).toLowerCase() === 'desc' ? -1 : 1;
+
+    if (sortBy === 'time') {
+      // Sort by modified time
+      directories.sort((a, b) => {
+        const timeA = new Date(a.modified).getTime();
+        const timeB = new Date(b.modified).getTime();
+        return (timeA - timeB) * sortOrder;
+      });
+      files.sort((a, b) => {
+        const timeA = new Date(a.modified).getTime();
+        const timeB = new Date(b.modified).getTime();
+        return (timeA - timeB) * sortOrder;
+      });
+    } else {
+      // Sort by name (case-insensitive, default)
+      directories.sort((a, b) => {
+        const comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        return comparison * sortOrder;
+      });
+      files.sort((a, b) => {
+        const comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        return comparison * sortOrder;
+      });
     }
 
     res.json({

@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, isAbsolute } from 'node:path';
+import { resolve, dirname, isAbsolute, join } from 'node:path';
 import cron from 'node-cron';
 
 import { ConfigError } from './utils/errors';
@@ -451,6 +451,10 @@ export function loadConfig(configPath?: string): StandaloneConfig {
   if (config.logLevel) {
     logger.setLevel(config.logLevel);
   }
+
+  // Set log file path
+  const logPath = join(process.cwd(), 'data', 'pixiv-downloader.log');
+  logger.setLogPath(logPath);
 
   // Process placeholders (e.g., YESTERDAY)
   return processConfigPlaceholders(config);

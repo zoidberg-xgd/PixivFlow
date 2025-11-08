@@ -169,6 +169,10 @@ export class WebUIServer {
  * Start WebUI server
  */
 export async function startWebUI(options?: WebUIServerOptions): Promise<void> {
+  // Set up log file path
+  const logPath = path.join(process.cwd(), 'data', 'pixiv-downloader.log');
+  logger.setLogPath(logPath);
+
   const server = new WebUIServer(options);
   await server.start();
 
