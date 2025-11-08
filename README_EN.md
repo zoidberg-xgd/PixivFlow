@@ -104,18 +104,16 @@ Make Pixiv artwork collection elegant and efficient | 让 Pixiv 作品收集变�
 
 ### 🌟 Why Choose PixivFlow?
 
-PixivFlow is designed for automation scenarios, offering the following core advantages:
+Compared to other Pixiv downloaders, PixivFlow focuses on **automation** and **server deployment** scenarios:
 
-| Feature | Description |
-|---------|-------------|
-| 🚀 **Fully Standalone** | No browser extension required, pure CLI tool that can run in any environment |
-| 🤖 **Powerful Automation** | Supports Cron scheduled tasks, set once and run automatically |
-| 💾 **Smart Deduplication** | Based on SQLite database, automatically records downloaded artworks to avoid duplicates |
-| 🔄 **Resume Download Support** | Automatically resumes after interruption, no need to restart |
-| 🎯 **Flexible Filtering** | Supports multi-dimensional filtering by tags, bookmarks, date range, etc. |
-| 📊 **Detailed Logging System** | Complete run logs and statistics for easy tracking and debugging |
-| 🖥️ **Server Friendly** | Supports background running, suitable for long-term deployment on servers |
-| 🔐 **Secure Authentication** | Uses OAuth 2.0 PKCE standard flow to ensure account security |
+| Advantage | Description |
+|-----------|-------------|
+| 🚀 **Fully Standalone** | No browser extension required, pure CLI tool that can run in any environment (servers, Docker, CI/CD) |
+| 🤖 **True Automation** | Set once, run forever. Supports Cron scheduled tasks, no manual intervention needed |
+| 🖥️ **Server Friendly** | Designed for servers, supports background running, process management, log rotation |
+| 🔐 **Secure & Reliable** | Uses OAuth 2.0 PKCE standard flow to ensure account security, avoids password leakage risks |
+| 📦 **Lightweight Deployment** | Low resource usage, no additional services needed (like databases, Redis), SQLite is enough |
+| 🛠️ **Out of the Box** | Rich script tools and setup wizard, get started in 3 steps |
 
 ### 🎯 Core Philosophy
 
@@ -132,14 +130,16 @@ PixivFlow is designed for automation scenarios, offering the following core adva
 
 | Feature | Description |
 |---------|-------------|
-| **🤖 Scheduled Automation** | Cron expression configuration, supports daily, weekly, monthly scheduled downloads |
-| **🎯 Precise Filtering** | Filter artworks by tags, bookmarks, date range |
-| **🎲 Random Download** | One-click download random popular tag artworks, quick experience |
-| **💾 Smart Deduplication** | SQLite database records history, auto skip already downloaded |
-| **🔄 Stable & Reliable** | Auto retry, resume download, error recovery, smart skip deleted/private artworks |
-| **📊 Complete Logging** | Detailed run logs and download statistics |
-| **🔐 Secure Login** | OAuth 2.0 PKCE flow via Python gppt library, supports terminal login |
-| **🌐 WebUI Interface** | Modern web management interface with file preview, real-time logs, and task management |
+| **📥 Batch Download** | Supports batch download of illustrations and novels, configurable download count and filters |
+| **🏷️ Tag Search** | Search artworks by tags, supports exact match, partial match, and other modes |
+| **🎲 Random Download** | One-click download random popular tag artworks for quick experience |
+| **⏰ Scheduled Tasks** | Cron expression configuration, supports daily, weekly, monthly automatic downloads |
+| **🔍 Smart Filtering** | Multi-dimensional filtering by bookmarks, date range, artwork type, etc. |
+| **💾 Auto Deduplication** | SQLite database records history, automatically skips already downloaded artworks |
+| **🔄 Resume Download** | Automatically resumes after interruption, no need to restart |
+| **🛡️ Error Handling** | Auto retry, error recovery, smart skip deleted/private artworks |
+| **🌐 WebUI Management** | Modern web management interface with file preview, real-time logs, and task management |
+| **📊 Statistics Reports** | Detailed run logs and download statistics |
 
 ### 🎁 Additional Advantages
 
