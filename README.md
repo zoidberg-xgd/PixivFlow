@@ -170,11 +170,10 @@
   - 或使用 Git Bash：如果已安装 Git for Windows，可以使用 Git Bash 运行脚本
   - 原生 Windows 支持有限：虽然 Node.js 部分可以在 Windows 上运行，但自动化脚本需要 bash 环境
 
-**登录功能（仅首次登录时需要）**：
+**登录功能**：
 - Python 3.9+ 和 `gppt` 包（`pip install gppt`）
-  - ⚠️ **注意**：Python 仅用于首次登录获取 refresh token，不是运行项目的必需依赖
-  - 如果已登录（已有 refresh token），则不需要 Python
-  - 如果 refresh token 过期，需要重新登录时才需要 Python
+  - Python 用于登录获取 refresh token
+  - 如果已有 refresh token 且未过期，则不需要重新登录
 
 ### 🎬 快速开始（推荐）
 
@@ -318,12 +317,12 @@ npm run setup
 - ✅ 配置向导：使用 `npm run setup` 可进行交互式配置
 
 **关于 Python 依赖**：
-- 🔐 **仅用于登录**：Python 和 gppt 仅用于首次登录获取 refresh token
+- 🔐 **用于登录**：Python 和 gppt 用于登录获取 refresh token
   - 两种登录模式都使用 Python gppt 库
   - gppt 内部使用 Selenium 自动化浏览器（交互模式打开窗口，无头模式后台运行）
-- ✅ **已登录后不需要**：如果已登录（已有 refresh token），则不需要 Python
-- 🔄 **Token 过期时**：如果 refresh token 过期，需要重新登录时才需要 Python
-- 💡 **替代方案**：可以在已安装 Python 的机器上完成首次登录，然后将 refresh token 复制到配置文件
+- ✅ **已登录后**：如果已有 refresh token 且未过期，则不需要重新登录
+- 🔄 **Token 过期时**：如果 refresh token 过期，需要重新登录
+- 💡 **替代方案**：可以在已安装 Python 的机器上完成登录，然后将 refresh token 复制到配置文件
 - 🚀 **自动安装**：可以使用部署脚本自动安装 Python 依赖：
   ```bash
   # 安装 Python 和 gppt

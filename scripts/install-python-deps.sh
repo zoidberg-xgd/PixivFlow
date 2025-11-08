@@ -367,8 +367,8 @@ show_help() {
     - 验证安装是否成功
 
 📚 说明:
-    Python 和 gppt 仅用于首次登录获取 refresh token。
-    如果已登录（已有 refresh token），则不需要 Python。
+    Python 和 gppt 用于登录获取 refresh token。
+    如果已有 refresh token 且未过期，则不需要重新登录。
 
 EOF
 }

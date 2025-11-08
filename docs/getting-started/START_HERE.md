@@ -27,6 +27,23 @@ PixivFlow 是一个**自动化下载工具**，专门用于从 Pixiv（日本最
 | **Pixiv 账号** | 有效账号 | 用于登录认证，访问 Pixiv API |
 | **时间** | 约 10 分钟 | 完成首次配置和测试 |
 
+**登录功能**：
+
+| 项目 | 要求 | 说明 |
+|------|------|------|
+| **Python** | 3.9+ | 用于登录获取 refresh token |
+| **gppt** | `pip install gppt` | Python 包，用于 Pixiv 登录认证 |
+| **Chrome/ChromeDriver** | 自动安装 | gppt 内部使用 Selenium 自动化浏览器 |
+
+> ⚠️ **重要说明**：
+> - Python 和 gppt 用于登录获取 refresh token
+> - 两种登录模式都使用 Python gppt：
+>   - **交互模式**：gppt 打开浏览器窗口，用户手动登录
+>   - **无头模式**：gppt 在后台运行浏览器，自动输入用户名密码
+> - 如果已有 refresh token 且未过期，则不需要重新登录
+> - 如果 refresh token 过期，需要重新登录
+> - 可以在已安装 Python 的机器上完成登录，然后将 refresh token 复制到配置文件
+
 > 💡 **提示**：如果你还没有 Pixiv 账号，可以访问 [Pixiv 官网](https://www.pixiv.net/) 免费注册。
 
 ### 检查环境
@@ -98,12 +115,14 @@ pixivflow download
 
 2. **依赖安装** 📦
    - 如果缺少依赖，会自动安装所需组件
-   - 包括 Node.js 包和 Python 工具（用于登录）
+   - 包括 Node.js 包
+   - 如果需要登录且未安装 Python/gppt，会尝试自动安装
 
 3. **账号登录** 🔐
    - 引导你输入 Pixiv 账号和密码
    - 使用 Python gppt 工具完成登录认证
    - 自动获取并保存认证令牌（refresh token）
+   - ⚠️ **注意**：如果已有 refresh token 且未过期，则不需要重新登录
 
 4. **配置设置** ⚙️
    - 引导你设置下载标签、数量等基本配置
@@ -167,7 +186,10 @@ npm run setup
 1. **🔐 终端登录**
    - 在终端中提示你输入 Pixiv 账号（可以是邮箱、用户名或账号名）
    - 然后提示输入密码（输入时不会显示，这是正常的安全措施）
-   - 使用 Python gppt 工具完成登录认证（无头模式，不打开浏览器）
+   - 使用 Python gppt 工具完成登录认证
+     - **交互模式**（默认）：gppt 打开浏览器窗口，用户手动登录
+     - **无头模式**（使用 `-u` 和 `-p` 参数）：gppt 在后台运行浏览器，自动输入用户名密码
+   - ⚠️ **注意**：如果已有 refresh token 且未过期，则不需要重新登录
 
 2. **✅ 自动认证**
    - 登录成功后，自动获取 refresh token（刷新令牌）
