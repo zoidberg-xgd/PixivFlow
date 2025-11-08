@@ -7,9 +7,18 @@ export declare class DownloadManager {
     private readonly client;
     private readonly database;
     private readonly fileService;
+    private progressCallback?;
     constructor(config: StandaloneConfig, client: PixivClient, database: Database, fileService: FileService);
+    /**
+     * Set progress callback
+     */
+    setProgressCallback(callback: (current: number, total: number, message?: string) => void): void;
     initialise(): Promise<void>;
     runAllTargets(): Promise<void>;
+    /**
+     * Update progress
+     */
+    private updateProgress;
     /**
      * Calculate popularity score for an illustration or novel
      * Uses total_bookmarks (preferred) or bookmark_count as primary metric

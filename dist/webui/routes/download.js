@@ -102,6 +102,18 @@ router.post('/stop', async (req, res) => {
     }
 });
 /**
+ * Helper function to serialize TaskStatus for JSON response
+ */
+function serializeTaskStatus(task) {
+    if (!task)
+        return null;
+    return {
+        ...task,
+        startTime: task.startTime instanceof Date ? task.startTime.toISOString() : task.startTime,
+        endTime: task.endTime instanceof Date ? task.endTime.toISOString() : task.endTime,
+    };
+}
+/**
  * GET /api/download/status
  * Get download task status
  */
@@ -115,14 +127,14 @@ router.get('/status', async (req, res) => {
                     error: 'Task not found',
                 });
             }
-            return res.json(status);
+            return res.json(serializeTaskStatus(status));
         }
         // Return all tasks and active task info
         const allTasks = DownloadTaskManager_1.downloadTaskManager.getAllTasks();
         const activeTask = DownloadTaskManager_1.downloadTaskManager.getActiveTask();
         res.json({
-            activeTask,
-            allTasks,
+            activeTask: serializeTaskStatus(activeTask),
+            allTasks: allTasks.map(serializeTaskStatus),
             hasActiveTask: DownloadTaskManager_1.downloadTaskManager.hasActiveTask(),
         });
     }
@@ -138,7 +150,7 @@ router.get('/status', async (req, res) => {
 router.get('/history', async (req, res) => {
     let database = null;
     try {
-        const { page = 1, limit = 20, type, tag } = req.query;
+        const { page = 1, limit = 20, type, tag, author, startDate, endDate, sortBy, sortOrder } = req.query;
         const configPath = (0, config_1.getConfigPath)();
         const config = (0, config_1.loadConfig)(configPath);
         database = new Database_1.Database(config.storage.databasePath);
@@ -148,6 +160,11 @@ router.get('/history', async (req, res) => {
             limit: Number(limit),
             type: type,
             tag: tag,
+            author: author,
+            startDate: startDate,
+            endDate: endDate,
+            sortBy: sortBy || 'downloadedAt',
+            sortOrder: sortOrder || 'desc',
         });
         database.close();
         database = null;
@@ -224,6 +241,234 @@ const POPULAR_NOVEL_TAGS = [
     'original', 'story', 'novel', 'romance', 'fantasy',
     'daily', 'youth', 'adventure', 'mystery', 'horror'
 ];
+/**
+ * GET /api/download/incomplete
+ * Get incomplete download tasks
+ */
+router.get('/incomplete', async (req, res) => {
+    let database = null;
+    try {
+        const configPath = (0, config_1.getConfigPath)();
+        const config = (0, config_1.loadConfig)(configPath);
+        database = new Database_1.Database(config.storage.databasePath);
+        database.migrate();
+        const incompleteTasks = database.getIncompleteTasks(50);
+        database.close();
+        database = null;
+        res.json({
+            success: true,
+            tasks: incompleteTasks,
+        });
+    }
+    catch (error) {
+        if (database) {
+            try {
+                database.close();
+            }
+            catch (closeError) {
+                // Ignore close errors
+            }
+        }
+        logger_1.logger.error('Failed to get incomplete tasks', { error });
+        res.status(500).json({
+            error: 'Failed to get incomplete tasks',
+            message: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+/**
+ * DELETE /api/download/incomplete/:id
+ * Delete an incomplete download task by id
+ */
+router.delete('/incomplete/:id', async (req, res) => {
+    let database = null;
+    try {
+        // Parse and validate task ID
+        const rawId = req.params.id;
+        const id = parseInt(rawId, 10);
+        if (isNaN(id) || !Number.isInteger(id) || id <= 0) {
+            logger_1.logger.warn('Invalid task ID provided for deletion', {
+                rawId,
+                parsedId: id
+            });
+            return res.status(400).json({
+                error: 'Invalid task ID',
+                message: `Task ID must be a valid positive integer, got: ${rawId}`,
+            });
+        }
+        logger_1.logger.info('Attempting to delete incomplete task', { taskId: id });
+        // Initialize database connection
+        const configPath = (0, config_1.getConfigPath)();
+        const config = (0, config_1.loadConfig)(configPath);
+        if (!config.storage?.databasePath) {
+            logger_1.logger.error('Database path not configured');
+            return res.status(500).json({
+                error: 'Database not configured',
+                message: 'Database path is not set in configuration',
+            });
+        }
+        try {
+            database = new Database_1.Database(config.storage.databasePath);
+            database.migrate();
+        }
+        catch (dbError) {
+            logger_1.logger.error('Failed to initialize database', {
+                error: dbError instanceof Error ? dbError.message : String(dbError),
+                databasePath: config.storage.databasePath,
+            });
+            return res.status(500).json({
+                error: 'Database initialization failed',
+                message: dbError instanceof Error ? dbError.message : String(dbError),
+            });
+        }
+        // Perform deletion
+        const result = database.deleteIncompleteTask(id);
+        // Close database connection immediately after operation
+        try {
+            database.close();
+            database = null;
+        }
+        catch (closeError) {
+            logger_1.logger.warn('Error closing database connection', {
+                error: closeError instanceof Error ? closeError.message : String(closeError)
+            });
+        }
+        // Handle result
+        if (!result.success) {
+            const statusCode = result.message?.includes('not found') ? 404 : 400;
+            logger_1.logger.warn('Failed to delete incomplete task', {
+                taskId: id,
+                reason: result.message
+            });
+            return res.status(statusCode).json({
+                error: result.message || 'Task not found or cannot be deleted',
+                message: result.message || 'Task not found or cannot be deleted',
+            });
+        }
+        logger_1.logger.info('Successfully deleted incomplete task via API', { taskId: id });
+        res.json({
+            success: true,
+            message: 'Task deleted successfully',
+        });
+    }
+    catch (error) {
+        // Ensure database is closed even on error
+        if (database) {
+            try {
+                database.close();
+            }
+            catch (closeError) {
+                logger_1.logger.warn('Error closing database connection in error handler', {
+                    error: closeError instanceof Error ? closeError.message : String(closeError)
+                });
+            }
+        }
+        logger_1.logger.error('Unexpected error while deleting incomplete task', {
+            error,
+            taskId: req.params.id,
+            parsedTaskId: parseInt(req.params.id, 10),
+            errorMessage: error instanceof Error ? error.message : String(error),
+            errorStack: error instanceof Error ? error.stack : undefined,
+        });
+        res.status(500).json({
+            error: 'Failed to delete incomplete task',
+            message: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+/**
+ * GET /api/download/incomplete/test
+ * Test endpoint to verify database connection and incomplete tasks query
+ */
+router.get('/incomplete/test', async (req, res) => {
+    let database = null;
+    try {
+        const configPath = (0, config_1.getConfigPath)();
+        const config = (0, config_1.loadConfig)(configPath);
+        if (!config.storage?.databasePath) {
+            return res.status(500).json({
+                error: 'Database not configured',
+                message: 'Database path is not set in configuration',
+            });
+        }
+        database = new Database_1.Database(config.storage.databasePath);
+        database.migrate();
+        // Test query
+        const tasks = database.getIncompleteTasks(10);
+        database.close();
+        database = null;
+        res.json({
+            success: true,
+            message: 'Database connection successful',
+            taskCount: tasks.length,
+            sampleTasks: tasks.slice(0, 3),
+        });
+    }
+    catch (error) {
+        if (database) {
+            try {
+                database.close();
+            }
+            catch (closeError) {
+                // Ignore close errors
+            }
+        }
+        logger_1.logger.error('Database test failed', { error });
+        res.status(500).json({
+            error: 'Database test failed',
+            message: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+/**
+ * POST /api/download/resume
+ * Resume an incomplete download task by tag
+ */
+router.post('/resume', async (req, res) => {
+    try {
+        const { tag, type } = req.body;
+        if (!tag || !type) {
+            return res.status(400).json({
+                error: 'Tag and type are required',
+            });
+        }
+        // Check if there's already an active task
+        if (DownloadTaskManager_1.downloadTaskManager.hasActiveTask()) {
+            return res.status(409).json({
+                error: 'Another download task is already running',
+            });
+        }
+        const configPath = (0, config_1.getConfigPath)();
+        const config = (0, config_1.loadConfig)(configPath);
+        // Find target by tag
+        const target = config.targets?.find((t) => (t.tag === tag || t.filterTag === tag) && t.type === type);
+        if (!target) {
+            return res.status(404).json({
+                error: `Target not found for tag "${tag}" and type "${type}"`,
+            });
+        }
+        const targetIndex = config.targets.indexOf(target);
+        const taskId = `task_resume_${tag}_${Date.now()}`;
+        // Start task in background with the specific target
+        DownloadTaskManager_1.downloadTaskManager.startTask(taskId, targetIndex.toString()).catch((error) => {
+            logger_1.logger.error('Background task error', { error, taskId });
+        });
+        res.json({
+            success: true,
+            taskId,
+            message: `Resuming download task for tag "${tag}" (${type})`,
+            tag,
+            type,
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Failed to resume download', { error });
+        res.status(500).json({
+            error: 'Failed to resume download',
+            message: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
 /**
  * POST /api/download/random
  * Download a random illustration or novel

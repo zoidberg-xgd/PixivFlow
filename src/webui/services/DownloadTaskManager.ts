@@ -69,6 +69,10 @@ export class DownloadTaskManager {
     const fileService = new FileService(config.storage!);
     const downloadManager = new DownloadManager(config, pixivClient, database, fileService);
 
+    // Set progress callback
+    const progressCallback = this.getProgressCallback(taskId);
+    downloadManager.setProgressCallback(progressCallback);
+
     await downloadManager.initialise();
 
     const abortController = new AbortController();
@@ -173,6 +177,33 @@ export class DownloadTaskManager {
    */
   hasActiveTask(): boolean {
     return this.activeTask !== null;
+  }
+
+  /**
+   * Update progress for a task
+   */
+  updateProgress(taskId: string, progress: { current: number; total: number; message?: string }): void {
+    const task = this.tasks.get(taskId);
+    if (task) {
+      task.progress = progress;
+    }
+  }
+
+  /**
+   * Get progress callback for a task
+   */
+  getProgressCallback(taskId: string): (current: number, total: number, message?: string) => void {
+    return (current: number, total: number, message?: string) => {
+      this.updateProgress(taskId, { current, total, message });
+      
+      // Log progress to console for real-time visibility
+      const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+      if (message) {
+        logger.info(`[${taskId}] Progress: ${current}/${total} (${percentage}%) - ${message}`);
+      } else {
+        logger.info(`[${taskId}] Progress: ${current}/${total} (${percentage}%)`);
+      }
+    };
   }
 }
 

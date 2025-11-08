@@ -374,7 +374,9 @@ class PixivClient {
     async request(url, init) {
         let lastError;
         const network = this.config.network;
-        for (let attempt = 0; attempt < (network.retries ?? 3); attempt++) {
+        let maxAttempts = network.retries ?? 3;
+        let hasRateLimitError = false;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
                 const token = await this.auth.getAccessToken();
                 const controller = new AbortController();
@@ -421,6 +423,43 @@ class PixivClient {
                         }
                         throw new errors_1.NetworkError(`Pixiv API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`, url, undefined);
                     }
+                    if (response.status === 429) {
+                        // Rate limit error - use longer wait time
+                        hasRateLimitError = true;
+                        // Increase max attempts for rate limit errors (up to 10 attempts)
+                        if (maxAttempts < 10) {
+                            maxAttempts = 10;
+                        }
+                        let errorBody = '';
+                        try {
+                            const text = await response.text();
+                            errorBody = text;
+                            logger_1.logger.warn('429 Rate Limit response body', { url, body: text });
+                        }
+                        catch (e) {
+                            // Ignore errors reading body
+                        }
+                        // Check if Retry-After header is present
+                        const retryAfter = response.headers.get('Retry-After');
+                        let waitTime;
+                        if (retryAfter) {
+                            // Use Retry-After header value, but ensure minimum 60 seconds
+                            waitTime = Math.max(parseInt(retryAfter, 10) * 1000, 60000);
+                        }
+                        else {
+                            // Exponential backoff with longer wait times: 60s, 120s, 240s, 480s, 600s, max 600s
+                            // For rate limits, we need to wait longer
+                            waitTime = Math.min(60000 * Math.pow(2, attempt), 600000); // 1min, 2min, 4min, 8min, max 10min
+                        }
+                        logger_1.logger.warn(`Rate limited (429). Waiting ${waitTime / 1000}s before retry...`, {
+                            url,
+                            attempt: attempt + 1,
+                            maxAttempts,
+                            retryAfter,
+                            waitTime: waitTime / 1000,
+                        });
+                        throw new errors_1.NetworkError(`Pixiv API error: ${response.status} ${response.statusText} - Rate Limit${errorBody ? ` - ${errorBody}` : ''}`, url, undefined, { isRateLimit: true, waitTime });
+                    }
                     if (!response.ok) {
                         // Try to get response body for debugging
                         let errorBody = '';
@@ -446,18 +485,31 @@ class PixivClient {
                 if ((0, errors_1.is404Error)(error)) {
                     throw error;
                 }
+                // Handle rate limit errors with longer wait time
+                const isRateLimit = error instanceof errors_1.NetworkError && error.isRateLimit;
+                const waitTime = error instanceof errors_1.NetworkError && error.waitTime
+                    ? error.waitTime
+                    : Math.min(1000 * (attempt + 1), 5000);
+                // Check if this is the last attempt
+                if (attempt >= maxAttempts - 1) {
+                    // Last attempt failed, throw error
+                    throw error;
+                }
                 logger_1.logger.warn('Pixiv API request failed', {
                     url,
                     attempt: attempt + 1,
+                    maxAttempts,
+                    isRateLimit,
+                    waitTime: waitTime / 1000,
                     error: error instanceof Error ? error.message : String(error),
                 });
-                await (0, promises_1.setTimeout)(Math.min(1000 * (attempt + 1), 5000));
+                await (0, promises_1.setTimeout)(waitTime);
             }
         }
         const errorMessage = lastError instanceof Error
             ? lastError.message
             : String(lastError);
-        throw new errors_1.NetworkError(`Pixiv API request to ${url} failed after ${network.retries ?? 3} attempts: ${errorMessage}`, url, lastError instanceof Error ? lastError : undefined);
+        throw new errors_1.NetworkError(`Pixiv API request to ${url} failed after ${maxAttempts} attempts: ${errorMessage}`, url, lastError instanceof Error ? lastError : undefined);
     }
 }
 exports.PixivClient = PixivClient;

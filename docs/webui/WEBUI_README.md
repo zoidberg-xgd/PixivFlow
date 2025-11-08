@@ -56,6 +56,83 @@ npm run webui
 
 打开浏览器访问：http://localhost:3000
 
+---
+
+## 🐳 Docker 部署
+
+### 使用 Docker Compose（推荐）
+
+Docker 镜像已经包含了构建好的前端静态文件，无需手动构建。
+
+#### 启动 WebUI 服务
+
+```bash
+# 启动 WebUI 服务
+docker-compose up -d pixivflow-webui
+
+# 或同时启动定时任务和 WebUI
+docker-compose up -d
+```
+
+#### 访问 WebUI
+
+启动后，打开浏览器访问：**http://localhost:3000**
+
+#### 查看日志
+
+```bash
+# 查看 WebUI 日志
+docker-compose logs -f pixivflow-webui
+```
+
+#### 停止服务
+
+```bash
+# 停止 WebUI 服务
+docker-compose stop pixivflow-webui
+
+# 停止并删除容器
+docker-compose down pixivflow-webui
+```
+
+#### 修改端口
+
+如果需要修改 WebUI 端口，编辑 `docker-compose.yml`：
+
+```yaml
+pixivflow-webui:
+  ports:
+    - "8080:3000"  # 将宿主机端口改为 8080
+  environment:
+    - PORT=3000    # 容器内端口保持 3000
+```
+
+然后访问：http://localhost:8080
+
+### Docker 环境变量
+
+Docker 环境中的 WebUI 支持以下环境变量：
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `PORT` | WebUI 端口 | `3000` |
+| `HOST` | WebUI 主机 | `0.0.0.0` |
+| `STATIC_PATH` | 前端静态文件路径 | `/app/webui-frontend/dist` |
+| `PIXIV_DATABASE_PATH` | 数据库文件路径（容器内路径） | `/app/data/pixiv-downloader.db` |
+| `PIXIV_DOWNLOAD_DIR` | 下载根目录（容器内路径） | `/app/downloads` |
+| `PIXIV_ILLUSTRATION_DIR` | 插画保存目录（容器内路径） | `/app/downloads/downloads/illustrations` |
+| `PIXIV_NOVEL_DIR` | 小说保存目录（容器内路径） | `/app/downloads/downloads/novels` |
+
+**重要提示**：
+- Docker 环境中的路径配置需要使用**容器内路径**（如 `/app/data/...`），而不是宿主机路径
+- `docker-compose.yml` 已自动配置这些环境变量，通常无需手动修改
+
+### 更多信息
+
+详细的 Docker 使用说明请查看 [Docker 使用指南](../docker/DOCKER.md)。
+
+---
+
 ## 📁 项目结构
 
 ```
@@ -76,6 +153,32 @@ pixivflow/
 ```
 
 ## 🔌 API 端点
+
+### 根路径
+- `GET /` - 获取 API 信息
+  - 当未配置静态文件路径时，返回 JSON 格式的 API 信息
+  - 包含服务器版本、可用端点列表和使用说明
+  - 响应示例：
+    ```json
+    {
+      "message": "PixivFlow WebUI API Server",
+      "version": "2.0.0",
+      "endpoints": {
+        "health": "/api/health",
+        "auth": "/api/auth",
+        "config": "/api/config",
+        "download": "/api/download",
+        "stats": "/api/stats",
+        "logs": "/api/logs",
+        "files": "/api/files"
+      },
+      "note": "Frontend is not configured. To serve the frontend, set STATIC_PATH environment variable or run in development mode with separate frontend server on port 5173."
+    }
+    ```
+
+### 健康检查
+- `GET /api/health` - 服务器健康状态
+  - 返回服务器状态和时间戳
 
 ### 认证相关
 - `GET /api/auth/status` - 获取登录状态

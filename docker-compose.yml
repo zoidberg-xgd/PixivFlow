@@ -1,4 +1,21 @@
+# PixivFlow Docker Compose 配置
+# 
+# 本文件定义了两个服务：
+# 1. pixivflow - 定时任务服务（自动执行下载任务）
+# 2. pixivflow-webui - WebUI 管理界面（可选，提供 Web 管理界面）
+#
+# 使用说明：
+# - 启动定时任务：docker-compose up -d pixivflow
+# - 启动 WebUI：docker-compose up -d pixivflow-webui
+# - 同时启动两个服务：docker-compose up -d
+# - 查看日志：docker-compose logs -f pixivflow
+# - 停止服务：docker-compose down
+#
+# 详细文档：docs/docker/DOCKER.md
+
 services:
+  # 定时任务服务
+  # 功能：自动执行定时下载任务，后台持续运行
   pixivflow:
     build:
       context: .
@@ -64,47 +81,72 @@ services:
       retries: 3
       start_period: 40s
 
-  # WebUI 服务（可选，如果需要 WebUI）
+  # WebUI 服务（可选）
+  # 功能：提供现代化的 Web 管理界面
+  # 访问地址：http://localhost:3000
+  # 功能包括：文件浏览、统计查看、任务管理、实时日志等
+  # 
+  # 注意：
+  # - WebUI 服务与定时任务服务共享配置、数据和下载目录
+  # - 可以独立运行 WebUI 服务，不运行定时任务服务
+  # - 前端静态文件已内置在镜像中，无需单独构建
   pixivflow-webui:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: pixivflow-webui
     restart: unless-stopped
+    # 启动 WebUI 服务器
     command: node dist/webui/index.js
     
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
-      - PORT=3000
-      - HOST=0.0.0.0
-      - STATIC_PATH=/app/webui-frontend/dist
-      # Docker 容器内路径配置
+      # WebUI 服务器配置
+      - PORT=3000                    # WebUI 端口（容器内）
+      - HOST=0.0.0.0                 # 监听所有网络接口
+      - STATIC_PATH=/app/webui-frontend/dist  # 前端静态文件路径
+      # Docker 容器内路径配置（必须使用容器内路径）
       - PIXIV_DATABASE_PATH=/app/data/pixiv-downloader.db
       - PIXIV_DOWNLOAD_DIR=/app/downloads
       - PIXIV_ILLUSTRATION_DIR=/app/downloads/downloads/illustrations
       - PIXIV_NOVEL_DIR=/app/downloads/downloads/novels
-      # 代理设置（使用本机代理，同上）
+      # 代理设置（使用本机代理）
+      # 注意：如果代理只监听在 127.0.0.1，需要使用 host.docker.internal
+      # macOS/Windows: 使用 host.docker.internal
+      # Linux: 可以使用 172.17.0.1 或 host.docker.internal
       - HTTP_PROXY=http://127.0.0.1:6152
       - HTTPS_PROXY=http://127.0.0.1:6152
       # 注意：undici ProxyAgent 可能不支持 SOCKS5，优先使用 HTTP/HTTPS 代理
+      # 如果必须使用 SOCKS5，需要在配置文件中设置，而不是通过环境变量
       # - ALL_PROXY=socks5://host.docker.internal:6153
+      # 如果代理在局域网其他机器，直接使用 IP 地址：
+      # - HTTP_PROXY=http://192.168.1.100:7890
+      # - HTTPS_PROXY=http://192.168.1.100:7890
     
+    # 数据持久化（与定时任务服务共享）
     volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-      - ./downloads:/app/downloads
+      - ./config:/app/config          # 配置文件目录
+      - ./data:/app/data              # 数据库和日志文件
+      - ./downloads:/app/downloads    # 下载的作品文件
     
-    # 网络配置（同主服务）
+    # 网络配置
+    # 注意：macOS 上的 Docker Desktop 不支持 host 网络模式
+    # 如果代理只监听在 127.0.0.1，容器无法直接访问
+    # 解决方案：使用 host.docker.internal 或让代理监听在 0.0.0.0
     network_mode: bridge
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway"  # 允许容器访问宿主机
     
+    # 端口映射
+    # 格式：宿主机端口:容器内端口
+    # 修改宿主机端口：将 "3000" 改为其他端口，如 "8080:3000"
     ports:
-      - "3000:3000"
+      - "3000:3000"  # 访问地址：http://localhost:3000
     
+    # 依赖关系
+    # WebUI 服务依赖于定时任务服务（共享数据）
+    # 如果只需要 WebUI，可以注释掉这个依赖，并注释掉上面的 pixivflow 服务
     depends_on:
       - pixivflow
-    
-    # 如果只需要 WebUI，可以注释掉上面的 pixivflow 服务
 

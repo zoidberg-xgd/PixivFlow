@@ -60,6 +60,85 @@
 1. **pixivflow** - 定时任务服务（默认）
 2. **pixivflow-webui** - WebUI 管理界面（可选）
 
+### 使用 WebUI
+
+WebUI 提供了现代化的 Web 管理界面，可以在浏览器中管理下载任务、查看统计、浏览文件等。
+
+#### 启动 WebUI 服务
+
+```bash
+# 启动 WebUI 服务（会自动构建前端）
+docker-compose up -d pixivflow-webui
+
+# 或同时启动定时任务和 WebUI
+docker-compose up -d
+```
+
+#### 访问 WebUI
+
+启动后，打开浏览器访问：**http://localhost:3000**
+
+> **注意**：Docker 中的 WebUI 使用生产模式，前端静态文件已内置在镜像中，无需单独构建。
+
+#### WebUI 功能
+
+- 📊 **下载统计**：查看下载概览、标签统计、作者统计
+- 📁 **文件浏览**：浏览已下载的作品，支持预览（图片/小说）
+- 📝 **实时日志**：查看实时运行日志
+- ⚙️ **配置管理**：查看和更新配置文件
+- 🎯 **任务管理**：启动/停止下载任务
+- 📈 **下载历史**：查看历史下载记录
+
+#### WebUI 环境变量
+
+WebUI 服务支持以下环境变量（在 `docker-compose.yml` 中配置）：
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `PORT` | WebUI 端口 | `3000` |
+| `HOST` | WebUI 主机 | `0.0.0.0` |
+| `STATIC_PATH` | 前端静态文件路径 | `/app/webui-frontend/dist` |
+
+#### 修改 WebUI 端口
+
+如果需要修改 WebUI 端口，编辑 `docker-compose.yml`：
+
+```yaml
+pixivflow-webui:
+  ports:
+    - "8080:3000"  # 将宿主机端口改为 8080
+  environment:
+    - PORT=3000    # 容器内端口保持 3000
+```
+
+然后访问：http://localhost:8080
+
+#### 查看 WebUI 日志
+
+```bash
+# 查看 WebUI 日志
+docker-compose logs -f pixivflow-webui
+
+# 查看最近 100 行日志
+docker-compose logs --tail=100 pixivflow-webui
+```
+
+#### 停止 WebUI 服务
+
+```bash
+# 停止 WebUI 服务
+docker-compose stop pixivflow-webui
+
+# 停止并删除容器
+docker-compose down pixivflow-webui
+```
+
+#### WebUI 与定时任务服务
+
+- **独立运行**：可以只运行 WebUI 服务，不运行定时任务服务
+- **共享数据**：两个服务共享相同的配置、数据和下载目录（通过卷挂载）
+- **同时运行**：可以同时运行两个服务，WebUI 用于管理，定时任务用于自动下载
+
 ### 常用命令
 
 ```bash
@@ -154,9 +233,19 @@ docker run -d \
   -v $(pwd)/downloads:/app/downloads \
   -e PORT=3000 \
   -e HOST=0.0.0.0 \
+  -e STATIC_PATH=/app/webui-frontend/dist \
+  -e PIXIV_DATABASE_PATH=/app/data/pixiv-downloader.db \
+  -e PIXIV_DOWNLOAD_DIR=/app/downloads \
+  -e PIXIV_ILLUSTRATION_DIR=/app/downloads/downloads/illustrations \
+  -e PIXIV_NOVEL_DIR=/app/downloads/downloads/novels \
   pixivflow:latest \
   node dist/webui/index.js
 ```
+
+**说明**：
+- WebUI 服务会自动提供前端静态文件（已内置在镜像中）
+- 访问地址：http://localhost:3000
+- 确保设置了正确的路径环境变量，以便 WebUI 能够正确访问数据库和文件
 
 #### 方式 4：交互式登录
 

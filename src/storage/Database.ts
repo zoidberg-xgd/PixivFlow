@@ -217,6 +217,115 @@ export class Database {
   }
 
   /**
+   * Get incomplete tasks (failed or partial executions)
+   */
+  public getIncompleteTasks(limit: number = 50): Array<{
+    id: number;
+    tag: string;
+    type: 'illustration' | 'novel';
+    status: ExecutionStatus;
+    message: string | null;
+    executedAt: string;
+  }> {
+    const stmt = this.db.prepare(
+      `SELECT id, tag, type, status, message, executed_at
+       FROM execution_log
+       WHERE status IN ('failed', 'partial')
+       ORDER BY executed_at DESC
+       LIMIT ?`
+    );
+
+    const rows = stmt.all(limit) as Array<{
+      id: number;
+      tag: string;
+      type: string;
+      status: string;
+      message: string | null;
+      executed_at: string;
+    }>;
+
+    return rows.map(row => ({
+      id: row.id,
+      tag: row.tag,
+      type: row.type as 'illustration' | 'novel',
+      status: row.status as ExecutionStatus,
+      message: row.message,
+      executedAt: row.executed_at,
+    }));
+  }
+
+  /**
+   * Delete an incomplete task by id
+   * Returns an object with success status and message
+   */
+  public deleteIncompleteTask(id: number): { success: boolean; message?: string } {
+    try {
+      // Validate input
+      if (!Number.isInteger(id) || id <= 0) {
+        return { success: false, message: `Invalid task ID: ${id} (must be a positive integer)` };
+      }
+
+      // Use a transaction to ensure atomicity
+      const transaction = this.db.transaction(() => {
+        // First check if the task exists and get its status
+        const checkStmt = this.db.prepare(
+          `SELECT id, status, tag, type FROM execution_log WHERE id = ?`
+        );
+        const task = checkStmt.get(id) as { 
+          id: number; 
+          status: string; 
+          tag: string; 
+          type: string;
+        } | undefined;
+        
+        if (!task) {
+          throw new Error(`Task not found (ID: ${id})`);
+        }
+        
+        // Check if the task is in a deletable state
+        if (task.status !== 'failed' && task.status !== 'partial') {
+          throw new Error(
+            `Task cannot be deleted: status is '${task.status}' (only 'failed' or 'partial' tasks can be deleted)`
+          );
+        }
+        
+        // Delete the task
+        const deleteStmt = this.db.prepare(
+          `DELETE FROM execution_log 
+           WHERE id = ? AND status IN ('failed', 'partial')`
+        );
+        const result = deleteStmt.run(id);
+        
+        if (result.changes === 0) {
+          throw new Error(
+            `Failed to delete task: no rows affected (task may have been deleted or status changed)`
+          );
+        }
+        
+        return { success: true, task };
+      });
+
+      const result = transaction();
+      logger.info('Successfully deleted incomplete task', { 
+        taskId: id, 
+        tag: result.task.tag, 
+        type: result.task.type 
+      });
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to delete incomplete task', { 
+        taskId: id, 
+        error: errorMessage 
+      });
+      return { 
+        success: false, 
+        message: errorMessage 
+      };
+    }
+  }
+
+  /**
    * Get the next execution number for the scheduler
    */
   public getNextExecutionNumber(): number {
@@ -371,6 +480,11 @@ export class Database {
     limit?: number;
     type?: string;
     tag?: string;
+    author?: string;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: 'downloadedAt' | 'title' | 'author' | 'pixivId';
+    sortOrder?: 'asc' | 'desc';
   }): {
     items: Array<{
       id: number;
@@ -388,7 +502,17 @@ export class Database {
     limit: number;
     totalPages: number;
   } {
-    const { page = 1, limit = 20, type, tag } = options;
+    const { 
+      page = 1, 
+      limit = 20, 
+      type, 
+      tag, 
+      author,
+      startDate,
+      endDate,
+      sortBy = 'downloadedAt',
+      sortOrder = 'desc'
+    } = options;
 
     // Build query
     let whereClause = '1=1';
@@ -400,9 +524,34 @@ export class Database {
     }
 
     if (tag) {
-      whereClause += ' AND tag = ?';
-      params.push(tag);
+      whereClause += ' AND tag LIKE ?';
+      params.push(`%${tag}%`);
     }
+
+    if (author) {
+      whereClause += ' AND author LIKE ?';
+      params.push(`%${author}%`);
+    }
+
+    if (startDate) {
+      whereClause += ' AND downloaded_at >= ?';
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClause += ' AND downloaded_at <= ?';
+      params.push(endDate);
+    }
+
+    // Map sortBy to database column names
+    const sortColumnMap: Record<string, string> = {
+      downloadedAt: 'downloaded_at',
+      title: 'title',
+      author: 'author',
+      pixivId: 'pixiv_id',
+    };
+    const sortColumn = sortColumnMap[sortBy] || 'downloaded_at';
+    const orderDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     // Get total count
     const countStmt = this.db.prepare(`SELECT COUNT(*) as total FROM downloads WHERE ${whereClause}`);
@@ -414,7 +563,7 @@ export class Database {
     const stmt = this.db.prepare(
       `SELECT * FROM downloads 
        WHERE ${whereClause}
-       ORDER BY downloaded_at DESC 
+       ORDER BY ${sortColumn} ${orderDirection}
        LIMIT ? OFFSET ?`
     );
     const items = stmt.all(...params, Number(limit), offset) as Array<{

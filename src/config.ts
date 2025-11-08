@@ -441,6 +441,9 @@ export function loadConfig(configPath?: string): StandaloneConfig {
   // Apply environment variable overrides
   parsed = applyEnvironmentOverrides(parsed);
 
+  // Auto-detect Docker environment and adjust proxy configuration
+  parsed = adjustProxyForEnvironment(parsed);
+
   // Validate configuration
   validateConfig(parsed, resolvedPath);
 
@@ -603,6 +606,74 @@ function applyEnvironmentOverrides(config: Partial<StandaloneConfig>): Partial<S
   }
 
   return overridden;
+}
+
+/**
+ * Detect if running in Docker container
+ */
+function isRunningInDocker(): boolean {
+  // Method 1: Check for .dockerenv file (most reliable)
+  if (existsSync('/.dockerenv')) {
+    return true;
+  }
+
+  // Method 2: Check cgroup (Linux)
+  try {
+    if (existsSync('/proc/self/cgroup')) {
+      const cgroup = readFileSync('/proc/self/cgroup', 'utf-8');
+      if (cgroup.includes('docker') || cgroup.includes('containerd')) {
+        return true;
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+
+  // Method 3: Check environment variable (set by docker-compose.yml)
+  if (process.env.PIXIV_SKIP_AUTO_LOGIN === 'true' && process.env.NODE_ENV === 'production') {
+    // This is a hint but not definitive
+    // We'll use it as a secondary check
+  }
+
+  return false;
+}
+
+/**
+ * Auto-adjust proxy configuration based on running environment
+ * - If in Docker and proxy host is 127.0.0.1, change to host.docker.internal
+ * - If in local environment and proxy host is host.docker.internal, change to 127.0.0.1
+ */
+function adjustProxyForEnvironment(config: Partial<StandaloneConfig>): Partial<StandaloneConfig> {
+  const adjusted = { ...config };
+  const isDocker = isRunningInDocker();
+
+  if (!adjusted.network?.proxy?.enabled || !adjusted.network.proxy.host) {
+    return adjusted;
+  }
+
+  const proxy = adjusted.network.proxy;
+  const currentHost = proxy.host;
+
+  // If running in Docker and proxy points to localhost, change to host.docker.internal
+  if (isDocker && (currentHost === '127.0.0.1' || currentHost === 'localhost')) {
+    adjusted.network.proxy.host = 'host.docker.internal';
+    logger.info('Auto-adjusted proxy host for Docker environment', {
+      old: currentHost,
+      new: 'host.docker.internal',
+      port: proxy.port,
+    });
+  }
+  // If running locally and proxy points to host.docker.internal, change to 127.0.0.1
+  else if (!isDocker && currentHost === 'host.docker.internal') {
+    adjusted.network.proxy.host = '127.0.0.1';
+    logger.info('Auto-adjusted proxy host for local environment', {
+      old: 'host.docker.internal',
+      new: '127.0.0.1',
+      port: proxy.port,
+    });
+  }
+
+  return adjusted;
 }
 
 /**

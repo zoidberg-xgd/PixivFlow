@@ -39,6 +39,18 @@ export declare class DownloadTaskManager {
      * Check if there's an active task
      */
     hasActiveTask(): boolean;
+    /**
+     * Update progress for a task
+     */
+    updateProgress(taskId: string, progress: {
+        current: number;
+        total: number;
+        message?: string;
+    }): void;
+    /**
+     * Get progress callback for a task
+     */
+    getProgressCallback(taskId: string): (current: number, total: number, message?: string) => void;
 }
 export declare const downloadTaskManager: DownloadTaskManager;
 //# sourceMappingURL=DownloadTaskManager.d.ts.map

@@ -278,7 +278,20 @@ STATIC_PATH=webui-frontend/dist npm run webui
 
 然后访问 http://localhost:3000 即可使用 WebUI（后端服务器）。
 
-> **注意**：开发模式使用 Vite 开发服务器（端口 5173），生产模式使用 Express 服务器（端口 3000）。Docker 部署使用生产模式，访问端口为 3000。
+> **注意**：
+> - 开发模式使用 Vite 开发服务器（端口 5173），生产模式使用 Express 服务器（端口 3000）
+> - Docker 部署使用生产模式，前端静态文件已内置在镜像中，访问端口为 3000
+> - 详细 Docker 部署说明请查看 [Docker 使用指南](docs/docker/DOCKER.md) 和 [WebUI 设置指南](docs/webui/WEBUI_SETUP.md)
+
+**WebUI API 端点**：
+- 根路径 `GET /` - 返回 API 信息（当未配置静态文件时）
+- 健康检查 `GET /api/health` - 服务器健康状态
+- 认证相关 `GET /api/auth/*` - 登录、登出、状态查询
+- 配置管理 `GET /api/config` - 获取和更新配置
+- 下载任务 `POST /api/download/*` - 启动、停止、查询下载任务
+- 统计信息 `GET /api/stats/*` - 下载统计、标签统计、作者统计
+- 日志查看 `GET /api/logs` - 获取日志，WebSocket 实时日志流
+- 文件浏览 `GET /api/files/*` - 文件列表、预览、删除
 
 **WebUI 功能**：
 - 📊 下载统计和概览
@@ -295,6 +308,27 @@ STATIC_PATH=webui-frontend/dist npm run webui
 ### 🐳 使用 Docker（推荐）
 
 PixivFlow 支持 Docker 部署，无需安装 Node.js 环境：
+
+#### 快速开始
+
+```bash
+# 1. 准备配置文件
+cp config/standalone.config.example.json config/standalone.config.json
+
+# 2. 登录 Pixiv 账号（在主机上）
+npm run login
+
+# 3. 启动定时任务服务
+docker-compose up -d pixivflow
+
+# 或启动 WebUI 服务
+docker-compose up -d pixivflow-webui
+
+# 或同时启动两个服务
+docker-compose up -d
+```
+
+#### 使用脚本工具
 
 ```bash
 # 1. 初始化 Docker 环境
@@ -313,7 +347,47 @@ PixivFlow 支持 Docker 部署，无需安装 Node.js 环境：
 ./scripts/pixiv.sh docker logs -f
 ```
 
-**Docker 命令**：
+#### Docker 服务说明
+
+`docker-compose.yml` 提供了两个服务：
+
+1. **pixivflow** - 定时任务服务（默认）
+   - 自动执行定时下载任务
+   - 后台持续运行
+
+2. **pixivflow-webui** - WebUI 管理界面（可选）
+   - 提供现代化的 Web 管理界面
+   - 访问地址：http://localhost:3000
+   - 支持文件浏览、统计查看、任务管理等
+
+#### Docker 常用命令
+
+```bash
+# 启动定时任务服务
+docker-compose up -d pixivflow
+
+# 启动 WebUI 服务
+docker-compose up -d pixivflow-webui
+
+# 同时启动两个服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f pixivflow
+docker-compose logs -f pixivflow-webui
+
+# 停止服务
+docker-compose stop
+
+# 停止并删除容器
+docker-compose down
+
+# 重新构建镜像
+docker-compose build
+```
+
+#### Docker 脚本命令
+
 - `docker setup` - 初始化 Docker 环境
 - `docker build` - 构建 Docker 镜像
 - `docker deploy` - 部署服务（构建 + 启动）
@@ -322,6 +396,7 @@ PixivFlow 支持 Docker 部署，无需安装 Node.js 环境：
 - `docker status` - 查看服务状态
 - `docker logs` - 查看日志
 - `docker login` - 在容器中登录账号
+- `docker random` - 随机下载作品（测试用）
 
 详细说明请查看 [Docker 使用指南](docs/docker/DOCKER.md)。
 

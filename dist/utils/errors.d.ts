@@ -16,7 +16,12 @@ export declare class AuthenticationError extends PixivFlowError {
 }
 export declare class NetworkError extends PixivFlowError {
     readonly url?: string | undefined;
-    constructor(message: string, url?: string | undefined, cause?: Error);
+    readonly isRateLimit?: boolean;
+    readonly waitTime?: number;
+    constructor(message: string, url?: string | undefined, cause?: Error, metadata?: {
+        isRateLimit?: boolean;
+        waitTime?: number;
+    });
 }
 export declare class DownloadError extends PixivFlowError {
     readonly itemId?: number | undefined;
@@ -38,6 +43,15 @@ export declare function isSkipableError(error: unknown): boolean;
  * Extract error message safely
  */
 export declare function getErrorMessage(error: unknown): string;
+/**
+ * Get detailed error information including cause and suggestions
+ */
+export declare function getDetailedErrorInfo(error: unknown): {
+    message: string;
+    type: string;
+    cause?: string;
+    suggestions?: string[];
+};
 /**
  * Extract error stack trace safely
  */

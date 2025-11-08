@@ -34,9 +34,19 @@ export class AuthenticationError extends PixivFlowError {
 }
 
 export class NetworkError extends PixivFlowError {
-  constructor(message: string, public readonly url?: string, cause?: Error) {
+  public readonly isRateLimit?: boolean;
+  public readonly waitTime?: number;
+  
+  constructor(
+    message: string, 
+    public readonly url?: string, 
+    cause?: Error,
+    metadata?: { isRateLimit?: boolean; waitTime?: number }
+  ) {
     super(message, 'NETWORK_ERROR', undefined, cause);
     this.name = 'NetworkError';
+    this.isRateLimit = metadata?.isRateLimit;
+    this.waitTime = metadata?.waitTime;
   }
 }
 
@@ -109,6 +119,51 @@ export function getErrorMessage(error: unknown): string {
     return error;
   }
   return String(error);
+}
+
+/**
+ * Get detailed error information including cause and suggestions
+ */
+export function getDetailedErrorInfo(error: unknown): {
+  message: string;
+  type: string;
+  cause?: string;
+  suggestions?: string[];
+} {
+  const message = getErrorMessage(error);
+  let type = 'UNKNOWN_ERROR';
+  let cause: string | undefined;
+  const suggestions: string[] = [];
+
+  if (error instanceof NetworkError) {
+    type = 'NETWORK_ERROR';
+    if (error.cause) {
+      cause = getErrorMessage(error.cause);
+    }
+    
+    // Add suggestions based on error message
+    const msgLower = message.toLowerCase();
+    if (msgLower.includes('401') || msgLower.includes('unauthorized')) {
+      suggestions.push('认证失败：请检查 refresh token 是否有效');
+      suggestions.push('尝试重新登录以获取新的 refresh token');
+    } else if (msgLower.includes('403') || msgLower.includes('forbidden')) {
+      suggestions.push('访问被拒绝：可能是 Pixiv API 限制');
+      suggestions.push('等待一段时间后重试，或检查账户状态');
+    } else if (msgLower.includes('timeout') || msgLower.includes('timed out')) {
+      suggestions.push('请求超时：检查网络连接');
+      suggestions.push('尝试增加网络超时时间或使用代理');
+    } else if (msgLower.includes('failed after')) {
+      suggestions.push('多次重试后仍然失败：可能是网络不稳定或 API 限制');
+      suggestions.push('检查网络连接和代理设置');
+      suggestions.push('等待一段时间后重试');
+    }
+  } else if (error instanceof AuthenticationError) {
+    type = 'AUTH_ERROR';
+    suggestions.push('认证错误：请检查 refresh token 是否有效');
+    suggestions.push('尝试重新登录以获取新的 refresh token');
+  }
+
+  return { message, type, cause, suggestions: suggestions.length > 0 ? suggestions : undefined };
 }
 
 /**

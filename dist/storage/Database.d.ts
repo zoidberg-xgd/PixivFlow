@@ -41,6 +41,25 @@ export declare class Database {
     insertDownload(record: DownloadRecordInput): void;
     logExecution(tag: string, type: 'illustration' | 'novel', status: ExecutionStatus, message?: string): void;
     /**
+     * Get incomplete tasks (failed or partial executions)
+     */
+    getIncompleteTasks(limit?: number): Array<{
+        id: number;
+        tag: string;
+        type: 'illustration' | 'novel';
+        status: ExecutionStatus;
+        message: string | null;
+        executedAt: string;
+    }>;
+    /**
+     * Delete an incomplete task by id
+     * Returns an object with success status and message
+     */
+    deleteIncompleteTask(id: number): {
+        success: boolean;
+        message?: string;
+    };
+    /**
      * Get the next execution number for the scheduler
      */
     getNextExecutionNumber(): number;
@@ -75,6 +94,11 @@ export declare class Database {
         limit?: number;
         type?: string;
         tag?: string;
+        author?: string;
+        startDate?: string;
+        endDate?: string;
+        sortBy?: 'downloadedAt' | 'title' | 'author' | 'pixivId';
+        sortOrder?: 'asc' | 'desc';
     }): {
         items: Array<{
             id: number;

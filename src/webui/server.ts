@@ -66,9 +66,6 @@ export class WebUIServer {
     // API routes
     this.setupRoutes();
 
-    // Error handler
-    this.app.use(this.errorHandler);
-
     // Serve static files (frontend build)
     if (options.staticPath) {
       this.app.use(express.static(options.staticPath));
@@ -78,7 +75,28 @@ export class WebUIServer {
           res.sendFile(path.join(options.staticPath!, 'index.html'));
         }
       });
+    } else {
+      // Root path handler when static files are not configured
+      this.app.get('/', (req: Request, res: Response) => {
+        res.json({
+          message: 'PixivFlow WebUI API Server',
+          version: '2.0.0',
+          endpoints: {
+            health: '/api/health',
+            auth: '/api/auth',
+            config: '/api/config',
+            download: '/api/download',
+            stats: '/api/stats',
+            logs: '/api/logs',
+            files: '/api/files',
+          },
+          note: 'Frontend is not configured. To serve the frontend, set STATIC_PATH environment variable or run in development mode with separate frontend server on port 5173.',
+        });
+      });
     }
+
+    // Error handler (must be last)
+    this.app.use(this.errorHandler);
 
     // Create HTTP server
     this.server = createServer(this.app);

@@ -42,10 +42,20 @@ export const api = {
     limit?: number;
     type?: string;
     tag?: string;
+    author?: string;
+    startDate?: string;
+    endDate?: string;
+    sortBy?: 'downloadedAt' | 'title' | 'author' | 'pixivId';
+    sortOrder?: 'asc' | 'desc';
   }) => apiClient.get('/download/history', { params }),
   runAllDownloads: () => apiClient.post('/download/run-all'),
   randomDownload: (type?: 'illustration' | 'novel') =>
     apiClient.post('/download/random', { type }),
+  getIncompleteTasks: () => apiClient.get('/download/incomplete'),
+  resumeDownload: (tag: string, type: 'illustration' | 'novel') =>
+    apiClient.post('/download/resume', { tag, type }),
+  deleteIncompleteTask: (id: number) =>
+    apiClient.delete(`/download/incomplete/${id}`),
 
   // Stats
   getStatsOverview: (): Promise<{ data: StatsOverview }> =>

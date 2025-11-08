@@ -8,17 +8,29 @@ class DownloadManager {
     client;
     database;
     fileService;
+    progressCallback;
     constructor(config, client, database, fileService) {
         this.config = config;
         this.client = client;
         this.database = database;
         this.fileService = fileService;
     }
+    /**
+     * Set progress callback
+     */
+    setProgressCallback(callback) {
+        this.progressCallback = callback;
+    }
     async initialise() {
         await this.fileService.initialise();
     }
     async runAllTargets() {
+        const totalTargets = this.config.targets.length;
+        let currentTarget = 0;
         for (const target of this.config.targets) {
+            currentTarget++;
+            const targetName = target.filterTag || target.tag || 'unknown';
+            this.updateProgress(currentTarget, totalTargets, `处理目标: ${targetName} (${target.type})`);
             switch (target.type) {
                 case 'illustration':
                     await this.handleIllustrationTarget(target);
@@ -29,6 +41,17 @@ class DownloadManager {
                 default:
                     logger_1.logger.warn(`Unsupported target type ${target.type}`);
             }
+        }
+        if (this.progressCallback) {
+            this.progressCallback(totalTargets, totalTargets, '所有目标处理完成');
+        }
+    }
+    /**
+     * Update progress
+     */
+    updateProgress(current, total, message) {
+        if (this.progressCallback) {
+            this.progressCallback(current, total, message);
         }
     }
     /**
@@ -187,6 +210,8 @@ class DownloadManager {
         const targetLimit = target.limit || (itemType === 'illustration' ? 10 : 10);
         // Apply filters (minBookmarks, startDate, endDate)
         const filteredItems = this.filterItems(items, target, itemType);
+        // Update progress: starting download
+        this.updateProgress(0, targetLimit, `准备下载 ${itemType === 'illustration' ? '插画' : '小说'}: ${tagForLog}`);
         // Batch check for already downloaded items to optimize database queries
         const itemIds = filteredItems.map(item => String(item.id));
         const downloadedIds = this.database.getDownloadedIds(itemIds, itemType);
@@ -217,6 +242,7 @@ class DownloadManager {
                     try {
                         await downloadFn(randomItem, tagForLog);
                         downloaded++;
+                        this.updateProgress(downloaded, targetLimit, `已下载 ${itemType === 'illustration' ? '插画' : '小说'} ${randomItem.id} (${downloaded}/${targetLimit})`);
                         if (itemType === 'novel') {
                             logger_1.logger.info(`Successfully downloaded novel ${randomItem.id} (${downloaded}/${targetLimit})`);
                         }
@@ -247,6 +273,7 @@ class DownloadManager {
                 try {
                     await downloadFn(item, tagForLog);
                     downloaded++;
+                    this.updateProgress(downloaded, targetLimit, `已下载 ${itemType === 'illustration' ? '插画' : '小说'} ${item.id} (${downloaded}/${targetLimit})`);
                     if (itemType === 'novel') {
                         logger_1.logger.info(`Successfully downloaded novel ${item.id} (${downloaded}/${targetLimit})`);
                     }
@@ -263,6 +290,8 @@ class DownloadManager {
                 }
             }
         }
+        // Update progress: completed
+        this.updateProgress(downloaded, targetLimit, `完成下载: ${downloaded} 个 ${itemType === 'illustration' ? '插画' : '小说'}`);
         return { downloaded, skipped: skippedCount };
     }
     async handleIllustrationTarget(target) {
@@ -364,17 +393,45 @@ class DownloadManager {
                 }
             }
             const { downloaded, skipped: skippedCount } = await this.downloadItems(illusts, target, 'illustration', (illust, tag) => this.downloadIllustration(illust, tag));
+            const targetLimit = target.limit || 10;
+            const tagForLog = target.filterTag || target.tag || 'unknown';
+            // Check if download actually succeeded
+            if (downloaded === 0 && targetLimit > 0) {
+                const errorMessage = `Failed to download any illustrations. Requested ${targetLimit}, but all ${skippedCount} attempt(s) failed or were skipped.`;
+                this.database.logExecution(tagForLog, 'illustration', 'failed', errorMessage);
+                logger_1.logger.error(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} failed: ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+            // Warn if downloaded significantly less than requested
+            if (downloaded > 0 && downloaded < targetLimit * 0.5 && skippedCount > 0) {
+                logger_1.logger.warn(`Only downloaded ${downloaded} out of ${targetLimit} requested illustration(s). ${skippedCount} illustration(s) were skipped due to errors.`);
+            }
             if (skippedCount > 0) {
                 logger_1.logger.info(`Skipped ${skippedCount} illustration(s) (deleted, private, or inaccessible)`);
             }
-            const tagForLog = target.filterTag || target.tag || 'unknown';
             this.database.logExecution(tagForLog, 'illustration', 'success', `${downloaded} items downloaded`);
             logger_1.logger.info(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.database.logExecution(displayTag, 'illustration', 'failed', message);
-            logger_1.logger.error(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag} failed`, { error: message });
+            // Get detailed error information
+            let errorMessage = error instanceof Error ? error.message : String(error);
+            // Add more context if it's a NetworkError
+            if (error instanceof errors_1.NetworkError && error.cause) {
+                const causeMsg = error.cause instanceof Error ? error.cause.message : String(error.cause);
+                errorMessage = `${errorMessage} (原因: ${causeMsg})`;
+            }
+            // Add URL information if available
+            if (error instanceof errors_1.NetworkError && error.url) {
+                errorMessage = `${errorMessage} [URL: ${error.url}]`;
+            }
+            this.database.logExecution(displayTag, 'illustration', 'failed', errorMessage);
+            logger_1.logger.error(`Illustration ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag} failed`, {
+                error: errorMessage,
+                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                stack: error instanceof Error ? error.stack : undefined
+            });
+            // Re-throw to allow upper level handling
+            throw error;
         }
     }
     async handleNovelTarget(target) {
@@ -398,9 +455,21 @@ class DownloadManager {
                 logger_1.logger.info(`Successfully downloaded novel ${target.novelId}`);
             }
             catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
+                // Get detailed error information
+                let errorMessage = error instanceof Error ? error.message : String(error);
+                // Add more context if it's a NetworkError
+                if (error instanceof errors_1.NetworkError && error.cause) {
+                    const causeMsg = error.cause instanceof Error ? error.cause.message : String(error.cause);
+                    errorMessage = `${errorMessage} (原因: ${causeMsg})`;
+                }
+                // Add URL information if available
+                if (error instanceof errors_1.NetworkError && error.url) {
+                    errorMessage = `${errorMessage} [URL: ${error.url}]`;
+                }
                 logger_1.logger.error(`Failed to download novel ${target.novelId}`, {
                     error: errorMessage,
+                    errorType: error instanceof Error ? error.constructor.name : typeof error,
+                    stack: error instanceof Error ? error.stack : undefined
                 });
                 throw error;
             }
@@ -552,20 +621,44 @@ class DownloadManager {
             }
             const targetLimit = target.limit || 10;
             const { downloaded, skipped: skippedCount } = await this.downloadItems(novels, target, 'novel', (novel, tag) => this.downloadNovel(novel, tag));
-            if (downloaded < targetLimit && skippedCount > 0) {
+            const tagForLog = target.filterTag || target.tag || 'unknown';
+            // Check if download actually succeeded
+            if (downloaded === 0 && targetLimit > 0) {
+                const errorMessage = `Failed to download any novels. Requested ${targetLimit}, but all ${skippedCount} attempt(s) failed or were skipped.`;
+                this.database.logExecution(tagForLog, 'novel', 'failed', errorMessage);
+                logger_1.logger.error(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} failed: ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+            // Warn if downloaded significantly less than requested
+            if (downloaded > 0 && downloaded < targetLimit * 0.5 && skippedCount > 0) {
                 logger_1.logger.warn(`Only downloaded ${downloaded} out of ${targetLimit} requested novel(s). ${skippedCount} novel(s) were skipped due to 404 errors or other issues.`);
             }
             if (skippedCount > 0) {
                 logger_1.logger.info(`Skipped ${skippedCount} novel(s) (deleted, private, or inaccessible)`);
             }
-            const tagForLog = target.filterTag || target.tag || 'unknown';
             this.database.logExecution(tagForLog, 'novel', 'success', `${downloaded} items downloaded`);
             logger_1.logger.info(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${tagForLog} completed`, { downloaded });
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            this.database.logExecution(displayTag, 'novel', 'failed', message);
-            logger_1.logger.error(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag} failed`, { error: message });
+            // Get detailed error information
+            let errorMessage = error instanceof Error ? error.message : String(error);
+            // Add more context if it's a NetworkError
+            if (error instanceof errors_1.NetworkError && error.cause) {
+                const causeMsg = error.cause instanceof Error ? error.cause.message : String(error.cause);
+                errorMessage = `${errorMessage} (原因: ${causeMsg})`;
+            }
+            // Add URL information if available
+            if (error instanceof errors_1.NetworkError && error.url) {
+                errorMessage = `${errorMessage} [URL: ${error.url}]`;
+            }
+            this.database.logExecution(displayTag, 'novel', 'failed', errorMessage);
+            logger_1.logger.error(`Novel ${mode === 'ranking' ? 'ranking' : 'tag'} ${displayTag} failed`, {
+                error: errorMessage,
+                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                stack: error instanceof Error ? error.stack : undefined
+            });
+            // Re-throw to allow upper level handling
+            throw error;
         }
     }
     /**
