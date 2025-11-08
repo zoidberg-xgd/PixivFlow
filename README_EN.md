@@ -27,8 +27,11 @@ Make Pixiv artwork collection elegant and efficient | 让 Pixiv 作品收集变�
 ## 📑 Table of Contents
 
 <details>
-<summary>Click to expand full table of contents</summary>
+<summary><b>Click to expand full table of contents</b></summary>
 
+<br>
+
+**Getting Started**
 - [💡 What is PixivFlow?](#-what-is-pixivflow)
   - [🌟 Why Choose PixivFlow?](#-why-choose-pixivflow)
   - [🎯 Core Philosophy](#-core-philosophy)
@@ -39,15 +42,50 @@ Make Pixiv artwork collection elegant and efficient | 让 Pixiv 作品收集变�
   - [📋 Requirements](#-requirements)
   - [🎬 Quick Start (Recommended)](#-quick-start-recommended)
   - [🎯 Manual Setup](#-manual-setup)
+  - [🌐 Using WebUI (Optional)](#-using-webui-optional)
+
+**Tools & Documentation**
 - [🛠️ Script Tools](#️-script-tools)
+  - [🎯 Main Control Script (Most Used)](#-main-control-script-most-used)
+  - [🔐 Login Management](#-login-management)
+  - [⚙️ Configuration Management](#️-configuration-management)
+  - [📊 Monitoring and Maintenance](#-monitoring-and-maintenance)
+  - [🚀 Deployment and Backup](#-deployment-and-backup)
+  - [🎨 Advanced CLI Tool](#-advanced-cli-tool)
 - [📚 Documentation](#-documentation)
+  - [🌟 Must Read for Beginners](#-must-read-for-beginners)
+  - [📘 Advanced Documentation](#-advanced-documentation)
+  - [📄 Project Documentation](#-project-documentation)
+
+**Usage & Configuration**
 - [🎯 Use Cases](#-use-cases)
+  - [Scenario 1: Daily Auto Collection](#scenario-1-daily-auto-collection-of-inspiration-materials)
+  - [Scenario 2: Server Scheduled Collection](#scenario-2-server-scheduled-collection-of-specific-tags)
+  - [Scenario 3: Quick Experience](#scenario-3-quick-experience---random-download)
+  - [Scenario 4: One-Time Batch Download](#scenario-4-one-time-batch-download)
 - [📁 Project Structure](#-project-structure)
 - [⚙️ Core Configuration](#️-core-configuration)
+  - [Authentication Configuration](#authentication-configuration)
+  - [Download Targets](#download-targets)
+  - [Scheduled Tasks](#scheduled-tasks)
+  - [Storage Configuration](#storage-configuration)
+
+**Troubleshooting & Advanced**
 - [🐛 FAQ](#-faq)
+  - [❓ Setup Wizard Login Failed?](#-setup-wizard-login-failed)
+  - [❓ Authentication Failed or Token Expired?](#-authentication-failed-or-token-expired)
+  - [❓ No Matching Artworks Found?](#-no-matching-artworks-found)
+  - [❓ Scheduled Task Not Running?](#-scheduled-task-not-running)
+  - [❓ Slow Download Speed or Frequent Failures?](#-slow-download-speed-or-frequent-failures)
+  - [❓ Encountered Deleted or Private Artworks?](#-encountered-deleted-or-private-artworks)
 - [🔒 Security Tips](#-security-tips)
 - [📊 Download Record Management](#-download-record-management)
 - [🚀 Advanced Usage](#-advanced-usage)
+  - [Deploy on Server](#deploy-on-server)
+  - [Configure Multiple Download Tasks](#configure-multiple-download-tasks)
+  - [Using Proxy](#using-proxy)
+
+**Project Information**
 - [📄 Open Source License](#-open-source-license)
 - [🙏 Acknowledgments](#-acknowledgments)
 - [📮 Get Help](#-get-help)
