@@ -146,7 +146,7 @@
 
 - ✅ **完全独立**：无需浏览器，纯命令行工具
 - ✅ **WebUI 支持**：提供现代化的 Web 管理界面，支持图形化操作
-- ✅ **跨平台支持**：Windows / macOS / Linux 全平台支持
+- ✅ **跨平台支持**：Windows (推荐 WSL) / macOS / Linux 全平台支持
 - ✅ **轻量级**：资源占用低，适合服务器长期运行
 - ✅ **开源免费**：GPL-3.0 许可证，可自由定制和分发
 - ✅ **类型安全**：TypeScript 编写，类型提示完善
@@ -160,8 +160,21 @@
 
 ### 📋 环境要求
 
+**必需环境**：
 - Node.js 18+ 和 npm 9+
 - 一个 Pixiv 账号
+
+**Windows 用户注意**：
+- ⚠️ **推荐使用 WSL**：本项目使用 bash 脚本，在 Windows 上推荐使用 WSL (Windows Subsystem for Linux)
+  - 安装 WSL：在 PowerShell 中运行 `wsl --install`
+  - 或使用 Git Bash：如果已安装 Git for Windows，可以使用 Git Bash 运行脚本
+  - 原生 Windows 支持有限：虽然 Node.js 部分可以在 Windows 上运行，但自动化脚本需要 bash 环境
+
+**登录功能（仅首次登录时需要）**：
+- Python 3.9+ 和 `gppt` 包（`pip install gppt`）
+  - ⚠️ **注意**：Python 仅用于首次登录获取 refresh token，不是运行项目的必需依赖
+  - 如果已登录（已有 refresh token），则不需要 Python
+  - 如果 refresh token 过期，需要重新登录时才需要 Python
 
 ### 🎬 快速开始（推荐）
 
@@ -294,15 +307,111 @@ npm run setup
 ```
 
 **登录说明**：
-- ✅ **默认登录模式**：交互式登录（打开浏览器窗口，在浏览器中手动登录）
-- ✅ **Headless 登录模式**：使用 `-u` 和 `-p` 参数提供用户名和密码（不打开浏览器窗口）
+- ✅ **交互式登录模式**（默认）：打开浏览器窗口，在浏览器中手动登录
+  - 使用 Python gppt 库，内部通过 Selenium 打开浏览器窗口
+  - 适合：需要手动处理验证码或安全验证的情况
+- ✅ **Headless 登录模式**：后台运行浏览器，自动输入用户名和密码
+  - 使用 Python gppt 库，内部通过 Selenium 在后台运行浏览器
+  - 需要提供 `-u` 和 `-p` 参数（用户名和密码）
+  - 适合：服务器环境或自动化场景
 - ✅ 自动更新配置：登录成功后自动更新配置文件中的 refresh token
-- ✅ 默认使用 Python gppt：自动使用 gppt 进行登录，避免被检测
 - ✅ 配置向导：使用 `npm run setup` 可进行交互式配置
+
+**关于 Python 依赖**：
+- 🔐 **仅用于登录**：Python 和 gppt 仅用于首次登录获取 refresh token
+  - 两种登录模式都使用 Python gppt 库
+  - gppt 内部使用 Selenium 自动化浏览器（交互模式打开窗口，无头模式后台运行）
+- ✅ **已登录后不需要**：如果已登录（已有 refresh token），则不需要 Python
+- 🔄 **Token 过期时**：如果 refresh token 过期，需要重新登录时才需要 Python
+- 💡 **替代方案**：可以在已安装 Python 的机器上完成首次登录，然后将 refresh token 复制到配置文件
+- 🚀 **自动安装**：可以使用部署脚本自动安装 Python 依赖：
+  ```bash
+  # 安装 Python 和 gppt
+  bash scripts/install-python-deps.sh
+  
+  # 或在部署时自动安装（部署脚本会自动检查并安装）
+  bash scripts/auto-deploy.sh
+  ```
 
 **登录模式说明**：
 - **默认模式**（`npm run login`）：打开浏览器窗口，在浏览器中手动完成登录
 - **Headless 模式**（`npm run login -- -u username -p password`）：不打开浏览器，使用命令行提供的用户名和密码自动登录
+
+---
+
+### 🪟 Windows 用户特别说明
+
+**推荐使用 WSL**：
+
+本项目使用 bash 脚本进行自动化部署和配置，在 Windows 上**强烈推荐使用 WSL (Windows Subsystem for Linux)** 以获得最佳体验。
+
+#### 为什么推荐 WSL？
+
+1. **脚本兼容性**：所有自动化脚本（`*.sh`）都是 bash 脚本，在 WSL 中可以直接运行
+2. **环境一致性**：WSL 提供与 Linux 相同的环境，避免跨平台兼容性问题
+3. **更好的性能**：WSL 2 提供接近原生 Linux 的性能
+4. **完整的工具链**：可以轻松安装和使用 Linux 工具和依赖
+
+#### 安装 WSL
+
+在 PowerShell（管理员权限）中运行：
+
+```powershell
+# 安装 WSL（默认安装 Ubuntu）
+wsl --install
+
+# 或指定发行版
+wsl --install -d Ubuntu
+```
+
+安装完成后，重启电脑，然后打开 WSL 终端。
+
+#### 在 WSL 中使用项目
+
+```bash
+# 1. 在 WSL 中安装 Node.js（如果还没有）
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 2. 克隆项目
+git clone https://github.com/zoidberg-xgd/pixivflow.git
+cd pixivflow
+
+# 3. 安装依赖
+npm install
+
+# 4. 运行脚本（现在可以正常使用所有 bash 脚本）
+./scripts/quick-start.sh
+```
+
+#### 使用 Git Bash（备选方案）
+
+如果不想安装 WSL，也可以使用 Git Bash（随 Git for Windows 安装）：
+
+```bash
+# 在 Git Bash 中运行
+cd /c/path/to/pixivflow
+npm install
+./scripts/quick-start.sh
+```
+
+**注意**：Git Bash 对某些高级 bash 功能的支持可能不如 WSL 完整。
+
+#### 原生 Windows 使用（不推荐）
+
+虽然 Node.js 部分可以在原生 Windows 上运行，但：
+
+- ❌ 无法直接运行 `.sh` 脚本
+- ❌ 需要手动执行每个步骤
+- ❌ 某些自动化功能不可用
+- ⚠️ 需要手动配置环境变量和路径
+
+如果必须在原生 Windows 上使用，建议：
+1. 只使用 `npm run` 命令（如 `npm run login`、`npm run download`）
+2. 手动编辑配置文件
+3. 跳过自动化脚本
+
+---
 
 #### 3️⃣ 配置下载选项（可选）
 
