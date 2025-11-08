@@ -91,6 +91,7 @@ show_help() {
     health      健康检查和诊断
     monitor     启动监控
     maintain    运维工具（日志/数据库/更新）
+    docker      Docker 管理工具（构建/部署/管理）
 
 💡 示例:
     $0 setup                # 首次配置
@@ -437,6 +438,16 @@ cmd_maintain() {
     fi
 }
 
+cmd_docker() {
+    local tool="$SCRIPT_DIR/docker.sh"
+    if [[ -f "$tool" ]]; then
+        bash "$tool" "$@"
+    else
+        log_error "Docker 管理工具未找到: $tool"
+        exit 1
+    fi
+}
+
 # ============================================================================
 # 路由分发
 # ============================================================================
@@ -467,6 +478,7 @@ main() {
         health)     cmd_health "$@" ;;
         monitor)    cmd_monitor "$@" ;;
         maintain)   cmd_maintain "$@" ;;
+        docker)     cmd_docker "$@" ;;
         
         # 帮助
         help|-h|--help|--version|-v)

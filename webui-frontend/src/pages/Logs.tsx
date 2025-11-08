@@ -17,7 +17,6 @@ import {
 } from 'antd';
 import {
   SearchOutlined,
-  DeleteOutlined,
   ReloadOutlined,
   ClearOutlined,
 } from '@ant-design/icons';
@@ -80,7 +79,7 @@ export default function Logs() {
         newSocket.emit('subscribe', 'logs');
       });
 
-      newSocket.on('log', (data: { message: string }) => {
+      newSocket.on('log', (_logData: { message: string }) => {
         // Invalidate query to refresh logs
         queryClient.invalidateQueries({ queryKey: ['logs'] });
       });
@@ -146,7 +145,7 @@ export default function Logs() {
       dataIndex: 'level',
       key: 'level',
       width: 100,
-      render: (level: string | undefined, record: LogEntry) => {
+      render: (level: string | undefined) => {
         if (!level) return '-';
         return <Tag color={getLevelColor(level)}>{level}</Tag>;
       },
@@ -177,8 +176,9 @@ export default function Logs() {
     },
   ];
 
+  // Use data to avoid unused variable warning
   const logEntries: LogEntry[] =
-    data?.data?.logs?.map((line: string) => parseLogLine(line)) || [];
+    (data?.data?.logs?.map((line: string) => parseLogLine(line)) || []);
 
   return (
     <div>

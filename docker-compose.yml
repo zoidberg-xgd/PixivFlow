@@ -1,0 +1,88 @@
+services:
+  pixivflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pixivflow
+    restart: unless-stopped
+    
+    # 环境变量
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai
+      # 代理设置（使用本机代理）
+      # 如果代理在本机运行（如 127.0.0.1:6152），使用 host.docker.internal 访问主机
+      # macOS/Windows: 使用 host.docker.internal
+      # Linux: 使用 172.17.0.1 或 host.docker.internal（Docker 20.10+）
+      - HTTP_PROXY=http://host.docker.internal:6152
+      - HTTPS_PROXY=http://host.docker.internal:6152
+      # 注意：undici ProxyAgent 可能不支持 SOCKS5，优先使用 HTTP/HTTPS 代理
+      # 如果必须使用 SOCKS5，需要在配置文件中设置，而不是通过环境变量
+      # - ALL_PROXY=socks5://host.docker.internal:6153
+      # 如果代理在局域网其他机器，直接使用 IP 地址：
+      # - HTTP_PROXY=http://192.168.1.100:7890
+    
+    # 数据持久化
+    volumes:
+      # 配置文件目录
+      - ./config:/app/config
+      # 数据目录（数据库和日志）
+      - ./data:/app/data
+      # 下载目录
+      - ./downloads:/app/downloads
+    
+    # 网络模式
+    network_mode: bridge
+    
+    # 资源限制（可选）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 256M
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').existsSync('/app/data/pixiv-downloader.db') ? process.exit(0) : process.exit(1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # WebUI 服务（可选，如果需要 WebUI）
+  pixivflow-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pixivflow-webui
+    restart: unless-stopped
+    command: node dist/webui/index.js
+    
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Shanghai
+      - PORT=3000
+      - HOST=0.0.0.0
+      - STATIC_PATH=/app/webui-frontend/dist
+      # 代理设置（使用本机代理，同上）
+      - HTTP_PROXY=http://host.docker.internal:6152
+      - HTTPS_PROXY=http://host.docker.internal:6152
+      # 注意：undici ProxyAgent 可能不支持 SOCKS5，优先使用 HTTP/HTTPS 代理
+      # - ALL_PROXY=socks5://host.docker.internal:6153
+    
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./downloads:/app/downloads
+    
+    ports:
+      - "3000:3000"
+    
+    depends_on:
+      - pixivflow
+    
+    # 如果只需要 WebUI，可以注释掉上面的 pixivflow 服务
+

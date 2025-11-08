@@ -149,7 +149,7 @@ npm run login
 
 | 选项 | 说明 | 示例 |
 |------|------|------|
-| `-i, --interactive` | 终端交互式登录（在终端输入用户名密码，默认，无头模式） | `npm run login` |
+| `-i, --interactive` | 交互式登录（默认，打开浏览器窗口，在浏览器中手动登录） | `npm run login` |
 | `--headless` | 无头登录（通过参数提供用户名和密码，不打开浏览器） | `npm run login -- --headless -u user -p pass` |
 | `-u, --username <id>` | Pixiv 用户名/邮箱（无头模式必需） | `npm run login -- --headless -u user@example.com` |
 | `-p, --password <pass>` | Pixiv 密码（无头模式必需） | `npm run login -- --headless -p password123` |
@@ -163,9 +163,11 @@ npm run login
 ##### 默认交互式登录（推荐 ⭐）
 
 ```bash
-# 最简单的方式：在终端输入用户名和密码
+# 默认模式：打开浏览器窗口，在浏览器中手动登录
 npm run login
 ```
+
+**注意**：默认模式会打开浏览器窗口，需要在浏览器中手动完成登录。如果不想打开浏览器，请使用 headless 模式。
 
 ##### 无头登录（通过参数提供用户名密码）
 

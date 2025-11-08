@@ -462,6 +462,14 @@ async function handleRandomDownload(args: {
       targetType = 'illustration';
     }
 
+    // Parse count parameter (default: 1)
+    const countArg = args.options.count || args.options.c;
+    const downloadCount = countArg ? parseInt(String(countArg), 10) : 1;
+    if (isNaN(downloadCount) || downloadCount < 1) {
+      logger.warn(`Invalid count value: ${countArg}, using default: 1`);
+    }
+    const limit = isNaN(downloadCount) || downloadCount < 1 ? 1 : downloadCount;
+
     // Ensure valid token exists (login if needed)
     logger.info('Checking authentication status...');
     await ensureValidToken({
@@ -490,7 +498,7 @@ async function handleRandomDownload(args: {
           {
             type: targetType,
             tag: randomTag,
-            limit: 1,
+            limit: limit,
             searchTarget: 'partial_match_for_tags' as const,
             random: true, // Enable random selection
           },
@@ -508,7 +516,7 @@ async function handleRandomDownload(args: {
           {
             type: targetType,
             tag: randomTag,
-            limit: 1,
+            limit: limit,
             searchTarget: 'partial_match_for_tags' as const,
             random: true, // Enable random selection
           },
@@ -524,7 +532,7 @@ async function handleRandomDownload(args: {
     const downloadManager = new DownloadManager(tempConfig, pixivClient, database, fileService);
 
     await downloadManager.initialise();
-    logger.info(`Starting random ${targetType} download...`);
+    logger.info(`Starting random ${targetType} download (count: ${limit})...`);
     await downloadManager.runAllTargets();
     logger.info(`Random ${targetType} download completed!`);
 

@@ -178,6 +178,9 @@ function loadConfig(configPath) {
     if (config.logLevel) {
         logger_1.logger.setLevel(config.logLevel);
     }
+    // Set log file path
+    const logPath = (0, node_path_1.join)(process.cwd(), 'data', 'pixiv-downloader.log');
+    logger_1.logger.setLogPath(logPath);
     // Process placeholders (e.g., YESTERDAY)
     return processConfigPlaceholders(config);
 }

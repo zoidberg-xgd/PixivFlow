@@ -12,7 +12,7 @@ const router = (0, express_1.Router)();
  */
 router.get('/list', async (req, res) => {
     try {
-        const { path: dirPath = '', type = 'illustration' } = req.query;
+        const { path: dirPath = '', type = 'illustration', sort = 'name', order = 'asc' } = req.query;
         const configPath = (0, config_1.getConfigPath)();
         const config = (0, config_1.loadConfig)(configPath);
         const baseDir = type === 'novel'
@@ -37,6 +37,7 @@ router.get('/list', async (req, res) => {
                     name: item,
                     path: dirPath ? `${dirPath}/${item}` : item,
                     type: 'directory',
+                    modified: stats.mtime.toISOString(),
                 });
             }
             else {
@@ -49,6 +50,33 @@ router.get('/list', async (req, res) => {
                     extension: (0, path_1.extname)(item),
                 });
             }
+        }
+        // Sort directories and files based on sort parameter
+        const sortBy = String(sort);
+        const sortOrder = String(order).toLowerCase() === 'desc' ? -1 : 1;
+        if (sortBy === 'time') {
+            // Sort by modified time
+            directories.sort((a, b) => {
+                const timeA = new Date(a.modified).getTime();
+                const timeB = new Date(b.modified).getTime();
+                return (timeA - timeB) * sortOrder;
+            });
+            files.sort((a, b) => {
+                const timeA = new Date(a.modified).getTime();
+                const timeB = new Date(b.modified).getTime();
+                return (timeA - timeB) * sortOrder;
+            });
+        }
+        else {
+            // Sort by name (case-insensitive, default)
+            directories.sort((a, b) => {
+                const comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                return comparison * sortOrder;
+            });
+            files.sort((a, b) => {
+                const comparison = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                return comparison * sortOrder;
+            });
         }
         res.json({
             files,

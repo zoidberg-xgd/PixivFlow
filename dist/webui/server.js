@@ -139,6 +139,9 @@ exports.WebUIServer = WebUIServer;
  * Start WebUI server
  */
 async function startWebUI(options) {
+    // Set up log file path
+    const logPath = path_1.default.join(process.cwd(), 'data', 'pixiv-downloader.log');
+    logger_1.logger.setLogPath(logPath);
     const server = new WebUIServer(options);
     await server.start();
     // Graceful shutdown

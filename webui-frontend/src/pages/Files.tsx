@@ -19,7 +19,6 @@ import {
 } from 'antd';
 import {
   FolderOutlined,
-  FileOutlined,
   DeleteOutlined,
   EyeOutlined,
   HomeOutlined,

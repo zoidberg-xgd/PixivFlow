@@ -166,8 +166,8 @@ npm run setup
 
 | 选项 | 说明 |
 |------|------|
-| `-i, --interactive` | 交互式登录（在终端输入用户名密码，默认） |
-| `--headless` | 无头登录（需要提供用户名和密码参数） |
+| `-i, --interactive` | 交互式登录（默认，打开浏览器窗口，在浏览器中手动登录） |
+| `--headless` | 无头登录（需要提供用户名和密码参数，不打开浏览器） |
 | `-u, --username <id>` | Pixiv 用户名/邮箱（无头模式必需） |
 | `-p, --password <pass>` | Pixiv 密码（无头模式必需） |
 | `-c, --config <path>` | 配置文件路径（默认: config/standalone.config.json） |
@@ -474,7 +474,7 @@ npm run setup
 最简单，自动处理所有步骤：
 
 ```bash
-# 默认交互式登录（在终端输入用户名密码，自动使用 Python gppt）
+# 默认交互式登录（打开浏览器窗口，在浏览器中手动登录，自动使用 Python gppt）
 npm run login
 ```
 

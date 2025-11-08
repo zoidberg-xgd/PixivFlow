@@ -1,0 +1,515 @@
+# 🐳 Docker 使用指南
+
+本文档介绍如何使用 Docker 运行 PixivFlow。
+
+## 📋 目录
+
+- [快速开始](#快速开始)
+- [Docker Compose 使用](#docker-compose-使用)
+- [手动构建和运行](#手动构建和运行)
+- [数据持久化](#数据持久化)
+- [配置说明](#配置说明)
+- [常见问题](#常见问题)
+
+---
+
+## 🚀 快速开始
+
+### 使用 Docker Compose（推荐）
+
+1. **准备配置文件**
+
+   首先，确保你有配置文件。如果还没有，可以复制示例配置：
+
+   ```bash
+   cp config/standalone.config.example.json config/standalone.config.json
+   ```
+
+   然后编辑 `config/standalone.config.json`，填入你的 Pixiv 账号信息。
+
+2. **启动服务**
+
+   ```bash
+   # 启动定时任务服务
+   docker-compose up -d pixivflow
+
+   # 或启动 WebUI 服务
+   docker-compose up -d pixivflow-webui
+   ```
+
+3. **查看日志**
+
+   ```bash
+   docker-compose logs -f pixivflow
+   ```
+
+4. **停止服务**
+
+   ```bash
+   docker-compose down
+   ```
+
+---
+
+## 📦 Docker Compose 使用
+
+### 服务说明
+
+`docker-compose.yml` 提供了两个服务：
+
+1. **pixivflow** - 定时任务服务（默认）
+2. **pixivflow-webui** - WebUI 管理界面（可选）
+
+### 常用命令
+
+```bash
+# 启动定时任务服务
+docker-compose up -d pixivflow
+
+# 启动 WebUI 服务
+docker-compose up -d pixivflow-webui
+
+# 同时启动两个服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f pixivflow
+
+# 停止服务
+docker-compose stop
+
+# 停止并删除容器
+docker-compose down
+
+# 重新构建镜像
+docker-compose build
+
+# 查看运行状态
+docker-compose ps
+```
+
+### 自定义配置
+
+你可以通过修改 `docker-compose.yml` 来自定义配置：
+
+- **环境变量**：添加代理设置等
+- **端口映射**：修改 WebUI 端口
+- **资源限制**：设置 CPU 和内存限制
+- **卷挂载**：修改数据存储路径
+
+---
+
+## 🔧 手动构建和运行
+
+### 构建镜像
+
+```bash
+docker build -t pixivflow:latest .
+```
+
+### 运行容器
+
+#### 方式 1：定时任务模式（推荐）
+
+```bash
+docker run -d \
+  --name pixivflow \
+  --restart unless-stopped \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/downloads:/app/downloads \
+  -e TZ=Asia/Shanghai \
+  pixivflow:latest
+```
+
+#### 方式 2：单次下载模式
+
+```bash
+docker run --rm \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/downloads:/app/downloads \
+  pixivflow:latest \
+  node dist/index.js download
+```
+
+#### 方式 3：WebUI 模式
+
+```bash
+docker run -d \
+  --name pixivflow-webui \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/downloads:/app/downloads \
+  -e PORT=3000 \
+  -e HOST=0.0.0.0 \
+  pixivflow:latest \
+  node dist/webui/index.js
+```
+
+#### 方式 4：交互式登录
+
+```bash
+docker run -it --rm \
+  -v $(pwd)/config:/app/config \
+  pixivflow:latest \
+  node dist/index.js login
+```
+
+---
+
+## 💾 数据持久化
+
+### 目录说明
+
+以下目录应该通过卷（volume）挂载到宿主机，以持久化数据：
+
+| 容器内路径 | 宿主机路径 | 说明 |
+|----------|----------|------|
+| `/app/config` | `./config` | 配置文件目录 |
+| `/app/data` | `./data` | 数据库和日志文件 |
+| `/app/downloads` | `./downloads` | 下载的作品文件 |
+
+### 使用命名卷（可选）
+
+如果你不想使用绑定挂载，可以使用 Docker 命名卷：
+
+```yaml
+volumes:
+  pixivflow-config:
+  pixivflow-data:
+  pixivflow-downloads:
+
+services:
+  pixivflow:
+    volumes:
+      - pixivflow-config:/app/config
+      - pixivflow-data:/app/data
+      - pixivflow-downloads:/app/downloads
+```
+
+---
+
+## ⚙️ 配置说明
+
+### 首次配置
+
+1. **复制配置模板**
+
+   ```bash
+   cp config/standalone.config.example.json config/standalone.config.json
+   ```
+
+2. **编辑配置文件**
+
+   编辑 `config/standalone.config.json`，至少需要配置：
+   - `pixiv.refreshToken` - Pixiv 刷新令牌
+
+3. **登录获取 Token**
+
+   Docker 镜像已经包含了登录所需的所有依赖（Python gppt、Chromium 浏览器和 ChromeDriver），可以直接使用登录功能。
+
+   **默认登录模式说明**：
+   - **默认模式**（`node dist/index.js login`）：交互式登录，会打开浏览器窗口，需要在浏览器中手动登录
+   - **Headless 模式**（`node dist/index.js login -u username -p password`）：无头登录，不打开浏览器窗口，使用命令行提供的用户名和密码自动登录
+
+   **方式 1：Headless 登录（推荐，无需浏览器窗口）**
+
+   使用用户名和密码进行无头登录（适合 Docker 环境，无需图形界面）：
+
+   ```bash
+   docker run -it --rm \
+     -v $(pwd)/config:/app/config \
+     -e HTTPS_PROXY=http://host.docker.internal:7890 \
+     pixivflow:latest \
+     node dist/index.js login -u your_username -p your_password
+   ```
+
+   **方式 2：交互式登录（需要浏览器窗口，Docker 环境不推荐）**
+
+   交互式登录会打开浏览器窗口，但 Docker 容器默认无法显示图形界面。如果需要使用交互式登录，需要：
+
+   - 使用 X11 转发（Linux）或 XQuartz（macOS）
+   - 或者使用 VNC 服务器
+   - 或者直接使用 headless 模式（推荐）
+
+   ```bash
+   docker run -it --rm \
+     -v $(pwd)/config:/app/config \
+     -e HTTPS_PROXY=http://host.docker.internal:7890 \
+     pixivflow:latest \
+     node dist/index.js login
+   ```
+
+   **方式 3：使用配置向导**
+
+   ```bash
+   docker run -it --rm \
+     -v $(pwd)/config:/app/config \
+     pixivflow:latest \
+     node dist/setup-wizard.js
+   ```
+
+   **注意事项**：
+   - 如果在中国大陆，需要设置代理环境变量（`HTTPS_PROXY` 或 `ALL_PROXY`）
+   - **Docker 环境推荐使用 Headless 模式**（方式 1），因为容器默认无法显示图形界面
+   - 默认登录模式会尝试打开浏览器窗口，在 Docker 环境中可能无法正常工作
+   - 登录成功后，refresh token 会保存到配置文件中
+
+### 环境变量
+
+可以通过环境变量配置：
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `NODE_ENV` | 运行环境 | `production` |
+| `TZ` | 时区 | `Asia/Shanghai` |
+| `HTTP_PROXY` | HTTP 代理 | - |
+| `HTTPS_PROXY` | HTTPS 代理 | - |
+| `ALL_PROXY` | 全局代理 | - |
+| `PORT` | WebUI 端口 | `3000` |
+| `HOST` | WebUI 主机 | `0.0.0.0` |
+
+### 代理设置
+
+如果需要通过代理访问 Pixiv，可以在 `docker-compose.yml` 中设置环境变量。
+
+#### 使用本机代理（推荐）
+
+如果代理软件运行在本机（如 Clash、V2Ray、Shadowsocks 等），需要使用特殊地址访问：
+
+**macOS/Windows**：
+```yaml
+environment:
+  - HTTP_PROXY=http://host.docker.internal:7890
+  - HTTPS_PROXY=http://host.docker.internal:7890
+  # 或使用 SOCKS5
+  - ALL_PROXY=socks5://host.docker.internal:1080
+```
+
+**Linux**：
+```yaml
+environment:
+  # 方式 1：使用 host.docker.internal（Docker 20.10+）
+  - HTTP_PROXY=http://host.docker.internal:7890
+  # 方式 2：使用 Docker 默认网关
+  - HTTP_PROXY=http://172.17.0.1:7890
+```
+
+**说明**：
+- `host.docker.internal` 是 Docker 提供的特殊主机名，指向宿主机
+- 如果使用 `172.17.0.1`，这是 Docker 默认网桥的网关 IP
+- 将 `7890` 和 `1080` 替换为你实际的代理端口
+
+#### 使用局域网代理
+
+如果代理在局域网其他机器上：
+```yaml
+environment:
+  - HTTP_PROXY=http://192.168.1.100:7890
+  - HTTPS_PROXY=http://192.168.1.100:7890
+```
+
+#### 使用远程代理
+
+如果代理在远程服务器：
+```yaml
+environment:
+  - HTTP_PROXY=http://proxy.example.com:8080
+  - HTTPS_PROXY=http://proxy.example.com:8080
+```
+
+#### 支持的代理协议
+
+- `http://` - HTTP 代理
+- `https://` - HTTPS 代理
+- `socks5://` - SOCKS5 代理
+- `socks4://` - SOCKS4 代理
+
+#### 验证代理配置
+
+配置后重启容器，查看日志确认代理是否生效：
+```bash
+docker-compose restart pixivflow
+docker-compose logs pixivflow | grep -i proxy
+```
+
+如果看到类似 `Proxy enabled` 或 `Proxy configured from environment variable` 的日志，说明代理配置成功。
+
+---
+
+## 🐛 常见问题
+
+### 1. 容器启动后立即退出
+
+**可能原因**：
+- 配置文件不存在或格式错误
+- refresh token 无效或过期
+
+**解决方法**：
+```bash
+# 检查日志
+docker-compose logs pixivflow
+
+# 验证配置文件
+docker run --rm \
+  -v $(pwd)/config:/app/config \
+  pixivflow:latest \
+  node -e "console.log(JSON.stringify(require('./config/standalone.config.json'), null, 2))"
+```
+
+### 2. 无法下载文件
+
+**可能原因**：
+- 网络连接问题
+- 需要配置代理
+- 权限问题
+
+**解决方法**：
+- 检查网络连接
+- 配置代理环境变量
+- 检查卷挂载权限
+
+### 3. 配置文件修改后不生效
+
+**解决方法**：
+```bash
+# 重启容器
+docker-compose restart pixivflow
+```
+
+### 4. 如何更新镜像
+
+```bash
+# 拉取最新代码
+git pull
+
+# 重新构建镜像
+docker-compose build
+
+# 重启服务
+docker-compose up -d
+```
+
+### 5. 查看容器内文件
+
+```bash
+# 进入容器
+docker exec -it pixivflow sh
+
+# 查看日志
+docker exec pixivflow cat /app/data/pixiv-downloader.log
+```
+
+### 6. 清理数据
+
+```bash
+# 停止并删除容器
+docker-compose down
+
+# 删除数据（谨慎操作）
+rm -rf data downloads
+
+# 重新启动
+docker-compose up -d
+```
+
+### 7. Docker 构建时无法连接 Docker Hub
+
+**可能原因**：
+- 网络连接问题
+- 需要配置 Docker Desktop 的代理
+
+**解决方法**：
+
+#### 方法 1：配置 Docker Desktop 代理（推荐）
+
+1. 打开 Docker Desktop
+2. 进入 Settings → Resources → Proxies
+3. 启用 "Manual proxy configuration"
+4. 填入代理地址（如 `http://127.0.0.1:7890`）
+5. 点击 "Apply & Restart"
+
+#### 方法 2：使用环境变量配置代理
+
+在构建前设置代理环境变量：
+
+```bash
+# macOS/Linux
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+docker-compose build
+
+# Windows PowerShell
+$env:HTTP_PROXY="http://127.0.0.1:7890"
+$env:HTTPS_PROXY="http://127.0.0.1:7890"
+docker-compose build
+```
+
+#### 方法 3：手动拉取镜像
+
+如果网络暂时无法连接，可以稍后重试：
+
+```bash
+# 手动拉取基础镜像
+docker pull node:18-alpine
+
+# 然后再构建
+docker-compose build
+```
+
+#### 方法 4：使用国内镜像源（仅限国内用户）
+
+创建或编辑 `~/.docker/daemon.json`：
+
+```json
+{
+  "registry-mirrors": [
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://hub-mirror.c.163.com"
+  ]
+}
+```
+
+然后重启 Docker Desktop。
+
+---
+
+## 🔒 安全建议
+
+1. **不要将配置文件提交到 Git**
+   - 确保 `config/standalone.config.json` 在 `.gitignore` 中
+
+2. **使用环境变量存储敏感信息**
+   - 考虑使用 Docker secrets 或环境变量文件
+
+3. **限制容器资源**
+   - 在 `docker-compose.yml` 中设置资源限制
+
+4. **定期备份数据**
+   - 定期备份 `data/` 和 `config/` 目录
+
+---
+
+## 📚 更多信息
+
+- [项目 README](README.md)
+- [配置指南](CONFIG_GUIDE.md)
+- [快速开始](QUICKSTART.md)
+- [WebUI 使用指南](WEBUI_README.md)
+
+---
+
+## 💡 提示
+
+- 首次使用建议先运行单次下载模式测试配置
+- 使用 `docker-compose logs -f` 实时查看日志
+- 定期检查容器健康状态：`docker-compose ps`
+- 建议使用 Docker Compose 管理服务，更方便
+
+---
+
+**需要帮助？** 查看 [常见问题](#常见问题) 或提交 [GitHub Issue](https://github.com/zoidberg-xgd/pixivflow/issues)
+

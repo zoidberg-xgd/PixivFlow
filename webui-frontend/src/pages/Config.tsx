@@ -17,8 +17,6 @@ import {
   Tag,
   Popconfirm,
   Modal,
-  Row,
-  Col,
 } from 'antd';
 import {
   SaveOutlined,
@@ -32,7 +30,6 @@ import { api } from '../services/api';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface TargetConfig {
   type: 'illustration' | 'novel';

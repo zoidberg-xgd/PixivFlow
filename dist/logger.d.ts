@@ -5,7 +5,9 @@ interface LogMeta {
 declare class Logger {
     private static readonly levelOrder;
     private threshold;
+    private logPath;
     setLevel(level: LogLevel): void;
+    setLogPath(path: string): void;
     debug(message: string, meta?: LogMeta): void;
     info(message: string, meta?: LogMeta): void;
     warn(message: string, meta?: LogMeta): void;

@@ -21,7 +21,7 @@ export default function Dashboard() {
           <Card>
             <Statistic
               title="总下载数"
-              value={data?.totalDownloads || 0}
+              value={data?.data?.totalDownloads || 0}
               prefix={<DownloadOutlined />}
             />
           </Card>
@@ -30,7 +30,7 @@ export default function Dashboard() {
           <Card>
             <Statistic
               title="插画"
-              value={data?.illustrations || 0}
+              value={data?.data?.illustrations || 0}
               prefix={<PictureOutlined />}
             />
           </Card>
@@ -39,7 +39,7 @@ export default function Dashboard() {
           <Card>
             <Statistic
               title="小说"
-              value={data?.novels || 0}
+              value={data?.data?.novels || 0}
               prefix={<FileTextOutlined />}
             />
           </Card>
@@ -48,7 +48,7 @@ export default function Dashboard() {
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={24}>
           <Card title="最近下载">
-            <p>最近 7 天下载: {data?.recentDownloads || 0} 个作品</p>
+            <p>最近 7 天下载: {data?.data?.recentDownloads || 0} 个作品</p>
           </Card>
         </Col>
       </Row>

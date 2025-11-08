@@ -438,6 +438,13 @@ async function handleRandomDownload(args) {
             // Default to illustration (as documented)
             targetType = 'illustration';
         }
+        // Parse count parameter (default: 1)
+        const countArg = args.options.count || args.options.c;
+        const downloadCount = countArg ? parseInt(String(countArg), 10) : 1;
+        if (isNaN(downloadCount) || downloadCount < 1) {
+            logger_1.logger.warn(`Invalid count value: ${countArg}, using default: 1`);
+        }
+        const limit = isNaN(downloadCount) || downloadCount < 1 ? 1 : downloadCount;
         // Ensure valid token exists (login if needed)
         logger_1.logger.info('Checking authentication status...');
         await (0, login_helper_1.ensureValidToken)({
@@ -463,7 +470,7 @@ async function handleRandomDownload(args) {
                     {
                         type: targetType,
                         tag: randomTag,
-                        limit: 1,
+                        limit: limit,
                         searchTarget: 'partial_match_for_tags',
                         random: true, // Enable random selection
                     },
@@ -481,7 +488,7 @@ async function handleRandomDownload(args) {
                     {
                         type: targetType,
                         tag: randomTag,
-                        limit: 1,
+                        limit: limit,
                         searchTarget: 'partial_match_for_tags',
                         random: true, // Enable random selection
                     },
@@ -495,7 +502,7 @@ async function handleRandomDownload(args) {
         const fileService = new FileService_1.FileService(config.storage);
         const downloadManager = new DownloadManager_1.DownloadManager(tempConfig, pixivClient, database, fileService);
         await downloadManager.initialise();
-        logger_1.logger.info(`Starting random ${targetType} download...`);
+        logger_1.logger.info(`Starting random ${targetType} download (count: ${limit})...`);
         await downloadManager.runAllTargets();
         logger_1.logger.info(`Random ${targetType} download completed!`);
         database.close();

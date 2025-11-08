@@ -181,5 +181,73 @@ router.post('/run-all', async (req, res) => {
         });
     }
 });
+// 热门标签列表，用于随机选择
+const POPULAR_TAGS = [
+    '風景', 'イラスト', 'オリジナル', '女の子', '男の子',
+    '猫', '犬', '空', '海', '桜', '花', '星空', '夕日',
+    'illustration', 'art', 'anime', 'manga', 'cute',
+    'beautiful', 'nature', 'sky', 'sunset', 'flower'
+];
+// 小说热门标签列表
+const POPULAR_NOVEL_TAGS = [
+    'オリジナル', '創作', '小説', '物語', 'ストーリー',
+    '恋愛', 'ファンタジー', '日常', '青春', '冒険',
+    'ミステリー', 'ホラー', 'SF', '歴史', '現代',
+    'original', 'story', 'novel', 'romance', 'fantasy',
+    'daily', 'youth', 'adventure', 'mystery', 'horror'
+];
+/**
+ * POST /api/download/random
+ * Download a random illustration or novel
+ */
+router.post('/random', async (req, res) => {
+    try {
+        if (DownloadTaskManager_1.downloadTaskManager.hasActiveTask()) {
+            return res.status(409).json({
+                error: 'Another download task is already running',
+            });
+        }
+        const { type } = req.body;
+        const targetType = type === 'novel' ? 'novel' : 'illustration';
+        // Select random tag
+        const tagList = targetType === 'novel' ? POPULAR_NOVEL_TAGS : POPULAR_TAGS;
+        const randomTag = tagList[Math.floor(Math.random() * tagList.length)];
+        logger_1.logger.info(`Randomly selected tag: ${randomTag} (type: ${targetType})`);
+        // Create temporary config for random download
+        const configPath = (0, config_1.getConfigPath)();
+        const baseConfig = (0, config_1.loadConfig)(configPath);
+        const tempConfig = {
+            ...baseConfig,
+            targets: [
+                {
+                    type: targetType,
+                    tag: randomTag,
+                    limit: 1,
+                    searchTarget: 'partial_match_for_tags',
+                    random: true, // Enable random selection
+                },
+            ],
+        };
+        const taskId = `task_random_${targetType}_${Date.now()}`;
+        // Start task in background
+        DownloadTaskManager_1.downloadTaskManager.startTask(taskId, undefined, tempConfig).catch((error) => {
+            logger_1.logger.error('Background task error', { error, taskId });
+        });
+        res.json({
+            success: true,
+            taskId,
+            message: `Random ${targetType} download started`,
+            tag: randomTag,
+            type: targetType,
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Failed to start random download', { error });
+        res.status(500).json({
+            error: 'Failed to start random download',
+            message: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
 exports.default = router;
 //# sourceMappingURL=download.js.map

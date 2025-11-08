@@ -205,10 +205,15 @@ npm run setup
 ```
 
 **Login Notes**:
-- ✅ Default interactive login: Enter username and password in terminal (headless mode, no browser)
+- ✅ **Default login mode**: Interactive login (opens browser window, manual login in browser)
+- ✅ **Headless login mode**: Use `-u` and `-p` parameters to provide username and password (no browser window)
 - ✅ Auto update config: Automatically updates refresh token in config after successful login
 - ✅ Default uses Python gppt: Automatically uses gppt for login to avoid detection
-- ✅ Setup wizard: Use `npm run setup` for interactive configuration, login is also pure terminal input
+- ✅ Setup wizard: Use `npm run setup` for interactive configuration
+
+**Login Mode Details**:
+- **Default mode** (`npm run login`): Opens browser window, manual login in browser
+- **Headless mode** (`npm run login -- -u username -p password`): No browser window, automatic login with provided credentials
 
 #### 3️⃣ Configure Download Options (Optional)
 
