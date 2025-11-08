@@ -325,6 +325,11 @@ PixivFlow 支持 Docker 部署，无需安装 Node.js 环境：
 
 详细说明请查看 [Docker 使用指南](DOCKER.md)。
 
+**相关文档**：
+- [Docker 使用指南](DOCKER.md) - 完整的 Docker 部署和使用说明
+- [Docker 网络问题解决方案](DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
+- [Docker 随机下载问题解决方案](DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
+
 ---
 
 ## 🛠️ 脚本工具
@@ -429,6 +434,11 @@ npm run login
 - `docker test` - 测试下载
 
 详细说明请查看 [Docker 使用指南](DOCKER.md)。
+
+**相关文档**：
+- [Docker 使用指南](DOCKER.md) - 完整的 Docker 部署和使用说明
+- [Docker 网络问题解决方案](DOCKER_NETWORK_SOLUTION.md) - 解决代理连接问题
+- [Docker 随机下载问题解决方案](DOCKER_RANDOM_DOWNLOAD_FIX.md) - 解决随机下载相关问题
 
 ### 🎨 高级 CLI 工具
 
