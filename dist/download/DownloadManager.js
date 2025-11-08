@@ -119,6 +119,54 @@ class DownloadManager {
         }
     }
     /**
+     * Filter items based on minBookmarks, startDate, and endDate criteria
+     */
+    filterItems(items, target, itemType) {
+        let filtered = [...items];
+        const originalCount = filtered.length;
+        // Filter by minimum bookmarks
+        if (target.minBookmarks !== undefined) {
+            const beforeCount = filtered.length;
+            filtered = filtered.filter(item => {
+                const bookmarks = item.total_bookmarks ?? item.bookmark_count ?? 0;
+                return bookmarks >= target.minBookmarks;
+            });
+            if (filtered.length < beforeCount) {
+                logger_1.logger.info(`Filtered by minBookmarks (>= ${target.minBookmarks}): ${beforeCount} -> ${filtered.length} ${itemType}(s)`);
+            }
+        }
+        // Filter by date range
+        if (target.startDate || target.endDate) {
+            const beforeCount = filtered.length;
+            const startDate = target.startDate ? new Date(target.startDate + 'T00:00:00') : null;
+            const endDate = target.endDate ? new Date(target.endDate + 'T23:59:59') : null;
+            filtered = filtered.filter(item => {
+                if (!item.create_date) {
+                    return false; // Skip items without create_date
+                }
+                const itemDate = new Date(item.create_date);
+                if (startDate && itemDate < startDate) {
+                    return false;
+                }
+                if (endDate && itemDate > endDate) {
+                    return false;
+                }
+                return true;
+            });
+            if (filtered.length < beforeCount) {
+                const dateRange = [
+                    target.startDate || 'unlimited',
+                    target.endDate || 'unlimited'
+                ].join(' ~ ');
+                logger_1.logger.info(`Filtered by date range (${dateRange}): ${beforeCount} -> ${filtered.length} ${itemType}(s)`);
+            }
+        }
+        if (filtered.length < originalCount) {
+            logger_1.logger.info(`Total filtering: ${originalCount} -> ${filtered.length} ${itemType}(s) after applying all filters`);
+        }
+        return filtered;
+    }
+    /**
      * Generic download loop for illustrations or novels
      */
     async downloadItems(items, target, itemType, downloadFn) {
@@ -126,13 +174,15 @@ class DownloadManager {
         let skippedCount = 0;
         const tagForLog = target.filterTag || target.tag || 'unknown';
         const targetLimit = target.limit || (itemType === 'illustration' ? 10 : 10);
+        // Apply filters (minBookmarks, startDate, endDate)
+        const filteredItems = this.filterItems(items, target, itemType);
         // Batch check for already downloaded items to optimize database queries
-        const itemIds = items.map(item => String(item.id));
+        const itemIds = filteredItems.map(item => String(item.id));
         const downloadedIds = this.database.getDownloadedIds(itemIds, itemType);
         // Random selection mode
-        if (target.random && items.length > 0) {
+        if (target.random && filteredItems.length > 0) {
             // Filter out already downloaded items
-            let available = items.filter(item => !downloadedIds.has(String(item.id)));
+            let available = filteredItems.filter(item => !downloadedIds.has(String(item.id)));
             if (available.length === 0) {
                 logger_1.logger.info('All search results have already been downloaded');
             }
@@ -177,8 +227,8 @@ class DownloadManager {
         }
         else {
             // Sequential download mode
-            for (let i = 0; i < items.length && downloaded < targetLimit; i++) {
-                const item = items[i];
+            for (let i = 0; i < filteredItems.length && downloaded < targetLimit; i++) {
+                const item = filteredItems[i];
                 if (downloadedIds.has(String(item.id))) {
                     logger_1.logger.debug(`${itemType === 'illustration' ? 'Illustration' : 'Novel'} ${item.id} already downloaded, skipping`);
                     continue;

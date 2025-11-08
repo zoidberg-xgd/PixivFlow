@@ -1,0 +1,247 @@
+import { Router, Request, Response } from 'express';
+import { readdirSync, statSync, existsSync, unlinkSync, readFileSync } from 'fs';
+import { join, extname, basename, resolve } from 'path';
+import { loadConfig, getConfigPath } from '../../config';
+import { logger } from '../../logger';
+
+const router = Router();
+
+/**
+ * GET /api/files/list
+ * List files in download directory
+ */
+router.get('/list', async (req: Request, res: Response) => {
+  try {
+    const { path: dirPath = '', type = 'illustration' } = req.query;
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
+
+    const baseDir =
+      type === 'novel'
+        ? config.storage!.novelDirectory!
+        : config.storage!.illustrationDirectory!;
+
+    const fullPath = dirPath ? join(baseDir, String(dirPath)) : baseDir;
+
+    // Security: Ensure path is within base directory
+    if (!fullPath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+
+    if (!existsSync(fullPath)) {
+      return res.json({ files: [], directories: [] });
+    }
+
+    const items = readdirSync(fullPath);
+    const files: any[] = [];
+    const directories: any[] = [];
+
+    for (const item of items) {
+      const itemPath = join(fullPath, item);
+      const stats = statSync(itemPath);
+
+      if (stats.isDirectory()) {
+        directories.push({
+          name: item,
+          path: dirPath ? `${dirPath}/${item}` : item,
+          type: 'directory',
+        });
+      } else {
+        files.push({
+          name: item,
+          path: dirPath ? `${dirPath}/${item}` : item,
+          type: 'file',
+          size: stats.size,
+          modified: stats.mtime.toISOString(),
+          extension: extname(item),
+        });
+      }
+    }
+
+    res.json({
+      files,
+      directories,
+      currentPath: dirPath || '/',
+    });
+  } catch (error) {
+    logger.error('Failed to list files', { error });
+    res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
+/**
+ * GET /api/files/preview
+ * Get file preview (for images and files)
+ * Query params: path (file path), type (illustration|novel)
+ */
+router.get('/preview', async (req: Request, res: Response) => {
+  try {
+    const { path: filePath, type = 'illustration' } = req.query;
+    
+    if (!filePath) {
+      return res.status(400).json({ error: 'File path is required' });
+    }
+
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
+
+    const baseDir =
+      type === 'novel'
+        ? config.storage!.novelDirectory!
+        : config.storage!.illustrationDirectory!;
+
+    const fullPath = join(baseDir, String(filePath));
+
+    // Security: Ensure path is within base directory
+    const resolvedBaseDir = resolve(baseDir);
+    const resolvedFullPath = resolve(fullPath);
+    
+    logger.info('Preview request', { 
+      filePath: String(filePath),
+      baseDir,
+      resolvedBaseDir,
+      fullPath,
+      resolvedFullPath
+    });
+    
+    if (!resolvedFullPath.startsWith(resolvedBaseDir)) {
+      logger.error('Invalid path - security check failed', { 
+        baseDir: resolvedBaseDir, 
+        fullPath: resolvedFullPath 
+      });
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+
+    if (!existsSync(resolvedFullPath)) {
+      logger.error('File not found', { path: resolvedFullPath, baseDir: resolvedBaseDir });
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const stats = statSync(resolvedFullPath);
+    if (stats.isDirectory()) {
+      return res.status(400).json({ error: 'Path is a directory, not a file' });
+    }
+
+    // Set appropriate headers
+    const ext = extname(resolvedFullPath).toLowerCase();
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    const textExtensions = ['.txt', '.md', '.text'];
+    const isImage = imageExtensions.includes(ext);
+    const isText = textExtensions.includes(ext);
+
+    if (isImage) {
+      // Map extensions to correct MIME types
+      const mimeTypes: { [key: string]: string } = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+      };
+      res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
+    } else if (isText) {
+      const fileName = basename(resolvedFullPath);
+      // Encode filename for Content-Disposition header to avoid invalid characters
+      const encodedFileName = encodeURIComponent(fileName);
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodedFileName}`);
+    } else {
+      const fileName = basename(resolvedFullPath);
+      const encodedFileName = encodeURIComponent(fileName);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodedFileName}`);
+    }
+
+    // Send file content
+    try {
+      if (isText) {
+        // For text files, read and send directly
+        const fileContent = readFileSync(resolvedFullPath, 'utf-8');
+        res.send(fileContent);
+      } else if (isImage) {
+        // For images, use sendFile
+        res.sendFile(resolvedFullPath, (err) => {
+          if (err) {
+            logger.error('Failed to send image file', { error: err, path: resolvedFullPath });
+            if (!res.headersSent) {
+              res.status(500).json({ error: 'Failed to read file' });
+            }
+          }
+        });
+      } else {
+        // For other files, try to read as text first, fallback to sendFile
+        try {
+          const fileContent = readFileSync(resolvedFullPath, 'utf-8');
+          res.send(fileContent);
+        } catch (readError) {
+          res.sendFile(resolvedFullPath, (err) => {
+            if (err) {
+              logger.error('Failed to send file', { error: err, path: resolvedFullPath });
+              if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to read file' });
+              }
+            }
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to send file content', { 
+        error, 
+        path: resolvedFullPath,
+        isText,
+        isImage
+      });
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to get file preview' });
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to get file preview', { error });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to get file preview' });
+    }
+  }
+});
+
+/**
+ * DELETE /api/files/:id
+ * Delete a file
+ */
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { path: filePath, type = 'illustration' } = req.query;
+    const configPath = getConfigPath();
+    const config = loadConfig(configPath);
+
+    const baseDir =
+      type === 'novel'
+        ? config.storage!.novelDirectory!
+        : config.storage!.illustrationDirectory!;
+
+    const fullPath = filePath ? join(baseDir, String(filePath)) : join(baseDir, id);
+
+    // Security: Ensure path is within base directory
+    if (!fullPath.startsWith(baseDir)) {
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+
+    if (!existsSync(fullPath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    unlinkSync(fullPath);
+
+    res.json({
+      success: true,
+      message: 'File deleted successfully',
+    });
+  } catch (error) {
+    logger.error('Failed to delete file', { error });
+    res.status(500).json({ error: 'Failed to delete file' });
+  }
+});
+
+export default router;
+

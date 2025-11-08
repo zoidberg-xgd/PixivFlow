@@ -32,6 +32,10 @@ export declare class DownloadManager {
      */
     private handleDownloadError;
     /**
+     * Filter items based on minBookmarks, startDate, and endDate criteria
+     */
+    private filterItems;
+    /**
      * Generic download loop for illustrations or novels
      */
     private downloadItems;

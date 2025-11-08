@@ -435,8 +435,8 @@ async function handleRandomDownload(args) {
             }
         }
         else {
-            // Default to novel for testing
-            targetType = 'novel';
+            // Default to illustration (as documented)
+            targetType = 'illustration';
         }
         // Ensure valid token exists (login if needed)
         logger_1.logger.info('Checking authentication status...');

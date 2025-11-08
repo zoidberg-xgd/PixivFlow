@@ -47,12 +47,18 @@
     "standalone:setup": "npm run setup",
     "standalone:run": "npm run scheduler",
     "standalone:run-once": "npm run download",
-    "test:download": "npm run test"
+    "test:download": "npm run test",
+    "webui": "npm run build && node dist/webui/index.js",
+    "webui:dev": "npm run build:watch & npm run webui",
+    "webui:frontend": "cd webui-frontend && npm run dev",
+    "webui:build": "cd webui-frontend && npm run build"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.7.4",
     "@types/node-cron": "^3.0.11",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
     "typescript": "^5.6.2"
   },
   "dependencies": {
@@ -61,7 +67,10 @@
     "https-proxy-agent": "^7.0.6",
     "node-cron": "^3.0.3",
     "socks-proxy-agent": "^8.0.5",
-    "undici": "^6.19.8"
+    "undici": "^6.19.8",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "socket.io": "^4.6.1"
   },
   "engines": {
     "node": ">=18.0.0",
