@@ -198,6 +198,9 @@ pixivflow/
 - `POST /api/download/stop` - 停止下载
 - `GET /api/download/status` - 获取下载状态
 - `GET /api/download/history` - 获取下载历史
+- `GET /api/download/incomplete` - 获取未完成任务列表
+- `DELETE /api/download/incomplete` - 删除所有未完成任务
+- `DELETE /api/download/incomplete/:id` - 删除指定未完成任务
 - `POST /api/download/random` - 随机下载
 
 ### 统计信息
@@ -215,6 +218,27 @@ pixivflow/
 - `GET /api/files/list` - 列出文件
 - `GET /api/files/preview` - 预览文件（支持日文、中文等特殊字符文件名）
 - `DELETE /api/files/:id` - 删除文件
+
+## 🎯 功能说明
+
+### 未完成任务管理
+
+WebUI 提供了完善的未完成任务管理功能：
+
+#### 查看未完成任务
+- 在下载页面可以看到所有未完成的任务（状态为 `failed` 或 `partial`）
+- 显示任务的标签、类型、状态、错误信息和执行时间
+- 支持分页和排序
+
+#### 删除未完成任务
+- **单个删除**：点击任务列表中的"删除"按钮，可以删除指定的未完成任务
+- **批量删除**：点击"删除所有未完成任务"按钮，可以一次性删除所有未完成的任务
+- 删除操作会显示确认对话框，防止误操作
+- 删除成功后会自动刷新任务列表
+
+#### 继续下载未完成任务
+- 点击任务列表中的"继续下载"按钮，可以重新启动未完成的任务
+- 系统会从上次中断的地方继续下载
 
 ## 🛠️ 开发
 
