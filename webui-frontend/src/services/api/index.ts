@@ -1,48 +1,38 @@
 /**
- * @deprecated This file is kept for backward compatibility.
- * Please use the new API structure from './api/index' instead.
+ * API services index
  * 
- * The API has been refactored into separate service modules:
- * - authApi: Authentication related APIs
- * - configApi: Configuration related APIs
- * - downloadApi: Download related APIs
- * - filesApi: File management APIs
- * - logsApi: Logs APIs
- * - statsApi: Statistics APIs
- * 
- * The old `api` object is still available for backward compatibility,
- * but new code should use the individual API services.
+ * This file exports all API services and maintains backward compatibility
+ * with the old api.ts structure.
  */
 
-// Import individual services to avoid circular dependency
-import { authApi } from './api/auth';
-import { configApi } from './api/config';
-import { downloadApi } from './api/download';
-import { filesApi } from './api/files';
-import { logsApi } from './api/logs';
-import { statsApi } from './api/stats';
-import { apiClient, createApiClient, createCustomApiClient } from './api/client';
-import { ApiError, handleApiError } from './api/error-handler';
-import { setupRequestInterceptor, setupResponseInterceptor } from './api/interceptors';
+// Export all API services
+export { authApi } from './auth';
+export { configApi } from './config';
+export { downloadApi } from './download';
+export { filesApi } from './files';
+export { logsApi } from './logs';
+export { statsApi } from './stats';
 
-// Re-export all services
-export {
-  authApi,
-  configApi,
-  downloadApi,
-  filesApi,
-  logsApi,
-  statsApi,
-  apiClient,
-  createApiClient,
-  createCustomApiClient,
-  ApiError,
-  handleApiError,
-  setupRequestInterceptor,
-  setupResponseInterceptor,
-};
+// Export client and utilities
+export { apiClient, createApiClient, createCustomApiClient } from './client';
+export { ApiError, handleApiError } from './error-handler';
+export { setupRequestInterceptor, setupResponseInterceptor } from './interceptors';
 
-// Create unified API object for backward compatibility
+// Export types
+export * from './types';
+
+// Backward compatibility: Create a unified API object
+import { authApi } from './auth';
+import { configApi } from './config';
+import { downloadApi } from './download';
+import { filesApi } from './files';
+import { logsApi } from './logs';
+import { statsApi } from './stats';
+
+/**
+ * Unified API object for backward compatibility
+ * @deprecated Use individual API services (authApi, configApi, etc.) instead
+ */
 export const api = {
   // Authentication
   getAuthStatus: authApi.getAuthStatus,
@@ -101,27 +91,3 @@ export const api = {
   normalizeFiles: filesApi.normalizeFiles,
 };
 
-// Re-export types
-export type {
-  ApiResponse,
-  StatsOverview,
-  DownloadTask,
-  DownloadStatus,
-  IncompleteTask,
-  DownloadHistoryItem,
-  DownloadHistoryResponse,
-  FileItem,
-  FilesResponse,
-  LogEntry,
-  LogsResponse,
-  ConfigData,
-  AuthStatus,
-  AuthLoginResponse,
-  ConfigHistoryEntry,
-  ConfigFileInfo,
-  ConfigFileContent,
-  ConfigDiagnoseResult,
-  ConfigRepairResult,
-  TaskLogsResponse,
-  NormalizeFilesResult,
-} from './api/types';
