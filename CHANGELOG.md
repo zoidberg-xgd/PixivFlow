@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.0](https://github.com/redtidev1918/PixivFlow/compare/v2.16.1...v2.17.0) (2026-09-10)
+
+
+### Features
+
+* **batch:** execute-slot, a one-shot execution plane with a machine-readable result ([#43](https://github.com/redtidev1918/PixivFlow/issues/43)) ([2dc135b](https://github.com/redtidev1918/PixivFlow/commit/2dc135b419f4b54fe42fb3cbdcfe13a43b0cc058))
+
 ## [2.16.1](https://github.com/redtidev1918/PixivFlow/compare/v2.16.0...v2.16.1) (2026-09-10)
 
 
